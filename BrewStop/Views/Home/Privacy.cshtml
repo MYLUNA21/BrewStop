@@ -1,0 +1,140 @@
+﻿@{
+    ViewData["Title"] = "System Assurance & Privacy";
+}
+
+<!-- Hero Banner Header -->
+<div class="hero-wrapper bg-espresso-animated text-white rounded-bottom-5 overflow-hidden shadow-lg position-relative pt-4 pb-5">
+    <div class="container max-w-1200 position-relative z-2">
+        <div class="py-4 text-center text-lg-start">
+            <div class="fade-in-up delay-1">
+                <span class="animated-badge-bg mb-3">
+                    <i class="fa-solid fa-shield-halved me-1 text-dark"></i> BrewStop Quality & Security Assurance
+                </span>
+                <h1 class="font-heading display-4 fw-bold text-white mb-3 lh-sm">
+                    Crafted for Excellence, <br />
+                    <span class="text-gold-gradient">Engineered with Precision.</span>
+                </h1>
+            </div>
+            <p class="text-light-subtle lead fs-6 pe-lg-4 opacity-85 fade-in-up delay-2 max-w-600">
+                BrewStop was built to streamline campus coffee ordering at UC Banilad. Discover how we guarantee order speed, strict data privacy, top-tier drink quality, and continuous improvement through student feedback.
+            </p>
+        </div>
+    </div>
+</div>
+
+<!-- Glassmorphism Grid Container with Staggered Entrance Animations -->
+<div class="container max-w-1200 my-5">
+    <div class="row g-4">
+
+        <!-- 1. Enterprise Security -->
+        <div class="col-md-6 fade-in-up delay-1">
+            <div class="card border-0 animated-glass-card rounded-4 p-4 h-100 shadow-sm">
+                <div class="d-flex align-items-center gap-3 mb-3">
+                    <div class="icon-badge-glow">
+                        <i class="fa-solid fa-lock fs-4"></i>
+                    </div>
+                    <div>
+                        <h4 class="font-heading fw-bold mb-0 text-dark">Data Security & Privacy</h4>
+                        <span class="stat-label">TLS Encrypted</span>
+                    </div>
+                </div>
+                <p class="text-muted fs-6 mb-0">
+                    Your personal information and order history are securely stored using Entity Framework Core data persistence. All live transactions and user sessions are encrypted over TLS, ensuring your data is never exposed or shared with third parties.
+                </p>
+            </div>
+        </div>
+
+        <!-- 2. High-Speed Performance & SignalR Hub -->
+        <div class="col-md-6 fade-in-up delay-2">
+            <div class="card border-0 animated-glass-card rounded-4 p-4 h-100 shadow-sm">
+                <div class="d-flex align-items-center justify-content-between mb-3">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="icon-badge-glow">
+                            <i class="fa-solid fa-bolt fs-4"></i>
+                        </div>
+                        <div>
+                            <h4 class="font-heading fw-bold mb-0 text-dark">Real-Time Performance</h4>
+                            <span class="stat-label">SignalR Order Pipeline</span>
+                        </div>
+                    </div>
+                    <span id="privacy-connection-badge" class="badge bg-secondary rounded-pill px-3 py-2 d-flex align-items-center gap-2 shadow-sm">
+                        Connecting...
+                    </span>
+                </div>
+                <p class="text-muted fs-6 mb-3">
+                    Engineered on ASP.NET Core MVC for instant menu loading and zero lag. Live order updates stream directly to your device via SignalR WebSockets, letting you know the moment your cup is being prepped and ready for pickup.
+                </p>
+                <div class="p-3 bg-white rounded-3 border d-flex align-items-center justify-content-between live-endpoint-pill">
+                    <span class="small fw-bold text-dark live-endpoint-label">Live Order Stream Endpoint</span>
+                    <code class="text-espresso fw-bold px-2 py-1 bg-light rounded">/hubs/orders</code>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3. Drink Quality Standard -->
+        <div class="col-md-6 fade-in-up delay-3">
+            <div class="card border-0 animated-glass-card rounded-4 p-4 h-100 shadow-sm">
+                <div class="d-flex align-items-center gap-3 mb-3">
+                    <div class="icon-badge-glow">
+                        <i class="fa-solid fa-mug-saucer fs-4"></i>
+                    </div>
+                    <div>
+                        <h4 class="font-heading fw-bold mb-0 text-dark">Drink Quality Standard</h4>
+                        <span class="stat-label">Handcrafted Excellence</span>
+                    </div>
+                </div>
+                <p class="text-muted fs-6 mb-0">
+                    Every espresso shot, cold brew, and bakery item is prepared with premium espresso beans and fresh campus ingredients. Our system manages queue times so your beverages are served at peak flavor and optimal temperature upon pickup.
+                </p>
+            </div>
+        </div>
+
+        <!-- 4. Campus Feedback Loop -->
+        <div class="col-md-6 fade-in-up delay-3">
+            <div class="card border-0 animated-glass-card rounded-4 p-4 h-100 shadow-sm">
+                <div class="d-flex align-items-center gap-3 mb-3">
+                    <div class="icon-badge-glow">
+                        <i class="fa-solid fa-comments fs-4"></i>
+                    </div>
+                    <div>
+                        <h4 class="font-heading fw-bold mb-0 text-dark">Customer & Student Feedback</h4>
+                        <span class="stat-label">Continuous Innovation</span>
+                    </div>
+                </div>
+                <p class="text-muted fs-6 mb-0">
+                    BrewStop continuously evolves based on student reviews and barista feedback. We use community input to introduce new seasonal flavors, optimize pickup schedules, and refine application UI features for optimal campus convenience.
+                </p>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        async function startOrderHubConnection() {
+            const badge = document.getElementById("privacy-connection-badge");
+            try {
+                const connection = new signalR.HubConnectionBuilder()
+                    .withUrl("/hubs/orders")
+                    .withAutomaticReconnect()
+                    .build();
+
+                connection.on("OrderStatusChanged", update => {
+                    console.log("[Privacy Page] Live Status update:", update);
+                });
+
+                await connection.start();
+                console.log("SignalR Connection Successful on Privacy Page!");
+                badge.className = "badge bg-dark text-white rounded-pill px-3 py-2 d-flex align-items-center gap-2 shadow-sm";
+                badge.innerHTML = '<span class="pulse-dot"></span> Active Stream';
+            } catch (err) {
+                console.error("SignalR Connection Error: ", err);
+                badge.className = "badge bg-danger text-white rounded-pill px-3 py-2 shadow-sm";
+                badge.innerText = "Offline";
+            }
+        }
+
+        document.addEventListener("DOMContentLoaded", startOrderHubConnection);
+    </script>
+}

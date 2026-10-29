@@ -1,0 +1,107 @@
+﻿@{
+    ViewData["Title"] = "Home";
+}
+
+<div class="container my-4">
+    <!-- Hero Section -->
+    <div class="hero-banner p-5 p-lg-5 mb-5 text-white">
+        <div class="row align-items-center">
+            <div class="col-lg-7 py-4">
+                <div class="mb-3">
+                    <span class="animated-badge-bg">
+                        <i class="fa-solid fa-sparkles me-1 text-dark"></i> UC Banilad Campus Coffee
+                    </span>
+                </div>
+                <h1 class="display-4 fw-bold font-serif mb-3">Elevate Your Daily Brew, Right on Campus.</h1>
+                <p class="lead text-light mb-4" style="opacity: 0.9;">
+                    Skip the line. Order your handcrafted espresso, specialty cold brews, and fresh pastries instantly with live status tracking.
+                </p>
+                <div class="d-flex gap-3">
+                    <a href="#menu" class="btn btn-caramel btn-lg px-4 rounded-pill fw-semibold text-dark">
+                        Explore Menu <i class="fa-solid fa-arrow-down ms-1"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Box Menu Section -->
+    <div id="menu" class="mb-5">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h2 class="fw-bold font-serif mb-1">Our Signature Menu</h2>
+                <p class="text-light mb-0">Handpicked beans, expertly roasted and customized for you.</p>
+            </div>
+        </div>
+
+        <div class="row g-4">
+            <!-- Bento Item 1: Caramel Macchiato -->
+            <div class="col-md-4">
+                <div class="bento-card h-100 d-flex flex-column justify-content-between">
+                    <div class="bento-img-wrapper">
+                        <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRBKW8xf289wdy-TEtQvWN9GI0yoUZhmxVkNWuPdaARCA&s=10" alt="Caramel Macchiato" class="bento-img" />
+                    </div>
+                    <div class="p-4 d-flex flex-column justify-content-between flex-grow-1">
+                        <div>
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <span class="badge bg-secondary text-light">Espresso Bar</span>
+                                <span class="text-caramel fw-bold">₱140.00</span>
+                            </div>
+                            <h4 class="fw-bold mb-2">Caramel Macchiato</h4>
+                            <p class="text-muted small">Sweet caramel, smooth espresso.</p>
+                        </div>
+                        <button class="btn btn-outline-light rounded-pill w-100 mt-3 btn-sm">Customize & Order</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bento Item 2: Velvet Cold Foam Nitro -->
+            <div class="col-md-4">
+                <div class="bento-card h-100 d-flex flex-column justify-content-between">
+                    <div class="bento-img-wrapper">
+                        <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcT4KMzv32t9WBILHgaPeeoAqxKHWY-ENz7BUxi5iBI-4mzZzFiJEzWrAQ0&s=10" alt="Velvet Cold Foam Nitro" class="bento-img" />
+                    </div>
+                    <div class="p-4 d-flex flex-column justify-content-between flex-grow-1">
+                        <div>
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <span class="badge bg-secondary text-light">Cold Brew</span>
+                                <span class="text-caramel fw-bold">₱160.00</span>
+                            </div>
+                            <h4 class="fw-bold mb-2">Velvet Cold Foam Nitro</h4>
+                            <p class="text-muted small">Bold cold brew, silky vanilla foam.</p>
+                        </div>
+                        <button class="btn btn-outline-light rounded-pill w-100 mt-3 btn-sm">Customize & Order</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bento Item 3: Artisan Butter Croissant -->
+            <div class="col-md-4">
+                <div class="bento-card h-100 d-flex flex-column justify-content-between">
+                    <div class="bento-img-wrapper">
+                        <img src="https://images.unsplash.com/photo-1555507036-ab1f4038808a?auto=format&fit=crop&w=800&q=80" alt="Artisan Butter Croissant" class="bento-img" />
+                    </div>
+                    <div class="p-4 d-flex flex-column justify-content-between flex-grow-1">
+                        <div>
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <span class="badge bg-secondary text-light">Bakery</span>
+                                <span class="text-caramel fw-bold">₱95.00</span>
+                            </div>
+                            <h4 class="fw-bold mb-2">Artisan Butter Croissant</h4>
+                            <p class="text-muted small">Golden, flaky, buttery perfection.</p>
+                        </div>
+                        <button class="btn btn-outline-light rounded-pill w-100 mt-3 btn-sm">Select Item</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Artisan Footer -->
+<footer class="footer text-muted py-4">
+    <div class="container text-center">
+        <p class="mb-1 text-light">&copy; 2026 <strong>BrewStop</strong>. Crafted with precision & passion.</p>
+        <small class="text-secondary">UC Banilad Campus Coffee Shop Ordering & Pickup System</small>
+    </div>
+</footer>

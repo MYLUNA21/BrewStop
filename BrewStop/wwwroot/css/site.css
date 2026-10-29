@@ -1,0 +1,271 @@
+/* ==========================================
+   Base Typography & Layout Reset
+   ========================================== */
+html {
+    font-size: 14px;
+    scroll-behavior: smooth;
+    height: 100%;
+}
+
+@media (min-width: 768px) {
+    html {
+        font-size: 16px;
+    }
+}
+
+.btn:focus, .btn:active:focus, .btn-link.nav-link:focus, .form-control:focus, .form-check-input:focus {
+    box-shadow: 0 0 0 0.1rem white, 0 0 0 0.25rem #258cfb;
+}
+
+:root {
+    --bg-espresso: #1a0f0d;
+    --card-espresso: #241411;
+    --accent-caramel: #d4a373;
+    --accent-caramel-hover: #faedcd;
+    --text-main: #fefae0;
+    --text-muted: #d4d4d4;
+    --glass-bg: rgba(26, 15, 13, 0.85);
+}
+
+body {
+    background-color: var(--bg-espresso) !important;
+    color: var(--text-main) !important;
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    margin: 0;
+    min-height: 100%;
+    padding-top: 76px;
+}
+
+.main-wrapper {
+    min-height: auto;
+}
+
+.glass-nav {
+    background: var(--glass-bg);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-bottom: 1px solid rgba(212, 163, 115, 0.15) !important;
+    transition: all 0.3s ease;
+}
+
+.brand-icon-wrapper {
+    width: 38px;
+    height: 38px;
+    background: linear-gradient(135deg, #d4a373, #bc6c25);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #1a0f0d;
+    font-size: 1.1rem;
+    box-shadow: 0 4px 12px rgba(212, 163, 115, 0.3);
+}
+
+.text-caramel {
+    color: var(--accent-caramel) !important;
+}
+
+.hover-effect {
+    transition: all 0.2s ease-in-out;
+}
+
+    .hover-effect:hover {
+        background-color: rgba(212, 163, 115, 0.15);
+        color: var(--accent-caramel) !important;
+    }
+
+.btn-caramel {
+    background-color: var(--accent-caramel);
+    border: none;
+    transition: all 0.25s ease;
+}
+
+    .btn-caramel:hover {
+        background-color: var(--accent-caramel-hover);
+        transform: translateY(-2px);
+        box-shadow: 0 6px 15px rgba(212, 163, 115, 0.35);
+    }
+
+.hero-banner {
+    position: relative;
+    border-radius: 20px;
+    overflow: hidden;
+    background: linear-gradient(to right, rgba(26, 15, 13, 0.9), rgba(26, 15, 13, 0.6)), url('https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?auto=format&fit=crop&w=1920&q=80') center/cover no-repeat;
+    border: 1px solid rgba(212, 163, 115, 0.2);
+    box-shadow: 0 15px 35px rgba(0,0,0,0.5);
+    min-height: 420px;
+}
+
+.bento-card {
+    background-color: var(--card-espresso);
+    border: 1px solid rgba(212, 163, 115, 0.12);
+    border-radius: 16px;
+    transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+    overflow: hidden;
+}
+
+    .bento-card:hover {
+        transform: translateY(-5px);
+        border-color: var(--accent-caramel);
+        box-shadow: 0 12px 30px rgba(212, 163, 115, 0.2);
+    }
+
+.footer {
+    background-color: #120a08;
+    border-top: 1px solid rgba(212, 163, 115, 0.1);
+    width: 100%;
+    margin-top: 80px;
+}
+
+.hero-banner p.lead {
+    color: #fefae0 !important;
+    opacity: 0.9;
+}
+
+.bento-card p {
+    color: #d4d4d4 !important;
+    line-height: 1.5;
+}
+
+.bento-card h4 {
+    color: #fefae0 !important;
+}
+
+/* Bento Card HD Image Styles */
+.bento-img-wrapper {
+    width: 100%;
+    height: 190px;
+    overflow: hidden;
+    border-top-left-radius: 16px;
+    border-top-right-radius: 16px;
+}
+
+.bento-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.4s ease;
+}
+
+.bento-card:hover .bento-img {
+    transform: scale(1.06);
+}
+
+/* --- Unique Animated Shimmer Badge --- */
+.animated-badge-bg {
+    display: inline-flex;
+    align-items: center;
+    padding: 8px 18px;
+    border-radius: 50rem;
+    font-weight: 700;
+    font-size: 0.85rem;
+    letter-spacing: 0.5px;
+    color: #1a0f0d;
+    background: linear-gradient(270deg, #d4a373, #faedcd, #bc6c25, #d4a373);
+    background-size: 300% 300%;
+    animation: luxuryShimmer 3s ease infinite;
+    box-shadow: 0 4px 15px rgba(212, 163, 115, 0.4);
+    border: 1px solid rgba(254, 250, 224, 0.3);
+}
+
+@keyframes luxuryShimmer {
+    0% {
+        background-position: 0% 50%;
+    }
+
+    50% {
+        background-position: 100% 50%;
+    }
+
+    100% {
+        background-position: 0% 50%;
+    }
+}
+
+/* ==========================================
+   Privacy Page Luxury Animations & FX
+   ========================================== */
+
+/* Animated Icon Container Badge */
+.icon-badge-glow {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 52px;
+    height: 52px;
+    background: linear-gradient(135deg, #3d2620, #1e120f);
+    border: 1px solid rgba(212, 163, 115, 0.35);
+    border-radius: 14px;
+    color: #d4a373 !important; /* Elegant Caramel Orange/Gold - Always visible! */
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
+    transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.4s ease, box-shadow 0.4s ease;
+}
+
+    .icon-badge-glow i {
+        color: #d4a373 !important; /* Fix dark icon issue */
+        transition: transform 0.4s ease, color 0.4s ease;
+    }
+
+/* Glass Card Animated Hover Lift */
+.animated-glass-card {
+    background: rgba(255, 255, 255, 0.88) !important;
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(212, 163, 115, 0.18) !important;
+    transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    position: relative;
+    overflow: hidden;
+}
+
+    .animated-glass-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(243, 194, 114, 0.15), transparent);
+        transition: left 0.7s ease;
+    }
+
+    .animated-glass-card:hover {
+        transform: translateY(-8px) scale(1.01);
+        border-color: rgba(212, 163, 115, 0.5) !important;
+        box-shadow: 0 20px 45px rgba(30, 18, 15, 0.15) !important;
+    }
+
+        .animated-glass-card:hover::before {
+            left: 100%;
+        }
+
+        .animated-glass-card:hover .icon-badge-glow {
+            transform: rotate(6deg) scale(1.1);
+            border-color: var(--gold-primary);
+            box-shadow: 0 10px 25px rgba(243, 194, 114, 0.3);
+        }
+
+            .animated-glass-card:hover .icon-badge-glow i {
+                transform: scale(1.15);
+                color: #ffffff !important;
+            }
+
+/* Live Endpoint Code Pill Contrast Fix */
+.live-endpoint-pill {
+    transition: all 0.3s ease;
+    border: 1px solid rgba(212, 163, 115, 0.2);
+}
+
+.live-endpoint-label {
+    transition: color 0.3s ease;
+}
+
+/* Ensure text stays perfectly readable on dark background hover */
+.animated-glass-card:hover .live-endpoint-pill {
+    background-color: #2e1c18 !important;
+    border-color: var(--gold-primary);
+}
+
+.animated-glass-card:hover .live-endpoint-label {
+    color: #fefae0 !important; /* Crisp cream white for complete readability */
+}

@@ -1,0 +1,155 @@
+﻿@model BrewStop.Models.MenuViewModel
+@{
+    ViewData["Title"] = "Menu";
+}
+
+<div class="container-fluid max-w-1200 py-4 mt-2">
+    <!-- Search Bar & Title Header -->
+    <div class="row mb-4 justify-content-between align-items-center g-3">
+        <div class="col-md-5">
+            <h1 class="fw-bold font-serif text-white mb-0">Menu</h1>
+        </div>
+        <div class="col-md-7 col-lg-5">
+            <div class="input-group glass-search-bar">
+                <span class="input-group-text bg-transparent border-0 text-muted ps-3">
+                    <i class="fa-solid fa-magnifying-glass text-caramel"></i>
+                </span>
+                <input type="text" id="menuSearchInput" class="form-control bg-transparent border-0 text-light py-2 px-2 shadow-none custom-placeholder-white" placeholder="Search our drinks, food, coffee..." onkeyup="filterMenu()">
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <!-- Sticky Left Category Sidebar Navigation -->
+        <div class="col-lg-3 col-md-4">
+            <div class="menu-sidebar sticky-top" style="top: 95px; z-index: 10;">
+                <nav class="d-flex flex-column gap-3">
+                    <!-- Global Reset Link -->
+                    <div>
+                        <a href="javascript:void(0)" onclick="switchCategoryTab('all')" class="menu-side-link text-decoration-none fw-bold fs-6 d-block py-1 active-side-link" id="side-link-all">
+                            <i class="fa-solid fa-layer-group me-2 text-caramel"></i> All Menu Categories
+                        </a>
+                    </div>
+
+                    <!-- Category Group: Drinks -->
+                    <div>
+                        <h6 class="fw-bold text-white text-uppercase tracking-wider fs-6 mb-2 border-bottom border-secondary pb-1">Drinks</h6>
+                        <ul class="list-unstyled ms-2 mb-0">
+                            @foreach (var cat in Model.Categories.Where(c => c.Group == "Drinks"))
+                            {
+                                <li>
+                                    <a href="javascript:void(0)" onclick="switchCategoryTab('@cat.Slug')" class="menu-side-link text-decoration-none d-block py-1" id="side-link-@cat.Slug">
+                                        @cat.Name 
+                                    </a>
+                                </li>
+                            }
+                        </ul>
+                    </div>
+
+                    <!-- Category Group: Food -->
+                    <div>
+                        <h6 class="fw-bold text-white text-uppercase tracking-wider fs-6 mb-2 border-bottom border-secondary pb-1">Food & Bakery</h6>
+                        <ul class="list-unstyled ms-2 mb-0">
+                            @foreach (var cat in Model.Categories.Where(c => c.Group == "Food"))
+                            {
+                                <li>
+                                    <a href="javascript:void(0)" onclick="switchCategoryTab('@cat.Slug')" class="menu-side-link text-decoration-none d-block py-1" id="side-link-@cat.Slug">
+                                        @cat.Name 
+                                    </a>
+                                </li>
+                            }
+                        </ul>
+                    </div>
+                </nav>
+            </div>
+        </div>
+
+        <div class="col-lg-9 col-md-8">
+            
+            @foreach (var category in Model.Categories)
+            {
+                <section class="menu-category-section mb-5" id="section-@category.Slug" data-category="@category.Slug">
+                    <div class="d-flex align-items-center justify-content-between border-bottom border-secondary pb-2 mb-4">
+                        <h2 class="fw-bold font-serif text-white mb-0">@category.Name</h2>
+                        <span class="badge bg-dark border border-secondary text-caramel rounded-pill px-3 py-2">
+                            @category.Items.Count Available
+                        </span>
+                    </div>
+
+                    <!-- Detailed Items Grid (Shows when category is selected or in All view) -->
+                    <div class="row g-4">
+                        @foreach (var item in category.Items)
+                        {
+                            <div class="col-md-6 category-item-card" data-search-text="@item.Name @item.Description @category.Name">
+                                <div class="bento-card h-100 d-flex flex-column justify-content-between">
+                                    <div class="bento-img-wrapper position-relative">
+                                        <img src="@item.ImageUrl" alt="@item.Name" class="bento-img" />
+                                        <span class="position-absolute top-0 end-0 m-3 badge bg-dark text-caramel border border-warning shadow-sm">
+                                            @item.BadgeText
+                                        </span>
+                                    </div>
+                                    <div class="p-4 d-flex flex-column justify-content-between flex-grow-1">
+                                        <div>
+                                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                                <span class="badge bg-secondary text-light">@category.Name</span>
+                                                <span class="text-caramel fw-bold fs-5">₱@item.Price.ToString("N2")</span>
+                                            </div>
+                                            <h4 class="fw-bold mb-2 text-white">@item.Name</h4>
+                                            <p class="text-muted small mb-3">@item.Description</p>
+                                        </div>
+                                        <button class="btn btn-caramel rounded-pill w-100 mt-2 fw-semibold text-dark btn-sm shadow-sm" onclick="openCustomizeModal('@item.Name', '@item.Price')">
+                                            <i class="fa-solid fa-mug-hot me-1"></i> Customize & Order
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </section>
+            }
+
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function switchCategoryTab(slug) {
+            const sections = document.querySelectorAll('.menu-category-section');
+            const links = document.querySelectorAll('.menu-side-link');
+
+            links.forEach(l => l.classList.remove('active-side-link', 'text-caramel'));
+
+            const targetLink = document.getElementById('side-link-' + slug);
+            if (targetLink) {
+                targetLink.classList.add('active-side-link', 'text-caramel');
+            }
+
+            sections.forEach(sec => {
+                if (slug === 'all' || sec.getAttribute('data-category') === slug) {
+                    sec.style.display = 'block';
+                } else {
+                    sec.style.display = 'none';
+                }
+            });
+        }
+
+        function filterMenu() {
+            const input = document.getElementById('menuSearchInput').value.toLowerCase();
+            const cards = document.querySelectorAll('.category-item-card');
+
+            cards.forEach(card => {
+                const searchData = card.getAttribute('data-search-text').toLowerCase();
+                if (searchData.includes(input)) {
+                    card.style.display = 'block';
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+        }
+
+        function openCustomizeModal(name, price) {
+            alert("Order selection initialized for: " + name + " (₱" + price + ")");
+        }
+    </script>
+}

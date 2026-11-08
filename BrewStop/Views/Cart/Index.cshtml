@@ -1,0 +1,68 @@
+﻿@model BrewStop.Models.CartViewModel
+@{
+    ViewData["Title"] = "Your cart";
+}
+
+<div class="tw">
+    <div class="mx-auto max-w-4xl px-4 pt-24 pb-12">
+        <h1 class="font-serif text-3xl font-bold text-cream">Your cart</h1>
+
+        @if (Model.Lines.Count == 0)
+        {
+            <div class="mt-6 rounded-2xl border border-white/10 bg-card p-10 text-center">
+                <p class="text-neutral-300">Your cart is empty.</p>
+                <a asp-controller="Menu" asp-action="Index" class="mt-4 inline-block rounded-full bg-caramel px-6 py-3 text-sm font-semibold text-black hover:bg-cream">Browse the menu</a>
+            </div>
+        }
+        else
+        {
+            <div class="mt-6 space-y-4">
+                @foreach (var l in Model.Lines)
+                {
+                    <div class="flex flex-col gap-4 rounded-2xl border border-white/10 bg-card p-4 sm:flex-row sm:items-center">
+                        <img src="@l.ImageUrl" alt="@l.Name" class="h-20 w-20 rounded-xl object-cover" />
+
+                        <div class="flex-1">
+                            <p class="font-semibold text-cream">@l.Name</p>
+                            <p class="text-xs text-neutral-400">
+                                @if (l.SizeName is not null)
+                                {
+                                    <span>@l.SizeName</span>
+                                }
+                                @if (l.AddOns.Count > 0)
+                                {
+                                    <span>@(l.SizeName is not null ? " · " : "")@string.Join(", ", l.AddOns.Select(a => a.Name))</span>
+                                }
+                            </p>
+                            <p class="mt-1 text-sm text-caramel">&#8369;@l.UnitPrice.ToString("N2") each</p>
+                        </div>
+
+                        <form asp-controller="Cart" asp-action="Update" method="post" class="flex items-center gap-2">
+                            <input type="hidden" name="key" value="@l.Key" />
+                            <label class="sr-only" for="qty-@l.Key">Quantity for @l.Name</label>
+                            <input id="qty-@l.Key" type="number" name="quantity" min="1" max="10" value="@l.Quantity"
+                                   class="w-16 rounded-lg border border-white/15 bg-transparent px-2 py-1 text-center text-cream" />
+                            <button type="submit" class="rounded-full border border-white/20 px-3 py-1 text-xs text-cream hover:border-caramel">Update</button>
+                        </form>
+
+                        <p class="w-24 text-right font-semibold text-cream">&#8369;@l.LineTotal.ToString("N2")</p>
+
+                        <form asp-controller="Cart" asp-action="Remove" method="post">
+                            <input type="hidden" name="key" value="@l.Key" />
+                            <button type="submit" class="rounded-full px-3 py-1 text-xs text-red-300 hover:bg-red-500/10" aria-label="Remove @l.Name">Remove</button>
+                        </form>
+                    </div>
+                }
+            </div>
+
+            <div class="mt-6 flex flex-col items-end gap-3 rounded-2xl border border-white/10 bg-card p-6">
+                <div class="flex w-full items-center justify-between">
+                    <span class="text-neutral-300">Total (@Model.ItemCount items)</span>
+                    <span class="text-2xl font-bold text-caramel">&#8369;@Model.Total.ToString("N2")</span>
+                </div>
+                <p class="w-full text-xs text-neutral-400">Payment is made at pickup.</p>
+                <a asp-controller="Checkout" asp-action="Index" class="rounded-full bg-caramel px-8 py-3 text-sm font-semibold text-black hover:bg-cream">Proceed to checkout</a>
+            </div>
+        }
+    </div>
+</div>

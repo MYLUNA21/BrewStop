@@ -1,4 +1,5 @@
-﻿<!DOCTYPE html>
+﻿@inject BrewStop.Services.ICartService Cart
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="utf-8" />
@@ -8,6 +9,15 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/BrewStop.styles.css" asp-append-version="true" />
+
+    <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+    <script>
+            tailwind.config = {
+                important: '.tw',
+                corePlugins: { preflight: false },
+                theme: { extend: { colors: { espresso: '#1a0f0d', card: '#241411', caramel: '#d4a373', cream: '#fefae0' } } }
+            };
+    </script>
 </head>
 <body>
     <!-- Elegant Glassmorphic Navbar -->
@@ -51,8 +61,12 @@
                             <a class="nav-link text-light px-3 py-2 rounded-pill hover-effect" asp-controller="Home" asp-action="Privacy">About</a>
                         </li>
                         <li class="nav-item ms-2">
-                            <a class="btn btn-caramel rounded-pill px-4 shadow-sm text-dark fw-semibold" asp-controller="Order" asp-action="Index">
-                                <i class="fa-solid fa-bag-shopping me-1"></i> Order Now
+                            <a class="btn btn-caramel rounded-pill px-4 shadow-sm text-dark fw-semibold" asp-controller="Cart" asp-action="Index">
+                                <i class="fa-solid fa-bag-shopping me-1"></i> Cart
+                                @if (Cart.Count > 0)
+                                {
+                                    <span class="badge bg-dark text-caramel ms-1">@Cart.Count</span>
+                                }
                             </a>
                         </li>
                     </ul>

@@ -1,0 +1,110 @@
+﻿@model BrewStop.Models.CustomizeViewModel
+@using System.Globalization
+@{
+    ViewData["Title"] = "Customize " + Model.Item.Name;
+    var inv = CultureInfo.InvariantCulture;
+}
+
+<div class="tw">
+    <div class="mx-auto max-w-3xl px-4 pt-24 pb-12">
+        <a asp-controller="Menu" asp-action="Index" class="text-sm text-caramel hover:underline">&larr; Back to menu</a>
+
+        @if (TempData["CartError"] is string err)
+        {
+            <div class="mt-4 rounded-lg border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-200">@err</div>
+        }
+
+        <form asp-controller="Cart" asp-action="Add" method="post" id="customizeForm"
+              data-base="@Model.Item.Price.ToString(inv)"
+              class="mt-4 overflow-hidden rounded-2xl border border-white/10 bg-card">
+            <input type="hidden" name="MenuItemId" value="@Model.Item.Id" />
+
+            <div class="flex flex-col gap-5 p-6 sm:flex-row">
+                <img src="@Model.Item.ImageUrl" alt="@Model.Item.Name" class="h-40 w-full rounded-xl object-cover sm:w-40" />
+                <div>
+                    <h1 class="font-serif text-2xl font-bold text-cream">@Model.Item.Name</h1>
+                    <p class="mt-1 text-sm text-neutral-300">@Model.Item.Description</p>
+                    <p class="mt-2 text-lg font-semibold text-caramel">From &#8369;@Model.Item.Price.ToString("N2")</p>
+                </div>
+            </div>
+
+            <div class="space-y-6 border-t border-white/10 p-6">
+                @if (Model.IsDrink)
+                {
+                    <fieldset>
+                        <legend class="mb-2 text-sm font-semibold uppercase tracking-wider text-cream">Size</legend>
+                        <div class="grid grid-cols-3 gap-3">
+                            @foreach (var s in Model.Sizes)
+                            {
+                                <label class="cursor-pointer">
+                                    <input type="radio" name="SizeId" value="@s.Id" data-delta="@s.PriceDelta.ToString(inv)"
+                                           class="peer sr-only" @(s.Id == Model.DefaultSizeId ? "checked" : "") />
+                                    <span class="block rounded-xl border border-white/15 px-3 py-3 text-center text-sm text-cream peer-checked:border-caramel peer-checked:bg-caramel/10 peer-focus-visible:ring-2 peer-focus-visible:ring-caramel">
+                                        @s.Name
+                                        <span class="block text-xs text-neutral-400">@(s.PriceDelta == 0 ? "Base price" : "+\u20B1" + s.PriceDelta.ToString("N2"))</span>
+                                    </span>
+                                </label>
+                            }
+                        </div>
+                    </fieldset>
+                }
+
+                @if (Model.AddOns.Count > 0)
+                {
+                    <fieldset>
+                        <legend class="mb-2 text-sm font-semibold uppercase tracking-wider text-cream">Add-ons</legend>
+                        <div class="space-y-2">
+                            @foreach (var a in Model.AddOns)
+                            {
+                                <label class="flex cursor-pointer items-center justify-between rounded-xl border border-white/15 px-4 py-3 text-sm text-cream has-[:checked]:border-caramel has-[:checked]:bg-caramel/10">
+                                    <span class="flex items-center gap-3">
+                                        <input type="checkbox" name="AddOnIds" value="@a.Id" data-price="@a.Price.ToString(inv)" class="h-4 w-4 accent-[#d4a373]" />
+                                        @a.Name
+                                    </span>
+                                    <span class="text-neutral-300">+&#8369;@a.Price.ToString("N2")</span>
+                                </label>
+                            }
+                        </div>
+                    </fieldset>
+                }
+
+                <div class="flex items-center justify-between gap-4">
+                    <label for="Quantity" class="text-sm font-semibold uppercase tracking-wider text-cream">Quantity</label>
+                    <input id="Quantity" name="Quantity" type="number" min="1" max="10" value="1"
+                           class="w-24 rounded-lg border border-white/15 bg-transparent px-3 py-2 text-center text-cream" />
+                </div>
+            </div>
+
+            <div class="flex items-center justify-between border-t border-white/10 bg-black/20 p-6">
+                <div>
+                    <p class="text-xs uppercase tracking-wider text-neutral-400">Estimated total</p>
+                    <p class="text-2xl font-bold text-caramel">&#8369;<span id="liveTotal">@Model.Item.Price.ToString("N2")</span></p>
+                </div>
+                <button type="submit" class="rounded-full bg-caramel px-6 py-3 text-sm font-semibold text-black hover:bg-cream">
+                    Add to cart
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        (function() {
+            const form = document.getElementById('customizeForm');
+            const out = document.getElementById('liveTotal');
+            const base = parseFloat(form.dataset.base);
+            function update() {
+                let unit = base;
+                const size = form.querySelector('input[name="SizeId"]:checked');
+                if (size) unit += parseFloat(size.dataset.delta);
+                form.querySelectorAll('input[name="AddOnIds"]:checked').forEach(c => unit += parseFloat(c.dataset.price));
+                const qty = Math.min(10, Math.max(1, parseInt(form.querySelector('#Quantity').value, 10) || 1));
+                out.textContent = (unit * qty).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            }
+            form.addEventListener('change', update);
+            form.addEventListener('input', update);
+            update();
+        })();
+    </script>
+}

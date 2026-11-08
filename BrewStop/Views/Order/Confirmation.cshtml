@@ -1,0 +1,53 @@
+﻿@model BrewStop.Models.Order
+@inject BrewStop.Services.IPickupSlotService Slots
+@{
+    ViewData["Title"] = "Order placed";
+    var pickupLocal = Slots.ToLocal(Model.PickupAtUtc);
+}
+
+<div class="tw">
+    <div class="mx-auto max-w-3xl px-4 pt-24 pb-12">
+        <div class="rounded-2xl border border-white/10 bg-card p-6">
+            <p class="text-sm font-semibold uppercase tracking-wider text-caramel">Order placed</p>
+            <h1 class="mt-1 font-serif text-3xl font-bold text-cream">Order #@Model.Id</h1>
+
+            <dl class="mt-4 grid grid-cols-2 gap-4 text-sm">
+                <div>
+                    <dt class="text-neutral-400">Pickup time</dt>
+                    <dd class="text-cream">@pickupLocal.ToString("ddd, MMM d · h:mm tt")</dd>
+                </div>
+                <div>
+                    <dt class="text-neutral-400">Status</dt>
+                    <dd class="text-cream">@Model.Status</dd>
+                </div>
+            </dl>
+
+            <ul class="mt-6 divide-y divide-white/10">
+                @foreach (var i in Model.Items)
+                {
+                    <li class="flex items-start justify-between gap-4 py-3 text-sm">
+                        <div>
+                            <p class="text-cream">@i.Quantity &times; @i.ItemName</p>
+                            <p class="text-xs text-neutral-400">
+                                @(i.SizeName ?? "")@(i.SizeName is not null && i.AddOns.Count > 0 ? " · " : "")@string.Join(", ", i.AddOns.Select(a => a.Name))
+                            </p>
+                        </div>
+                        <span class="text-cream">&#8369;@((i.UnitPrice * i.Quantity).ToString("N2"))</span>
+                    </li>
+                }
+            </ul>
+
+            @if (!string.IsNullOrWhiteSpace(Model.Note))
+            {
+                <p class="mt-4 text-sm text-neutral-300"><span class="text-neutral-400">Note:</span> @Model.Note</p>
+            }
+
+            <div class="mt-4 flex items-center justify-between border-t border-white/10 pt-4">
+                <span class="text-neutral-300">Total (pay at pickup)</span>
+                <span class="text-2xl font-bold text-caramel">&#8369;@Model.Total.ToString("N2")</span>
+            </div>
+
+            <a asp-controller="Menu" asp-action="Index" class="mt-6 inline-block rounded-full border border-white/20 px-5 py-2 text-sm text-cream hover:border-caramel">Back to menu</a>
+        </div>
+    </div>
+</div>

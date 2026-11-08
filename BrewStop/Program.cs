@@ -44,6 +44,22 @@ builder.Services.ConfigureApplicationCookie(options =>       // SRS-NFR-05
 
 builder.Services.AddScoped<IEmailService, LoggingEmailService>();
 
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddDistributedMemoryCache();
+builder.Services.AddSession(options =>
+{
+    options.Cookie.Name = ".BrewStop.Cart";
+    options.Cookie.HttpOnly = true;
+    options.Cookie.IsEssential = true;
+    options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+    options.Cookie.SameSite = SameSiteMode.Strict;
+    options.IdleTimeout = TimeSpan.FromHours(2);
+});
+
+builder.Services.Configure<ShopOptions>(builder.Configuration.GetSection("Shop"));
+builder.Services.AddScoped<ICartService, CartService>();
+builder.Services.AddScoped<IPickupSlotService, PickupSlotService>();
+
 builder.Services.AddControllersWithViews(options =>          // SRS-NFR-06
     options.Filters.Add(new AutoValidateAntiforgeryTokenAttribute()));
 
@@ -57,7 +73,9 @@ if (!app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 app.UseStaticFiles();
+
 app.UseRouting();
+app.UseSession();
 app.UseAuthentication();
 app.UseAuthorization();
 

@@ -39,7 +39,7 @@
                             {
                                 <li>
                                     <a href="javascript:void(0)" onclick="switchCategoryTab('@cat.Slug')" class="menu-side-link text-decoration-none d-block py-1" id="side-link-@cat.Slug">
-                                        @cat.Name 
+                                        @cat.Name
                                     </a>
                                 </li>
                             }
@@ -54,7 +54,7 @@
                             {
                                 <li>
                                     <a href="javascript:void(0)" onclick="switchCategoryTab('@cat.Slug')" class="menu-side-link text-decoration-none d-block py-1" id="side-link-@cat.Slug">
-                                        @cat.Name 
+                                        @cat.Name
                                     </a>
                                 </li>
                             }
@@ -65,7 +65,7 @@
         </div>
 
         <div class="col-lg-9 col-md-8">
-            
+
             @foreach (var category in Model.Categories)
             {
                 <section class="menu-category-section mb-5" id="section-@category.Slug" data-category="@category.Slug">
@@ -97,9 +97,9 @@
                                             <h4 class="fw-bold mb-2 text-white">@item.Name</h4>
                                             <p class="text-muted small mb-3">@item.Description</p>
                                         </div>
-                                        <button class="btn btn-caramel rounded-pill w-100 mt-2 fw-semibold text-dark btn-sm shadow-sm" onclick="openCustomizeModal('@item.Name', '@item.Price')">
+                                        <a asp-controller="Cart" asp-action="Customize" asp-route-id="@item.Id" class="btn btn-caramel rounded-pill w-100 mt-2 fw-semibold text-dark btn-sm shadow-sm">
                                             <i class="fa-solid fa-mug-hot me-1"></i> Customize & Order
-                                        </button>
+                                        </a>
                                     </div>
                                 </div>
                             </div>
@@ -146,10 +146,6 @@
                     card.style.display = 'none';
                 }
             });
-        }
-
-        function openCustomizeModal(name, price) {
-            alert("Order selection initialized for: " + name + " (₱" + price + ")");
         }
     </script>
 }

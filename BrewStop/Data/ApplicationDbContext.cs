@@ -10,16 +10,19 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
 
     public DbSet<Category> Categories => Set<Category>();
     public DbSet<MenuItem> MenuItems => Set<MenuItem>();
+    public DbSet<ItemSize> ItemSizes => Set<ItemSize>();
+    public DbSet<AddOn> AddOns => Set<AddOn>();
+    public DbSet<Order> Orders => Set<Order>();
+    public DbSet<OrderItem> OrderItems => Set<OrderItem>();
+    public DbSet<OrderItemAddOn> OrderItemAddOns => Set<OrderItemAddOn>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
 
-
         modelBuilder.Entity<ApplicationUser>()
             .HasIndex(u => u.CampusId)
             .IsUnique();
-
 
         modelBuilder.Entity<Category>(e =>
         {
@@ -30,17 +33,65 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
              .OnDelete(DeleteBehavior.Restrict);
         });
 
-
         modelBuilder.Entity<MenuItem>(e =>
         {
             e.Property(m => m.Price).HasPrecision(10, 2);
         });
 
+        modelBuilder.Entity<ItemSize>(e =>
+        {
+            e.Property(s => s.PriceDelta).HasPrecision(10, 2);
+            e.HasIndex(s => s.Name).IsUnique();
+        });
+
+        modelBuilder.Entity<AddOn>(e =>
+        {
+            e.Property(a => a.Price).HasPrecision(10, 2);
+            e.HasIndex(a => new { a.Group, a.Name }).IsUnique();
+        });
+
+        modelBuilder.Entity<Order>(e =>
+        {
+            e.Property(o => o.Total).HasPrecision(10, 2);
+            e.Property(o => o.Status).HasConversion<string>().HasMaxLength(20);
+            e.HasIndex(o => new { o.UserId, o.CreatedAtUtc });
+            e.HasIndex(o => new { o.Status, o.PickupAtUtc });
+            e.HasOne(o => o.User).WithMany().HasForeignKey(o => o.UserId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<OrderItem>(e =>
+        {
+            e.Property(i => i.UnitPrice).HasPrecision(10, 2);
+            e.HasOne(i => i.Order).WithMany(o => o.Items).HasForeignKey(i => i.OrderId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(i => i.MenuItem).WithMany().HasForeignKey(i => i.MenuItemId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<OrderItemAddOn>(e =>
+        {
+            e.Property(a => a.Price).HasPrecision(10, 2);
+            e.HasOne(a => a.OrderItem).WithMany(i => i.AddOns).HasForeignKey(a => a.OrderItemId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(a => a.AddOn).WithMany().HasForeignKey(a => a.AddOnId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<ItemSize>().HasData(
+            new ItemSize { Id = 1, Name = "Small", PriceDelta = 0.00m, SortOrder = 1 },
+            new ItemSize { Id = 2, Name = "Medium", PriceDelta = 0.50m, SortOrder = 2 },
+            new ItemSize { Id = 3, Name = "Large", PriceDelta = 1.00m, SortOrder = 3 }
+        );
+
+        modelBuilder.Entity<AddOn>().HasData(
+            new AddOn { Id = 1, Name = "Extra Espresso Shot", Price = 0.75m, Group = "Drinks" },
+            new AddOn { Id = 2, Name = "Oat Milk", Price = 0.60m, Group = "Drinks" },
+            new AddOn { Id = 3, Name = "Whipped Cream", Price = 0.40m, Group = "Drinks" },
+            new AddOn { Id = 4, Name = "Vanilla Syrup", Price = 0.50m, Group = "Drinks" },
+            new AddOn { Id = 5, Name = "Caramel Drizzle", Price = 0.50m, Group = "Drinks" },
+            new AddOn { Id = 6, Name = "Warm It Up", Price = 0.00m, Group = "Food" }
+        );
+
         modelBuilder.Entity<Category>().HasData(
             new Category { Id = 1, Slug = "coffee", Name = "Coffee", Group = "Drinks", ImageUrl = "/images/categories/coffee.jpg" },
             new Category { Id = 2, Slug = "pastries", Name = "Pastries", Group = "Food", ImageUrl = "/images/categories/pastries.jpg" }
         );
-
 
         modelBuilder.Entity<MenuItem>().HasData(
             new MenuItem

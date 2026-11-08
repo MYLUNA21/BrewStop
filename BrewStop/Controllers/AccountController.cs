@@ -15,7 +15,7 @@ public class AccountController(
     IConfiguration config,
     ILogger<AccountController> log) : Controller
 {
-    // Register
+    // Register-
     [HttpGet, AllowAnonymous]
     public IActionResult Register() => View(new RegisterViewModel());
 

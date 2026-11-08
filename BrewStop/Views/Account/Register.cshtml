@@ -1,0 +1,44 @@
+﻿@* Views/Account/Register.cshtml *@
+@model RegisterViewModel
+@{
+    ViewData["Title"] = "Register";
+}
+<h1 class="text-xl font-semibold mb-4">Create account</h1>
+<form asp-action="Register" method="post" class="space-y-4">
+    <div asp-validation-summary="ModelOnly" class="text-sm text-red-400"></div>
+    <div>
+        <label asp-for="FullName" class="block text-sm mb-1"></label>
+        <input asp-for="FullName" class="@ViewData["Input"]" />
+        <span asp-validation-for="FullName" class="text-xs text-red-400"></span>
+    </div>
+    <div>
+        <label asp-for="CampusId" class="block text-sm mb-1"></label>
+        <input asp-for="CampusId" class="@ViewData["Input"]" />
+        <span asp-validation-for="CampusId" class="text-xs text-red-400"></span>
+    </div>
+    <div>
+        <label asp-for="Email" class="block text-sm mb-1"></label>
+        <input asp-for="Email" class="@ViewData["Input"]" autocomplete="username" />
+        <span asp-validation-for="Email" class="text-xs text-red-400"></span>
+    </div>
+    <div>
+        <label asp-for="Role" class="block text-sm mb-1">I am a</label>
+        <select asp-for="Role" class="@ViewData["Input"]">
+            <option value="Student">Student</option>
+            <option value="Faculty">Faculty / Staff</option>
+        </select>
+        <span asp-validation-for="Role" class="text-xs text-red-400"></span>
+    </div>
+    <div>
+        <label asp-for="Password" class="block text-sm mb-1"></label>
+        <input asp-for="Password" class="@ViewData["Input"]" autocomplete="new-password" />
+        <span asp-validation-for="Password" class="text-xs text-red-400"></span>
+    </div>
+    <div>
+        <label asp-for="ConfirmPassword" class="block text-sm mb-1"></label>
+        <input asp-for="ConfirmPassword" class="@ViewData["Input"]" autocomplete="new-password" />
+        <span asp-validation-for="ConfirmPassword" class="text-xs text-red-400"></span>
+    </div>
+    <button type="submit" class="@ViewData["Btn"]">Register</button>
+    <p class="text-sm text-stone-400 text-center">Have an account? <a asp-action="Login" class="hover:text-amber-400">Sign in</a></p>
+</form>

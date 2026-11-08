@@ -1,0 +1,8 @@
+﻿@* Views/Account/Info.cshtml *@
+@model InfoViewModel
+@{
+    ViewData["Title"] = Model.Title;
+}
+<h1 class="text-xl font-semibold mb-2">@Model.Title</h1>
+<p class="text-stone-300 mb-6">@Model.Message</p>
+<a asp-action="Login" class="@ViewData["Btn"] block text-center">Go to sign in</a>

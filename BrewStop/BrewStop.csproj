@@ -4,24 +4,23 @@
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <UserSecretsId>fc08cdc4-bf52-4821-a12e-e76937ed7bd7</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Remove="Data\**" />
     <Compile Remove="Hub\**" />
-    <Content Remove="Data\**" />
     <Content Remove="Hub\**" />
-    <EmbeddedResource Remove="Data\**" />
     <EmbeddedResource Remove="Hub\**" />
-    <None Remove="Data\**" />
     <None Remove="Hub\**" />
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="9.0.0" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="9.0.0">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="9.0.0" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="9.0.0">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>

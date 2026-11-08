@@ -1,0 +1,22 @@
+﻿@* Views/Shared/_AuthLayout.cshtml *@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>@ViewData["Title"] - BrewStop</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="min-h-screen bg-stone-950 text-stone-100 flex items-center justify-center p-4">
+
+    <main class="w-full max-w-md rounded-2xl bg-stone-900 border border-stone-800 p-8 shadow-xl">
+        <a href="/" class="block text-center text-2xl font-bold mb-6">Brew<span class="text-amber-500">Stop</span></a>
+        @RenderBody()
+    </main>
+
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <partial name="_ValidationScriptsPartial" />
+    @await RenderSectionAsync("Scripts", required: false)
+
+</body>
+</html>

@@ -4,6 +4,12 @@
 }
 
 <div class="container-fluid max-w-1200 py-4 mt-2">
+
+    @if (TempData["MenuError"] is string menuErr)
+    {
+        <div class="alert alert-warning mb-4">@menuErr</div>
+    }
+
     <!-- Search Bar & Title Header -->
     <div class="row mb-4 justify-content-between align-items-center g-3">
         <div class="col-md-5">
@@ -72,11 +78,12 @@
                     <div class="d-flex align-items-center justify-content-between border-bottom border-secondary pb-2 mb-4">
                         <h2 class="fw-bold font-serif text-white mb-0">@category.Name</h2>
                         <span class="badge bg-dark border border-secondary text-caramel rounded-pill px-3 py-2">
-                            @category.Items.Count Available
+                            <!-- CHANGED: Count only available items -->
+                            @category.Items.Count(i => i.IsAvailable) Available
                         </span>
                     </div>
 
-                    <!-- Detailed Items Grid (Shows when category is selected or in All view) -->
+                    <!-- Detailed Items Grid -->
                     <div class="row g-4">
                         @foreach (var item in category.Items)
                         {
@@ -97,9 +104,24 @@
                                             <h4 class="fw-bold mb-2 text-white">@item.Name</h4>
                                             <p class="text-muted small mb-3">@item.Description</p>
                                         </div>
-                                        <a asp-controller="Cart" asp-action="Customize" asp-route-id="@item.Id" class="btn btn-caramel rounded-pill w-100 mt-2 fw-semibold text-dark btn-sm shadow-sm">
-                                            <i class="fa-solid fa-mug-hot me-1"></i> Customize & Order
-                                        </a>
+
+                                        <!-- CHANGED: Stock check and conditional checkout/sold out buttons -->
+                                        @if (item.IsAvailable)
+                                        {
+                                            @if (item.Stock <= 5)
+                                            {
+                                                <p class="small text-warning mb-1">Only @item.Stock left</p>
+                                            }
+                                            <a asp-controller="Cart" asp-action="Customize" asp-route-id="@item.Id" class="btn btn-caramel rounded-pill w-100 mt-2 fw-semibold text-dark btn-sm shadow-sm">
+                                                <i class="fa-solid fa-mug-hot me-1"></i> Customize & Order
+                                            </a>
+                                        }
+                                        else
+                                        {
+                                            <button type="button" class="btn btn-secondary rounded-pill w-100 mt-2 fw-semibold btn-sm" disabled>
+                                                Sold out
+                                            </button>
+                                        }
                                     </div>
                                 </div>
                             </div>

@@ -16,6 +16,8 @@ public class CartLineViewModel
     public decimal UnitPrice { get; set; }
     public int Quantity { get; set; }
     public decimal LineTotal => UnitPrice * Quantity;
+    public int StockLeft { get; set; }
+    public bool ExceedsStock { get; set; }
 }
 
 public class CartViewModel
@@ -23,6 +25,8 @@ public class CartViewModel
     public List<CartLineViewModel> Lines { get; set; } = new();
     public decimal Total => Lines.Sum(l => l.LineTotal);
     public int ItemCount => Lines.Sum(l => l.Quantity);
+
+    public bool HasStockProblem => Lines.Any(l => l.ExceedsStock);
 }
 
 public class CustomizeViewModel
@@ -62,3 +66,4 @@ public class CheckoutViewModel
     public IReadOnlyList<Services.PickupSlot> Slots { get; set; } = Array.Empty<Services.PickupSlot>();
     public CheckoutInput Input { get; set; } = new();
 }
+

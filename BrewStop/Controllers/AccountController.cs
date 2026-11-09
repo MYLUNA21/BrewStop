@@ -13,6 +13,7 @@ public class AccountController(
     SignInManager<ApplicationUser> signIn,
     IEmailService email,
     ICaptchaService captcha,
+    IAuditService audit, // NEW: Injected Audit Service
     IConfiguration config,
     ILogger<AccountController> log) : Controller
 {
@@ -59,6 +60,10 @@ public class AccountController(
         }
 
         await users.AddToRoleAsync(user, m.Role);
+
+        // NEW: Audit Log for Registration Role Assignment
+        await audit.LogAsync(user.Id, "RoleAssigned", $"Role={m.Role}; Source=Registration");
+
         await SendConfirmationAsync(user);
         log.LogInformation("User registered {UserId} as {Role}", user.Id, m.Role);
 
@@ -102,7 +107,6 @@ public class AccountController(
         }
         else if (result.IsNotAllowed)
         {
-            // Fixed: Added braces around multiple statements
             ModelState.AddModelError("", "Verify your email before signing in.");
             ViewBag.NeedsVerification = true;
         }
@@ -208,6 +212,4 @@ public class AccountController(
         return View("Info", new InfoViewModel("Check your email",
             "If that account needs verification, a new link has been sent."));
     }
-
-
 }

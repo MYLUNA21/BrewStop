@@ -19,6 +19,10 @@ public class MenuController : Controller
             .OrderBy(c => c.Id)
             .ToListAsync();
 
+            var stockDict = await _db.InventoryItems
+            .AsNoTracking()
+            .ToDictionaryAsync(i => i.MenuItemId, i => i.Quantity);
+
         var vm = new MenuViewModel
         {
             Categories = categories.Select(c => new CategoryGroupDto
@@ -36,7 +40,10 @@ public class MenuController : Controller
                     ImageUrl = m.ImageUrl,
                     BadgeText = m.BadgeText,
                     CategorySlug = c.Slug,
-                    CategoryName = c.Name
+                    CategoryName = c.Name,
+
+                    Stock = stockDict.GetValueOrDefault(m.Id, 0)
+
                 }).ToList()
             }).ToList()
         };

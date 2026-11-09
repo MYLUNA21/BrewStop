@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace BrewStop.Controllers;
 
-public class CartController(ICartService cart, ApplicationDbContext db) : Controller
+public class CartController(ICartService cart, IInventoryService inventory, ApplicationDbContext db) : Controller
 {
     [HttpGet]
     public async Task<IActionResult> Index() => View(await cart.GetAsync());
@@ -18,6 +18,13 @@ public class CartController(ICartService cart, ApplicationDbContext db) : Contro
             .Include(m => m.Category)
             .FirstOrDefaultAsync(m => m.Id == id);
         if (item is null) return NotFound();
+
+        var stockLeft = (await inventory.GetStockAsync(new[] { id })).GetValueOrDefault(id);
+        if (stockLeft <= 0)
+        {
+            TempData["MenuError"] = $"{item.Name} is sold out.";
+            return RedirectToAction("Index", "Menu");
+        }
 
         var isDrink = item.Category.Group == "Drinks";
         var group = item.Category.Group;

@@ -182,6 +182,39 @@ namespace BrewStop.Migrations
                     b.ToTable("AspNetUsers", (string)null);
                 });
 
+            modelBuilder.Entity("BrewStop.Models.AuditLog", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<string>("Action")
+                        .IsRequired()
+                        .HasMaxLength(60)
+                        .HasColumnType("varchar(60)");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("Details")
+                        .HasMaxLength(500)
+                        .HasColumnType("varchar(500)");
+
+                    b.Property<string>("UserId")
+                        .HasMaxLength(64)
+                        .HasColumnType("varchar(64)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedAtUtc");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("AuditLogs");
+                });
+
             modelBuilder.Entity("BrewStop.Models.Category", b =>
                 {
                     b.Property<int>("Id")
@@ -233,6 +266,105 @@ namespace BrewStop.Migrations
                             ImageUrl = "/images/categories/pastries.jpg",
                             Name = "Pastries",
                             Slug = "pastries"
+                        });
+                });
+
+            modelBuilder.Entity("BrewStop.Models.InventoryItem", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("MenuItemId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Quantity")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("MenuItemId")
+                        .IsUnique();
+
+                    b.ToTable("InventoryItems", t =>
+                        {
+                            t.HasCheckConstraint("CK_InventoryItems_Quantity", "`Quantity` >= 0");
+                        });
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            MenuItemId = 1,
+                            Quantity = 50
+                        },
+                        new
+                        {
+                            Id = 2,
+                            MenuItemId = 2,
+                            Quantity = 20
+                        },
+                        new
+                        {
+                            Id = 3,
+                            MenuItemId = 4,
+                            Quantity = 20
+                        },
+                        new
+                        {
+                            Id = 4,
+                            MenuItemId = 5,
+                            Quantity = 20
+                        },
+                        new
+                        {
+                            Id = 5,
+                            MenuItemId = 6,
+                            Quantity = 20
+                        },
+                        new
+                        {
+                            Id = 6,
+                            MenuItemId = 7,
+                            Quantity = 20
+                        },
+                        new
+                        {
+                            Id = 7,
+                            MenuItemId = 8,
+                            Quantity = 20
+                        },
+                        new
+                        {
+                            Id = 8,
+                            MenuItemId = 9,
+                            Quantity = 50
+                        },
+                        new
+                        {
+                            Id = 9,
+                            MenuItemId = 10,
+                            Quantity = 50
+                        },
+                        new
+                        {
+                            Id = 10,
+                            MenuItemId = 11,
+                            Quantity = 50
+                        },
+                        new
+                        {
+                            Id = 11,
+                            MenuItemId = 12,
+                            Quantity = 50
+                        },
+                        new
+                        {
+                            Id = 12,
+                            MenuItemId = 13,
+                            Quantity = 50
                         });
                 });
 
@@ -698,6 +830,17 @@ namespace BrewStop.Migrations
                     b.HasKey("UserId", "LoginProvider", "Name");
 
                     b.ToTable("AspNetUserTokens", (string)null);
+                });
+
+            modelBuilder.Entity("BrewStop.Models.InventoryItem", b =>
+                {
+                    b.HasOne("BrewStop.Models.MenuItem", "MenuItem")
+                        .WithOne()
+                        .HasForeignKey("BrewStop.Models.InventoryItem", "MenuItemId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("MenuItem");
                 });
 
             modelBuilder.Entity("BrewStop.Models.MenuItem", b =>

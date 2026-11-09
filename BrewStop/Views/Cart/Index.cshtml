@@ -7,6 +7,11 @@
     <div class="mx-auto max-w-4xl px-4 pt-24 pb-12">
         <h1 class="font-serif text-3xl font-bold text-cream">Your cart</h1>
 
+        @if (TempData["CartError"] is string cartErr)
+        {
+            <div class="mt-4 rounded-lg border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-200">@cartErr</div>
+        }
+
         @if (Model.Lines.Count == 0)
         {
             <div class="mt-6 rounded-2xl border border-white/10 bg-card p-10 text-center">
@@ -61,7 +66,16 @@
                     <span class="text-2xl font-bold text-caramel">&#8369;@Model.Total.ToString("N2")</span>
                 </div>
                 <p class="w-full text-xs text-neutral-400">Payment is made at pickup.</p>
-                <a asp-controller="Checkout" asp-action="Index" class="rounded-full bg-caramel px-8 py-3 text-sm font-semibold text-black hover:bg-cream">Proceed to checkout</a>
+
+                @if (Model.HasStockProblem)
+                {
+                    <span class="cursor-not-allowed rounded-full bg-caramel/40 px-8 py-3 text-sm font-semibold text-black">Fix stock issues to continue</span>
+                }
+                else
+                {
+                    <a asp-controller="Checkout" asp-action="Index" class="rounded-full bg-caramel px-8 py-3 text-sm font-semibold text-black hover:bg-cream">Proceed to checkout</a>
+                }
+
             </div>
         }
     </div>

@@ -15,6 +15,8 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<Order> Orders => Set<Order>();
     public DbSet<OrderItem> OrderItems => Set<OrderItem>();
     public DbSet<OrderItemAddOn> OrderItemAddOns => Set<OrderItemAddOn>();
+    public DbSet<InventoryItem> InventoryItems => Set<InventoryItem>();
+    public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -214,6 +216,36 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
                 BadgeText = "Special",
                 CategoryId = 1
             }
+        );
+
+        modelBuilder.Entity<InventoryItem>(e =>
+        {
+            e.HasIndex(i => i.MenuItemId).IsUnique();
+            e.HasOne(i => i.MenuItem).WithOne().HasForeignKey<InventoryItem>(i => i.MenuItemId)
+             .OnDelete(DeleteBehavior.Cascade);
+            e.ToTable(t => t.HasCheckConstraint("CK_InventoryItems_Quantity", "`Quantity` >= 0"));
+        });
+
+        modelBuilder.Entity<AuditLog>(e =>
+        {
+            e.HasIndex(a => a.CreatedAtUtc);
+            e.HasIndex(a => a.UserId);
+        });
+
+        // Starting stock: coffee 50, pastries 20 (editable by admins later, FR-14/FR-15).
+        modelBuilder.Entity<InventoryItem>().HasData(
+            new InventoryItem { Id = 1, MenuItemId = 1, Quantity = 50 },
+            new InventoryItem { Id = 2, MenuItemId = 2, Quantity = 20 },
+            new InventoryItem { Id = 3, MenuItemId = 4, Quantity = 20 },
+            new InventoryItem { Id = 4, MenuItemId = 5, Quantity = 20 },
+            new InventoryItem { Id = 5, MenuItemId = 6, Quantity = 20 },
+            new InventoryItem { Id = 6, MenuItemId = 7, Quantity = 20 },
+            new InventoryItem { Id = 7, MenuItemId = 8, Quantity = 20 },
+            new InventoryItem { Id = 8, MenuItemId = 9, Quantity = 50 },
+            new InventoryItem { Id = 9, MenuItemId = 10, Quantity = 50 },
+            new InventoryItem { Id = 10, MenuItemId = 11, Quantity = 50 },
+            new InventoryItem { Id = 11, MenuItemId = 12, Quantity = 50 },
+            new InventoryItem { Id = 12, MenuItemId = 13, Quantity = 50 }
         );
     }
 }

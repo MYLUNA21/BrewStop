@@ -17,7 +17,7 @@ public interface ICartService
     Task<CartViewModel> GetAsync();
 }
 
-public class CartService(ApplicationDbContext db, IHttpContextAccessor http) : ICartService
+public class CartService(ApplicationDbContext db, IHttpContextAccessor http, IInventoryService inventory) : ICartService
 {
     public const int MaxQuantity = 10;
     public const int MaxLines = 20;
@@ -47,6 +47,13 @@ public class CartService(ApplicationDbContext db, IHttpContextAccessor http) : I
             .Include(m => m.Category)
             .FirstOrDefaultAsync(m => m.Id == menuItemId);
         if (item is null) return (false, "That item is no longer on the menu.");
+
+        var stock = (await inventory.GetStockAsync(new[] { menuItemId })).GetValueOrDefault(menuItemId);
+        if (stock <= 0) return (false, $"{item.Name} is sold out.");
+
+        var inCart = Load().Where(e => e.MenuItemId == menuItemId).Sum(e => e.Quantity);
+        if (inCart + quantity > stock)
+            return (false, $"Only {stock} left in stock (you already have {inCart} in your cart).");
 
         var isDrink = item.Category.Group == "Drinks";
 
@@ -114,6 +121,9 @@ public class CartService(ApplicationDbContext db, IHttpContextAccessor http) : I
         if (entries.Count == 0) return vm;
 
         var itemIds = entries.Select(e => e.MenuItemId).Distinct().ToList();
+
+        var stock = await inventory.GetStockAsync(itemIds);
+
         var items = await db.MenuItems.AsNoTracking()
             .Where(m => itemIds.Contains(m.Id))
             .ToDictionaryAsync(m => m.Id);
@@ -148,9 +158,14 @@ public class CartService(ApplicationDbContext db, IHttpContextAccessor http) : I
                 SizeName = size?.Name,
                 AddOns = lineAddOns,
                 UnitPrice = item.Price + (size?.PriceDelta ?? 0m) + lineAddOns.Sum(a => a.Price),
-                Quantity = e.Quantity
+                Quantity = e.Quantity,
+                StockLeft = stock.GetValueOrDefault(item.Id)
             });
         }
+
+        var perItem = vm.Lines.GroupBy(l => l.MenuItemId).ToDictionary(g => g.Key, g => g.Sum(l => l.Quantity));
+        foreach (var line in vm.Lines)
+            line.ExceedsStock = perItem[line.MenuItemId] > line.StockLeft;
 
         if (kept.Count != entries.Count) Save(kept);
         return vm;

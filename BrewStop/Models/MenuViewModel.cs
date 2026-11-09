@@ -10,6 +10,8 @@
         public string CategoryName { get; set; } = string.Empty;
         public string ImageUrl { get; set; } = string.Empty;
         public string BadgeText { get; set; } = "Bestseller";
+        public int Stock { get; set; }
+        public bool IsAvailable => Stock > 0;
     }
 
     public class CategoryGroupDto

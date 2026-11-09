@@ -60,6 +60,9 @@ builder.Services.Configure<ShopOptions>(builder.Configuration.GetSection("Shop")
 builder.Services.AddScoped<ICartService, CartService>();
 builder.Services.AddScoped<IPickupSlotService, PickupSlotService>();
 
+builder.Services.Configure<CaptchaOptions>(builder.Configuration.GetSection("Captcha"));
+builder.Services.AddHttpClient<ICaptchaService, CaptchaService>(c => c.Timeout = TimeSpan.FromSeconds(5));
+
 builder.Services.AddControllersWithViews(options =>          // SRS-NFR-06
     options.Filters.Add(new AutoValidateAntiforgeryTokenAttribute()));
 

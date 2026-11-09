@@ -1,0 +1,242 @@
+﻿@model string
+@inject Microsoft.Extensions.Options.IOptions<BrewStop.Services.CaptchaOptions> Captcha
+@{
+    var id = "bs-captcha-" + Guid.NewGuid().ToString("N").Substring(0, 8);
+}
+
+<div id="@id" class="bs-captcha" data-state="idle" data-sitekey="@Captcha.Value.SiteKey" data-action="@Model">
+
+    <!-- 1. Moved the original visible Cloudflare widget ABOVE the custom checkbox -->
+    <div class="bs-captcha-widget" style="min-height:65px"></div>
+
+    <!-- 2. Custom checkbox is now BELOW the widget -->
+    <label class="bs-captcha-box">
+        <input type="checkbox" class="bs-captcha-check" aria-describedby="@id-status" />
+        <span class="bs-captcha-mark" aria-hidden="true"></span>
+        <span class="bs-captcha-text">I'm not a robot</span>
+        <span class="bs-captcha-brand">Cloudflare Turnstile</span>
+    </label>
+
+    <p id="@id-status" class="bs-captcha-status" role="status" aria-live="polite"></p>
+</div>
+
+<style>
+    .bs-captcha {
+        margin: 4px 0;
+    }
+
+    .bs-captcha-box {
+        position: relative;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 12px 14px;
+        border: 1px solid rgba(255,255,255,.18);
+        border-radius: 12px;
+        background: rgba(255,255,255,.04);
+        cursor: pointer;
+        user-select: none;
+    }
+
+        .bs-captcha-box:hover {
+            border-color: #d4a373;
+        }
+
+    .bs-captcha-check {
+        position: absolute;
+        opacity: 0;
+        width: 1px;
+        height: 1px;
+    }
+
+        .bs-captcha-check:focus-visible + .bs-captcha-mark {
+            outline: 2px solid #d4a373;
+            outline-offset: 2px;
+        }
+
+    .bs-captcha-mark {
+        flex: none;
+        width: 26px;
+        height: 26px;
+        border: 2px solid #a8a29e;
+        border-radius: 6px;
+        position: relative;
+        background: transparent;
+    }
+
+    .bs-captcha-text {
+        flex: 1;
+        font-size: 14px;
+        color: #f5f5f4;
+    }
+
+    .bs-captcha-brand {
+        font-size: 10px;
+        color: #a8a29e;
+    }
+
+    /* Changed margin from top to bottom so it pushes the checkbox down */
+    .bs-captcha-widget {
+        margin-bottom: 8px;
+    }
+
+    .bs-captcha-status {
+        margin: 6px 2px 0;
+        font-size: 12px;
+        min-height: 16px;
+        color: #a8a29e;
+    }
+
+    .bs-captcha[data-state="loading"] .bs-captcha-mark {
+        border-color: #d4a373 transparent #d4a373 #d4a373;
+        border-radius: 50%;
+        animation: bs-spin .8s linear infinite;
+    }
+
+    .bs-captcha[data-state="success"] .bs-captcha-mark {
+        background: #4ade80;
+        border-color: #4ade80;
+    }
+
+        .bs-captcha[data-state="success"] .bs-captcha-mark::after {
+            content: "";
+            position: absolute;
+            left: 7px;
+            top: 2px;
+            width: 6px;
+            height: 12px;
+            border: solid #052e16;
+            border-width: 0 3px 3px 0;
+            transform: rotate(45deg);
+        }
+
+    .bs-captcha[data-state="success"] .bs-captcha-box {
+        cursor: default;
+        border-color: #4ade80;
+    }
+
+    .bs-captcha[data-state="error"] .bs-captcha-box {
+        border-color: #f87171;
+    }
+
+    .bs-captcha[data-state="error"] .bs-captcha-status {
+        color: #fca5a5;
+    }
+
+    @@keyframes bs-spin {
+        to {
+            transform: rotate(360deg);
+        }
+    }
+</style>
+
+<script src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" async defer></script>
+
+<script>
+    (function() {
+        const root = document.getElementById('@id');
+        const form = root.closest('form');
+        const check = root.querySelector('.bs-captcha-check');
+        const mount = root.querySelector('.bs-captcha-widget');
+        const status = root.querySelector('.bs-captcha-status');
+
+        const MSG_FIX = 'Please fix the highlighted fields, then tick the box again.';
+
+        let widgetId = null;
+        let ticked = false;       // user ticked "I'm not a robot"
+        let tokenReady = false;   // Cloudflare widget produced a valid token
+        let failed = false;
+        let notice = '';          // message that survives the widget re-running after a reset
+
+        function paint() {
+            let state = 'idle', msg = notice;
+            if (failed) { state = 'error'; msg = 'Verification failed. Tick the box to try again.'; }
+            else if (ticked && tokenReady) { state = 'success'; msg = 'Verified.'; }
+            else if (ticked) { state = 'loading'; msg = 'Verifying…'; }
+            else if (notice) { state = 'error'; }
+            else if (tokenReady) { msg = 'Cloudflare check passed. Tick the box to continue.'; }
+
+            root.dataset.state = state;
+            status.textContent = msg;
+            check.checked = ticked;
+        }
+
+        // Un-verifies everything and re-runs the Cloudflare widget for a fresh token.
+        function resetCaptcha(message) {
+            const needsReset = ticked || tokenReady || failed;
+            ticked = false;
+            tokenReady = false;
+            failed = false;
+            notice = message || '';
+            if (needsReset && widgetId !== null && window.turnstile) turnstile.reset(widgetId);
+            paint();
+        }
+
+        function whenReady(fn) {
+            if (window.turnstile) fn(); else setTimeout(function() { whenReady(fn); }, 100);
+        }
+
+        // Render the visible Cloudflare widget as soon as the page loads.
+        whenReady(function() {
+            widgetId = turnstile.render(mount, {
+                sitekey: root.dataset.sitekey,
+                action: root.dataset.action,
+                theme: 'dark',
+                appearance: 'always',
+                callback: function() { tokenReady = true; failed = false; paint(); },
+                'error-callback': function() { tokenReady = false; ticked = false; failed = true; paint(); },
+                'expired-callback': function() { resetCaptcha('Verification expired. Tick the box again.'); },
+                'timeout-callback': function() { resetCaptcha('Verification timed out. Tick the box again.'); }
+            });
+        });
+
+        check.addEventListener('change', function() {
+            if (ticked && tokenReady) { check.checked = true; return; }   // locked once verified
+
+            ticked = check.checked;
+            notice = '';
+            if (failed && widgetId !== null) {                             // retry after an error
+                failed = false;
+                tokenReady = false;
+                turnstile.reset(widgetId);
+            }
+            paint();
+        });
+
+        // 1) jQuery unobtrusive validation fires "invalid-form" whenever validation fails.
+        //    jQuery loads after this partial, so bind once the DOM is ready.
+        function bindValidationHook() {
+            if (window.jQuery) {
+                window.jQuery(form).on('invalid-form.bsCaptcha', function() { resetCaptcha(MSG_FIX); });
+            }
+        }
+        if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bindValidationHook);
+        else bindValidationHook();
+
+        // 2) Submit gate: check validity first, then the captcha. The server still verifies the token (SRS-FR-07).
+        form.addEventListener('submit', function(e) {
+            const jq = window.jQuery;
+            if (jq && jq.fn.valid && !jq(form).valid()) {
+                e.preventDefault();
+                resetCaptcha(MSG_FIX);
+                return;
+            }
+
+            if (!(ticked && tokenReady)) {
+                e.preventDefault();
+                if (ticked) {
+                    status.textContent = 'Still verifying, one moment…';
+                } else {
+                    notice = 'Please tick "I\'m not a robot" first.';
+                    paint();
+                }
+                check.focus();
+            }
+        });
+
+        // 3) Coming back via the browser's Back button would show a stale "Verified" state.
+        window.addEventListener('pageshow', function(e) {
+            if (e.persisted) resetCaptcha('');
+        });
+    })();
+</script>

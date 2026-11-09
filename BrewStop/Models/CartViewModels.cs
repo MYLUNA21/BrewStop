@@ -51,7 +51,7 @@ public class CheckoutInput
     public string? PickupSlot { get; set; }
 
     [StringLength(200, ErrorMessage = "Note must be 200 characters or fewer.")]
-    [RegularExpression(@"^[\p{L}\p{N}\s.,!?'’\-()#&/:]*$",
+    [RegularExpression(@"^[^<>\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]*$",
         ErrorMessage = "Note contains characters that are not allowed.")]
     public string? Note { get; set; }
 }

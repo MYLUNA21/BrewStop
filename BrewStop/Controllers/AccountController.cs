@@ -1,10 +1,10 @@
-﻿using System.Net;
-using BrewStop.Models;
+﻿using BrewStop.Models;
 using BrewStop.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Net;
 
 namespace BrewStop.Controllers;
 
@@ -12,6 +12,7 @@ public class AccountController(
     UserManager<ApplicationUser> users,
     SignInManager<ApplicationUser> signIn,
     IEmailService email,
+    ICaptchaService captcha,
     IConfiguration config,
     ILogger<AccountController> log) : Controller
 {
@@ -22,6 +23,13 @@ public class AccountController(
     [HttpPost, AllowAnonymous]
     public async Task<IActionResult> Register(RegisterViewModel m)
     {
+        // SRS-FR-07: reject bots before touching the database.
+        if (!await captcha.VerifyAsync(Request, "register", HttpContext.RequestAborted))
+        {
+            ModelState.AddModelError(string.Empty, "Captcha verification failed. Please try again.");
+            return View(m);
+        }
+
         var domain = config["Campus:AllowedEmailDomain"];
         if (!string.IsNullOrWhiteSpace(domain) &&
             !m.Email.EndsWith("@" + domain, StringComparison.OrdinalIgnoreCase))
@@ -114,17 +122,26 @@ public class AccountController(
         return RedirectToAction("Index", "Home");
     }
 
-    // Password reset
     [HttpGet, AllowAnonymous]
     public IActionResult ForgotPassword() => View(new ForgotPasswordViewModel());
 
+    // Password reset
     [HttpPost, AllowAnonymous]
     public async Task<IActionResult> ForgotPassword(ForgotPasswordViewModel m)
     {
         if (!ModelState.IsValid) return View(m);
 
         var user = await users.FindByEmailAsync(m.Email);
-        if (user is not null && await users.IsEmailConfirmedAsync(user))
+
+        if (user is null)
+        {
+            log.LogWarning("Password reset requested for unknown email {Email}", m.Email);
+        }
+        else if (!await users.IsEmailConfirmedAsync(user))
+        {
+            log.LogWarning("Password reset skipped: email {Email} is not confirmed yet", m.Email);
+        }
+        else
         {
             var token = await users.GeneratePasswordResetTokenAsync(user);
             var link = Url.Action(nameof(ResetPassword), "Account",
@@ -191,4 +208,6 @@ public class AccountController(
         return View("Info", new InfoViewModel("Check your email",
             "If that account needs verification, a new link has been sent."));
     }
+
+
 }

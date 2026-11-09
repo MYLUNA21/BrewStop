@@ -16,7 +16,6 @@ public class Order
 
     public DateTime PickupAtUtc { get; set; }
 
-    [RegularExpression(@"^[a-zA-Z0-9\s.,!?()'-]*$", ErrorMessage = "Note contains characters that are not allowed.")]
     [MaxLength(200)]
     public string? Note { get; set; }
 

@@ -5,6 +5,7 @@ using BrewStop.Models;
 using BrewStop.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Linq;
 
 namespace BrewStop.Controllers;
 
@@ -36,12 +37,12 @@ public class CheckoutController(ICartService cart, IPickupSlotService slots, App
         {
             UserId = User.FindFirstValue(ClaimTypes.NameIdentifier)!,
             PickupAtUtc = pickupUtc,
-            Note = string.IsNullOrWhiteSpace(input.Note) ? null : input.Note.Trim(),
+            Note = SanitizeNote(input.Note),
             Status = OrderStatus.Placed,
             CreatedAtUtc = DateTime.UtcNow
         };
 
-        // Prices come from CartService (re-read from the database), never from the posted form.
+        
         foreach (var l in c.Lines)
         {
             order.Items.Add(new OrderItem
@@ -78,4 +79,15 @@ public class CheckoutController(ICartService cart, IPickupSlotService slots, App
     private static bool TryParseSlot(string value, out DateTime utc) =>
         DateTime.TryParseExact(value, "yyyy-MM-dd'T'HH:mm'Z'", CultureInfo.InvariantCulture,
             DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal, out utc);
+
+    private static string? SanitizeNote(string? note)
+    {
+        if (string.IsNullOrWhiteSpace(note)) return null;
+
+        var cleaned = new string(note.Where(ch => !char.IsControl(ch) || ch is '\n' or '\r').ToArray())
+            .Replace("<", "").Replace(">", "")
+            .Trim();
+
+        return cleaned.Length == 0 ? null : cleaned;
+    }
 }

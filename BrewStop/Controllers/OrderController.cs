@@ -10,7 +10,6 @@ namespace BrewStop.Controllers;
 [Authorize]
 public class OrderController(ApplicationDbContext db) : Controller
 {
-    // GET /Order  -> the logged-in user's order history
     [HttpGet]
     public async Task<IActionResult> Index()
     {
@@ -25,7 +24,6 @@ public class OrderController(ApplicationDbContext db) : Controller
         return View(orders);
     }
 
-    // GET /Order/Details/5  -> full order with items and add-ons
     [HttpGet]
     public async Task<IActionResult> Details(int id)
     {
@@ -38,7 +36,6 @@ public class OrderController(ApplicationDbContext db) : Controller
         return order is null ? NotFound() : View(order);
     }
 
-    // GET /Order/Confirmation/5  (your existing action)
     [HttpGet]
     public async Task<IActionResult> Confirmation(int id)
     {
@@ -51,7 +48,6 @@ public class OrderController(ApplicationDbContext db) : Controller
         return order is null ? NotFound() : View(order);
     }
 
-    // POST /Order/Cancel/5  -> only allowed while still Placed
     [HttpPost, ValidateAntiForgeryToken]
     public async Task<IActionResult> Cancel(int id)
     {

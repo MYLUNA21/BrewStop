@@ -13,7 +13,7 @@ public class AccountController(
     SignInManager<ApplicationUser> signIn,
     IEmailService email,
     ICaptchaService captcha,
-    IAuditService audit, // NEW: Injected Audit Service
+    IAuditService audit, 
     IConfiguration config,
     ILogger<AccountController> log) : Controller
 {
@@ -24,6 +24,8 @@ public class AccountController(
     [HttpPost, AllowAnonymous]
     public async Task<IActionResult> Register(RegisterViewModel m)
     {
+        if (!ModelState.IsValid) return View(m);
+
         // SRS-FR-07: reject bots before touching the database.
         if (!await captcha.VerifyAsync(Request, "register", HttpContext.RequestAborted))
         {
@@ -61,7 +63,7 @@ public class AccountController(
 
         await users.AddToRoleAsync(user, m.Role);
 
-        // NEW: Audit Log for Registration Role Assignment
+        
         await audit.LogAsync(user.Id, "RoleAssigned", $"Role={m.Role}; Source=Registration");
 
         await SendConfirmationAsync(user);
@@ -90,14 +92,14 @@ public class AccountController(
     [HttpPost, AllowAnonymous]
     public async Task<IActionResult> Login(LoginViewModel m)
     {
-        // NEW: Captcha verification for Login
+
+        if (!ModelState.IsValid) return View(m);
+
         if (!await captcha.VerifyAsync(Request, "login", HttpContext.RequestAborted))
         {
             ModelState.AddModelError(string.Empty, "Please complete the captcha.");
             return View(m);
         }
-
-        if (!ModelState.IsValid) return View(m);
 
         var result = await signIn.PasswordSignInAsync(m.Email, m.Password,
             isPersistent: false, lockoutOnFailure: true);

@@ -1,16 +1,13 @@
-﻿using System.Collections.Concurrent;
-
-namespace BrewStop.Services;
+﻿namespace BrewStop.Services;
 
 public interface IImageResolver
 {
     string Resolve(string? imageUrl, string? name = null);
 }
 
-public class ImageResolver(IWebHostEnvironment env, IHttpContextAccessor http) : IImageResolver
+public class ImageResolver(IHttpContextAccessor http) : IImageResolver
 {
     private const string Placeholder = "images/placeholder.svg";
-    private static readonly string[] Exts = [".png", ".jpg", ".jpeg", ".webp", ".gif", ".svg"];
 
     private static string U(string id) =>
         $"https://images.unsplash.com/photo-{id}?auto=format&fit=crop&w=800&q=80";
@@ -39,57 +36,21 @@ public class ImageResolver(IWebHostEnvironment env, IHttpContextAccessor http) :
         ["Celestia Almond Croissant"] = U("1705856987588-1e6ae0b6061f"),
     };
 
-    private readonly ConcurrentDictionary<string, string> _files = new(StringComparer.OrdinalIgnoreCase);
-    private readonly object _lock = new();
-
     private string PathBase => http.HttpContext?.Request.PathBase.Value ?? string.Empty;
 
     public string Resolve(string? imageUrl, string? name = null)
     {
-        // 1) Curated stock photo by name
+        // 1) Curated photo by item name
         if (!string.IsNullOrWhiteSpace(name) && Catalog.TryGetValue(name.Trim(), out var stock))
             return stock;
 
-        // 2) Already an absolute http(s) URL in the DB
+        // 2) Absolute http(s) URL stored in DB (e.g. added by an admin)
         if (!string.IsNullOrWhiteSpace(imageUrl) &&
             Uri.TryCreate(imageUrl, UriKind.Absolute, out var abs) &&
             (abs.Scheme == Uri.UriSchemeHttp || abs.Scheme == Uri.UriSchemeHttps))
             return imageUrl;
 
-        // 3) Local wwwroot/images file, else placeholder
-        var rel = Lookup(imageUrl) ?? Placeholder;
-        var encoded = string.Join('/', rel.Split('/').Select(Uri.EscapeDataString));
-        return $"{PathBase}/{encoded}";
-    }
-
-    private string? Lookup(string? imageUrl)
-    {
-        if (string.IsNullOrWhiteSpace(imageUrl)) return null;
-
-        var clean = Uri.UnescapeDataString(imageUrl.Split('?', '#')[0]).Replace('\\', '/');
-        var fileName = Path.GetFileName(clean);
-        if (string.IsNullOrEmpty(fileName)) return null;
-
-        var key = Path.GetFileNameWithoutExtension(fileName);
-        if (_files.TryGetValue(key, out var hit)) return hit;
-
-        Scan();
-        return _files.TryGetValue(key, out hit) ? hit : null;
-    }
-
-    private void Scan()
-    {
-        lock (_lock)
-        {
-            var root = Path.Combine(env.WebRootPath, "images");
-            if (!Directory.Exists(root)) return;
-
-            foreach (var file in Directory.EnumerateFiles(root, "*.*", SearchOption.AllDirectories))
-            {
-                if (!Exts.Contains(Path.GetExtension(file), StringComparer.OrdinalIgnoreCase)) continue;
-                var rel = "images/" + Path.GetRelativePath(root, file).Replace('\\', '/');
-                _files[Path.GetFileNameWithoutExtension(file)] = rel;
-            }
-        }
+        // 3) Placeholder
+        return $"{PathBase}/{Placeholder}";
     }
 }

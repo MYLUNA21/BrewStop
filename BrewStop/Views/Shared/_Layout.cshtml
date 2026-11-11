@@ -8,7 +8,7 @@
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
-    <link rel="stylesheet" href="~/BrewStop.styles.css" asp-append-version="true" />
+    
 
     <script src="https://cdn.tailwindcss.com/3.4.17"></script>
     <script>
@@ -46,6 +46,7 @@
                         <li class="nav-item ms-2">
                             @if (User.Identity?.IsAuthenticated == true)
                             {
+                                <a class="nav-link text-light px-3 py-2 rounded-pill hover-effect" asp-controller="Order" asp-action="Index">My Orders</a>
                                 <form asp-controller="Account" asp-action="Logout" method="post" class="d-inline">
                                     <button type="submit" class="btn btn-sm btn-outline-light rounded-pill px-3">
                                         <i class="fa-solid fa-right-from-bracket me-1"></i> Logout

@@ -6,7 +6,6 @@ using BrewStop.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using System.Linq;
 
 namespace BrewStop.Controllers;
 
@@ -43,19 +42,19 @@ public class CheckoutController(
         var c = await cart.GetAsync();
         if (c.Lines.Count == 0) return RedirectToAction("Index", "Cart");
 
-        // SRS-FR-07: verified before anything is written.
-        if (!await captcha.VerifyAsync(Request, "checkout", ct))
-        {
-            ModelState.AddModelError(string.Empty, "Captcha verification failed. Please try again.");
-            return View("Index", Build(c, input));
-        }
-
         DateTime pickupUtc = default;
         if (input.PickupSlot is null || !TryParseSlot(input.PickupSlot, out pickupUtc) || !slots.IsValid(pickupUtc))
             ModelState.AddModelError("Input.PickupSlot", "Please choose an available pickup time.");
 
         if (!ModelState.IsValid)
             return View("Index", Build(c, input));
+
+        // SRS-FR-07: verified before anything is written.
+        if (!await captcha.VerifyAsync(Request, "checkout", ct))
+        {
+            ModelState.AddModelError(string.Empty, "Captcha verification failed. Please try again.");
+            return View("Index", Build(c, input));
+        }
 
         var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
 

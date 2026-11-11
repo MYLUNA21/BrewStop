@@ -1,6 +1,5 @@
 ﻿@model BrewStop.Models.Order
 @inject BrewStop.Services.IPickupSlotService Slots
-@* [ADDED]: Inject ImageResolver *@
 @inject BrewStop.Services.IImageResolver Images
 
 @{
@@ -30,7 +29,7 @@
                 {
                     <li class="flex items-start justify-between gap-4 py-3 text-sm">
                         <div class="flex items-start gap-3">
-                            @* [UPDATED]: Added resolved image thumbnail *@
+                            
                             <img src="@Images.Resolve(i.MenuItem?.ImageUrl, i.ItemName)" alt="@i.ItemName" class="h-14 w-14 rounded-lg object-cover" />
                             <div>
                                 <p class="text-cream">@i.Quantity &times; @i.ItemName</p>

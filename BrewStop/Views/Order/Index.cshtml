@@ -1,0 +1,39 @@
+﻿@model List<BrewStop.Models.Order>
+@{
+    ViewData["Title"] = "My Orders";
+}
+
+<div class="tw">
+    <div class="mx-auto max-w-4xl px-4 pt-24 pb-12">
+        <h1 class="font-serif text-3xl font-bold text-cream">My Orders</h1>
+
+        @if (TempData["Success"] is string ok)
+        {
+            <p class="mt-4 rounded-xl bg-green-500/10 p-3 text-sm text-green-300">@ok</p>
+        }
+
+        @if (Model.Count == 0)
+        {
+            <p class="mt-6 text-neutral-400">No orders yet.</p>
+        }
+        else
+        {
+            <div class="mt-6 space-y-3">
+                @foreach (var o in Model)
+                {
+                    <a asp-action="Details" asp-route-id="@o.Id"
+                       class="flex items-center justify-between rounded-2xl border border-white/10 bg-card p-4 hover:border-caramel">
+                        <div>
+                            <p class="font-semibold text-cream">Order #@o.Id</p>
+                            <p class="text-xs text-neutral-400">@o.CreatedAtUtc.ToString("yyyy-MM-dd HH:mm") UTC &middot; @o.Items.Sum(i => i.Quantity) item(s)</p>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-caramel">&#8369;@o.Total.ToString("N2")</p>
+                            <p class="text-xs text-neutral-400">@o.Status</p>
+                        </div>
+                    </a>
+                }
+            </div>
+        }
+    </div>
+</div>

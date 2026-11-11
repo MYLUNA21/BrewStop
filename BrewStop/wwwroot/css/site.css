@@ -89,16 +89,6 @@ html {
             box-shadow: 0 6px 15px rgba(212, 163, 115, 0.35);
         }
 
-    .hero-banner {
-        position: relative;
-        border-radius: 20px;
-        overflow: hidden;
-        background: linear-gradient(to right, rgba(26, 15, 13, 0.9), rgba(26, 15, 13, 0.6)), url('https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?auto=format&fit=crop&w=1920&q=80') center/cover no-repeat;
-        border: 1px solid rgba(212, 163, 115, 0.2);
-        box-shadow: 0 15px 35px rgba(0,0,0,0.5);
-        min-height: 420px;
-    }
-
     .bento-card {
         background-color: var(--card-espresso);
         border: 1px solid rgba(212, 163, 115, 0.12);
@@ -119,21 +109,6 @@ html {
         width: 100%;
         margin-top: 80px;
     }
-
-    .hero-banner p.lead {
-        color: #fefae0 !important;
-        opacity: 0.9;
-    }
-
-    .bento-card p {
-        color: #d4d4d4 !important;
-        line-height: 1.5;
-    }
-
-    .bento-card h4 {
-        color: #fefae0 !important;
-    }
-
 
 .bento-img-wrapper {
     width: 100%;
@@ -560,3 +535,8 @@ html {
         .tw button:disabled {
             cursor: not-allowed;
         }
+
+.bento-desc {
+    color: #d4d4d4;
+    line-height: 1.5;
+}

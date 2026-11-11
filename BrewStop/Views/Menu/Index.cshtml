@@ -17,7 +17,7 @@
         </div>
         <div class="col-md-7 col-lg-5">
             <div class="input-group glass-search-bar">
-                <span class="input-group-text bg-transparent border-0 text-muted ps-3">
+                <span class="input-group-text bg-transparent border-0 ps-3 bento-desc">
                     <i class="fa-solid fa-magnifying-glass text-caramel"></i>
                 </span>
                 <input type="text" id="menuSearchInput" class="form-control bg-transparent border-0 text-light py-2 px-2 shadow-none custom-placeholder-white" placeholder="Search our drinks, food, coffee..." onkeyup="filterMenu()">
@@ -89,8 +89,9 @@
                             <div class="col-md-6 category-item-card" data-search-text="@item.Name @item.Description @category.Name">
                                 <div class="bento-card h-100 d-flex flex-column justify-content-between">
                                     <div class="bento-img-wrapper position-relative">
-                                        @* [UPDATED]: Added lazy loading, no-referrer policy, and onerror fallback *@
-                                        <img src="@item.ImageUrl" alt="@item.Name" class="bento-img" loading="lazy" referrerpolicy="no-referrer" onerror="this.onerror=null;this.src='/images/placeholder.svg'" />
+                                        
+                                        <img src="@item.ImageUrl" alt="@item.Name" class="bento-img" loading="lazy" referrerpolicy="no-referrer"
+                                             onerror="this.onerror=null;this.src='@Url.Content("~/images/placeholder.svg")'" />
                                         <span class="position-absolute top-0 end-0 m-3 badge bg-dark text-caramel border border-warning shadow-sm">
                                             @item.BadgeText
                                         </span>
@@ -102,7 +103,7 @@
                                                 <span class="text-caramel fw-bold fs-5">₱@item.Price.ToString("N2")</span>
                                             </div>
                                             <h4 class="fw-bold mb-2 text-white">@item.Name</h4>
-                                            <p class="text-muted small mb-3">@item.Description</p>
+                                            <p class="bento-desc small mb-3">@item.Description</p>
                                         </div>
 
                                         @if (item.IsAvailable)

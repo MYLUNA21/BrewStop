@@ -1,0 +1,42 @@
+﻿@model BrewStop.Models.Order
+@{
+    ViewData["Title"] = $"Order #{Model.Id}";
+}
+
+<div class="tw">
+    <div class="mx-auto max-w-3xl px-4 pt-24 pb-12">
+        <h1 class="font-serif text-3xl font-bold text-cream">Order #@Model.Id</h1>
+        <p class="mt-1 text-sm text-neutral-400">Status: @Model.Status</p>
+
+        @if (TempData["Error"] is string err)
+        {
+            <p class="mt-4 rounded-xl bg-red-500/10 p-3 text-sm text-red-300">@err</p>
+        }
+
+        <ul class="mt-6 divide-y divide-white/10 rounded-2xl border border-white/10 bg-card">
+            @foreach (var i in Model.Items)
+            {
+                <li class="p-4 text-sm text-cream">
+                    <div class="flex justify-between">
+                        <span>@i.Quantity &times; @i.ItemName @(i.SizeName is null ? "" : $"({i.SizeName})")</span>
+                        <span>&#8369;@((i.UnitPrice * i.Quantity).ToString("N2"))</span>
+                    </div>
+                    @if (i.AddOns.Count > 0)
+                    {
+                        <p class="text-xs text-neutral-400">+ @string.Join(", ", i.AddOns.Select(a => a.Name))</p>
+                    }
+                </li>
+            }
+        </ul>
+
+        <p class="mt-4 text-right text-lg font-semibold text-caramel">Total &#8369;@Model.Total.ToString("N2")</p>
+
+        @if (Model.Status == BrewStop.Models.OrderStatus.Placed)
+        {
+            <form asp-action="Cancel" asp-route-id="@Model.Id" method="post" class="mt-6">
+                <button class="rounded-full border border-red-400/40 px-5 py-2 text-sm text-red-300 hover:bg-red-500/10">Cancel order</button>
+            </form>
+        }
+        <a asp-action="Index" class="mt-6 inline-block text-sm text-caramel">&larr; Back to orders</a>
+    </div>
+</div>

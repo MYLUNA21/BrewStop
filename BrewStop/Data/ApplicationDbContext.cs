@@ -75,6 +75,22 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
             e.HasOne(a => a.AddOn).WithMany().HasForeignKey(a => a.AddOnId).OnDelete(DeleteBehavior.Restrict);
         });
 
+        modelBuilder.Entity<InventoryItem>(e =>
+        {
+            e.HasIndex(i => i.MenuItemId).IsUnique();
+            e.HasOne(i => i.MenuItem).WithOne().HasForeignKey<InventoryItem>(i => i.MenuItemId)
+             .OnDelete(DeleteBehavior.Cascade);
+            e.ToTable(t => t.HasCheckConstraint("CK_InventoryItems_Quantity", "`Quantity` >= 0"));
+        });
+
+        modelBuilder.Entity<AuditLog>(e =>
+        {
+            e.HasIndex(a => a.CreatedAtUtc);
+            e.HasIndex(a => a.UserId);
+        });
+
+        // ---------- Seed data ----------
+
         modelBuilder.Entity<ItemSize>().HasData(
             new ItemSize { Id = 1, Name = "Small", PriceDelta = 0.00m, SortOrder = 1 },
             new ItemSize { Id = 2, Name = "Medium", PriceDelta = 0.50m, SortOrder = 2 },
@@ -91,146 +107,24 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
         );
 
         modelBuilder.Entity<Category>().HasData(
-            new Category { Id = 1, Slug = "coffee", Name = "Coffee", Group = "Drinks", ImageUrl = "/images/categories/coffee.jpg" },
-            new Category { Id = 2, Slug = "pastries", Name = "Pastries", Group = "Food", ImageUrl = "/images/categories/pastries.jpg" }
+            new Category { Id = 1, Slug = "coffee", Name = "Coffee", Group = "Drinks", ImageUrl = "" },
+            new Category { Id = 2, Slug = "pastries", Name = "Pastries", Group = "Food", ImageUrl = "" }
         );
 
         modelBuilder.Entity<MenuItem>().HasData(
-            new MenuItem
-            {
-                Id = 1,
-                Name = "Caramel Latte",
-                Description = "Espresso, steamed milk, and house caramel.",
-                Price = 50.50m,
-                ImageUrl = "/images/menu/Caramel Cloud Latte.png",
-                BadgeText = "Bestseller",
-                CategoryId = 1
-            },
-            new MenuItem
-            {
-                Id = 2,
-                Name = "Butter Croissant",
-                Description = "Flaky, freshly baked all-butter croissant.",
-                Price = 30.25m,
-                ImageUrl = "/images/menu/Butter Croissant.png",
-                BadgeText = "Bestseller",
-                CategoryId = 2
-            },
-            new MenuItem
-            {
-                Id = 4,
-                Name = "Strawberry Crème Éclair",
-                Description = "Delicate choux pastry filled with smooth vanilla cream and topped with rich strawberry glaze.",
-                Price = 30.95m,
-                ImageUrl = "/images/menu/Strawberry Eclair.png",
-                BadgeText = "Bestseller",
-                CategoryId = 2
-            },
-            new MenuItem
-            {
-                Id = 5,
-                Name = "Golden Honey Puff",
-                Description = "Flaky golden puff pastry filled with sweet honey custard and dusted with powdered sugar.",
-                Price = 30.25m,
-                ImageUrl = "/images/menu/Golden Honey Puff.png",
-                BadgeText = "New",
-                CategoryId = 2
-            },
-            new MenuItem
-            {
-                Id = 6,
-                Name = "Midnight Cocoa Twist",
-                Description = "Buttery twisted pastry layered with dark cocoa filling and finished with chocolate drizzle.",
-                Price = 35.75m,
-                ImageUrl = "/images/menu/Midnight Cocoa Twist.png",
-                BadgeText = "Popular",
-                CategoryId = 2
-            },
-            new MenuItem
-            {
-                Id = 7,
-                Name = "Roselle Berry Tart",
-                Description = "Crispy buttery tart shell filled with creamy custard and topped with fresh mixed berries.",
-                Price = 50.50m,
-                ImageUrl = "/images/menu/Roselle Berry Tart.png",
-                BadgeText = "Chef's Pick",
-                CategoryId = 2
-            },
-            new MenuItem
-            {
-                Id = 8,
-                Name = "Celestia Almond Croissant",
-                Description = "Golden flaky croissant filled with almond cream and topped with toasted almond slices.",
-                Price = 40.25m,
-                ImageUrl = "/images/menu/Celestia Almond Croissant.png",
-                BadgeText = "Special",
-                CategoryId = 2
-            },
-            new MenuItem
-            {
-                Id = 9,
-                Name = "Caramel Cloud Latte",
-                Description = "Smooth espresso blended with steamed milk and sweet caramel syrup, topped with creamy foam.",
-                Price = 39.25m,
-                ImageUrl = "/images/menu/Caramel Cloud Latte.png",
-                BadgeText = "Bestseller",
-                CategoryId = 1
-            },
-            new MenuItem
-            {
-                Id = 10,
-                Name = "Velvet Mocha Brew",
-                Description = "Rich espresso mixed with premium chocolate and steamed milk, finished with chocolate powder.",
-                Price = 39.50m,
-                ImageUrl = "/images/menu/Velvet Mocha Brew.png",
-                BadgeText = "Popular",
-                CategoryId = 1
-            },
-            new MenuItem
-            {
-                Id = 11,
-                Name = "Vanilla Silk Macchiato",
-                Description = "Bold espresso layered with creamy milk and sweet vanilla syrup for a smooth finish.",
-                Price = 45.75m,
-                ImageUrl = "/images/menu/Vanilla Silk Macchiato.png",
-                BadgeText = "New",
-                CategoryId = 1
-            },
-            new MenuItem
-            {
-                Id = 12,
-                Name = "Midnight Cold Brew",
-                Description = "Slow-steeped coffee served over ice with a naturally smooth flavor and refreshing finish.",
-                Price = 45.95m,
-                ImageUrl = "/images/menu/Midnight Cold Brew.png",
-                BadgeText = "Refreshing",
-                CategoryId = 1
-            },
-            new MenuItem
-            {
-                Id = 13,
-                Name = "Hazelnut Dream Cappuccino",
-                Description = "Freshly brewed espresso combined with steamed milk, velvety foam, and roasted hazelnut syrup.",
-                Price = 50.50m,
-                ImageUrl = "/images/menu/Hazelnut Dream Cappuccino.png",
-                BadgeText = "Special",
-                CategoryId = 1
-            }
+            new MenuItem { Id = 1, Name = "Caramel Latte", Description = "Espresso, steamed milk, and house caramel.", Price = 50.50m, BadgeText = "Bestseller", CategoryId = 1 },
+            new MenuItem { Id = 2, Name = "Butter Croissant", Description = "Flaky, freshly baked all-butter croissant.", Price = 30.25m, BadgeText = "Bestseller", CategoryId = 2 },
+            new MenuItem { Id = 4, Name = "Strawberry Crème Éclair", Description = "Delicate choux pastry filled with smooth vanilla cream and topped with rich strawberry glaze.", Price = 30.95m, ImageUrl = "/images/Strawberry Eclair.png", BadgeText = "Bestseller", CategoryId = 2 },
+            new MenuItem { Id = 5, Name = "Golden Honey Puff", Description = "Flaky golden puff pastry filled with sweet honey custard and dusted with powdered sugar.", Price = 30.25m, BadgeText = "New", CategoryId = 2 },
+            new MenuItem { Id = 6, Name = "Midnight Cocoa Twist", Description = "Buttery twisted pastry layered with dark cocoa filling and finished with chocolate drizzle.", Price = 35.75m, BadgeText = "Popular", CategoryId = 2 },
+            new MenuItem { Id = 7, Name = "Roselle Berry Tart", Description = "Crispy buttery tart shell filled with creamy custard and topped with fresh mixed berries.", Price = 50.50m, BadgeText = "Chef's Pick", CategoryId = 2 },
+            new MenuItem { Id = 8, Name = "Celestia Almond Croissant", Description = "Golden flaky croissant filled with almond cream and topped with toasted almond slices.", Price = 40.25m, BadgeText = "Special", CategoryId = 2 },
+            new MenuItem { Id = 9, Name = "Caramel Cloud Latte", Description = "Smooth espresso blended with steamed milk and sweet caramel syrup, topped with creamy foam.", Price = 39.25m, BadgeText = "Bestseller", CategoryId = 1 },
+            new MenuItem { Id = 10, Name = "Velvet Mocha Brew", Description = "Rich espresso mixed with premium chocolate and steamed milk, finished with chocolate powder.", Price = 39.50m, BadgeText = "Popular", CategoryId = 1 },
+            new MenuItem { Id = 11, Name = "Vanilla Silk Macchiato", Description = "Bold espresso layered with creamy milk and sweet vanilla syrup for a smooth finish.", Price = 45.75m, BadgeText = "New", CategoryId = 1 },
+            new MenuItem { Id = 12, Name = "Midnight Cold Brew", Description = "Slow-steeped coffee served over ice with a naturally smooth flavor and refreshing finish.", Price = 45.95m, BadgeText = "Refreshing", CategoryId = 1 },
+            new MenuItem { Id = 13, Name = "Hazelnut Dream Cappuccino", Description = "Freshly brewed espresso combined with steamed milk, velvety foam, and roasted hazelnut syrup.", Price = 50.50m, BadgeText = "Special", CategoryId = 1 }
         );
-
-        modelBuilder.Entity<InventoryItem>(e =>
-        {
-            e.HasIndex(i => i.MenuItemId).IsUnique();
-            e.HasOne(i => i.MenuItem).WithOne().HasForeignKey<InventoryItem>(i => i.MenuItemId)
-             .OnDelete(DeleteBehavior.Cascade);
-            e.ToTable(t => t.HasCheckConstraint("CK_InventoryItems_Quantity", "`Quantity` >= 0"));
-        });
-
-        modelBuilder.Entity<AuditLog>(e =>
-        {
-            e.HasIndex(a => a.CreatedAtUtc);
-            e.HasIndex(a => a.UserId);
-        });
 
         // Starting stock: coffee 50, pastries 20 (editable by admins later, FR-14/FR-15).
         modelBuilder.Entity<InventoryItem>().HasData(

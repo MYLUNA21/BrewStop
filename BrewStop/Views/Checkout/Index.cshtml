@@ -67,7 +67,7 @@
             </div>
 
             <p class="text-xs text-neutral-400">Payment is made at pickup.</p>
-            <partial name="_Captcha" model='"checkout"' />
+            <partial name="_Captcha" model="@("checkout")" />
             <button type="submit" disabled="@(Model.Slots.Count == 0)"
                     class="w-full rounded-full bg-caramel px-6 py-3 text-sm font-semibold text-black hover:bg-cream disabled:cursor-not-allowed disabled:opacity-50">
                 Place order

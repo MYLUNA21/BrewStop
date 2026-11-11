@@ -9,14 +9,18 @@
         group-data-[state=success]/cc:cursor-default group-data-[state=success]/cc:border-green-400
         group-data-[state=error]/cc:border-red-400">
         <input type="checkbox" class="bs-cc-check peer sr-only" aria-describedby="@id-status" aria-haspopup="dialog" />
-        <span aria-hidden="true"
-              class="grid size-6 flex-none place-items-center rounded-md border-2 border-stone-400
+
+        @* Bulletproof custom checkbox rendering *@
+        <div aria-hidden="true"
+             style="width: 24px !important; height: 24px !important; min-width: 24px !important; min-height: 24px !important; display: grid !important; border-width: 2px !important; border-style: solid !important;"
+             class="flex-none place-items-center rounded-md border-stone-400
             peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-amber-400
-            group-data-[state=success]/cc:border-green-400 group-data-[state=success]/cc:bg-green-400">
-            <svg viewBox="0 0 20 20" class="hidden size-4 text-stone-950 group-data-[state=success]/cc:block" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+            group-data-[state=success]/cc:!border-green-400 group-data-[state=success]/cc:!bg-green-400">
+            <svg viewBox="0 0 20 20" class="hidden w-4 h-4 text-stone-950 group-data-[state=success]/cc:block" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M4 10.5l4 4 8-9" />
             </svg>
-        </span>
+        </div>
+
         <span class="flex-1 text-sm">I am not a robot</span>
         <span class="text-xl" aria-hidden="true">&#9749;</span>
     </label>
@@ -62,11 +66,13 @@
                 class="group/tile relative aspect-square overflow-hidden bg-stone-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-600">
             <img alt="" draggable="false"
                  class="size-full object-cover transition-transform duration-150 group-aria-pressed/tile:scale-[0.8]" />
-            <span class="pointer-events-none absolute left-1 top-1 hidden size-6 place-items-center rounded-full bg-blue-600 text-white group-aria-pressed/tile:grid">
-                <svg viewBox="0 0 20 20" class="size-4" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+
+            <div class="pointer-events-none absolute left-1 top-1 hidden place-items-center rounded-full bg-blue-600 text-white group-aria-pressed/tile:grid"
+                 style="width: 24px !important; height: 24px !important;">
+                <svg viewBox="0 0 20 20" style="width: 16px !important; height: 16px !important;" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                     <path d="M4 10.5l4 4 8-9" />
                 </svg>
-            </span>
+            </div>
         </button>
     </template>
 </div>

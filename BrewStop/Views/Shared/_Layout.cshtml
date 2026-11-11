@@ -47,8 +47,9 @@
                             @if (User.Identity?.IsAuthenticated == true)
                             {
                                 <form asp-controller="Account" asp-action="Logout" method="post" class="d-inline">
-                                    <span class="text-light small me-2">@User.Identity.Name</span>
-                                    <button type="submit" class="btn btn-sm btn-outline-light rounded-pill px-3">Logout</button>
+                                    <button type="submit" class="btn btn-sm btn-outline-light rounded-pill px-3">
+                                        <i class="fa-solid fa-right-from-bracket me-1"></i> Logout
+                                    </button>
                                 </form>
                             }
                             else
@@ -81,6 +82,58 @@
             @RenderBody()
         </main>
     </div>
+
+    <footer class="tw bs-footer mt-16 border-t border-white/10 bg-card">
+        <div class="mx-auto grid max-w-6xl gap-10 px-4 py-12 sm:grid-cols-2 lg:grid-cols-5">
+            <div>
+                <h3 class="font-serif text-base font-semibold text-cream">About Us</h3>
+                <ul class="mt-4 space-y-2.5 text-sm text-neutral-400">
+                    <li><a asp-controller="Home" asp-action="Privacy" class="hover:text-caramel">Our Shop</a></li>
+                    <li><a asp-controller="Home" asp-action="Privacy" class="hover:text-caramel">Customer Service</a></li>
+                </ul>
+            </div>
+            <div>
+                <h3 class="font-serif text-base font-semibold text-cream">Order Online</h3>
+                <ul class="mt-4 space-y-2.5 text-sm text-neutral-400">
+                    <li><a asp-controller="Menu" asp-action="Index" class="hover:text-caramel">Browse Menu</a></li>
+                    <li><a asp-controller="Cart" asp-action="Index" class="hover:text-caramel">Your Cart</a></li>
+                    <li><a asp-controller="Home" asp-action="Privacy" class="hover:text-caramel">Pickup Slots</a></li>
+                </ul>
+            </div>
+            <div>
+                <h3 class="font-serif text-base font-semibold text-cream">My Account</h3>
+                <ul class="mt-4 space-y-2.5 text-sm text-neutral-400">
+                    <li><a asp-controller="Account" asp-action="Login" class="hover:text-caramel">Sign in</a></li>
+                    <li><a asp-controller="Account" asp-action="Register" class="hover:text-caramel">Join Now</a></li>
+                    <li><a asp-controller="Account" asp-action="ForgotPassword" class="hover:text-caramel">Forgot password</a></li>
+                </ul>
+            </div>
+            <div>
+                <h3 class="font-serif text-base font-semibold text-cream">Orders</h3>
+                <ul class="mt-4 space-y-2.5 text-sm text-neutral-400">
+                    <li><span>Order history</span></li>
+                    <li><span>Pickup verification</span></li>
+                </ul>
+            </div>
+            <div class="flex items-start lg:justify-end">
+                <span class="font-serif text-2xl font-bold tracking-[0.3em] text-cream lg:[writing-mode:vertical-rl]">
+                    BREW<span class="text-caramel">STOP</span>
+                </span>
+            </div>
+        </div>
+        <div class="border-t border-white/10">
+            <div class="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-5 text-xs text-neutral-500">
+                <div class="flex gap-5">
+                    <a asp-controller="Home" asp-action="Privacy" class="hover:text-caramel">Privacy Policy</a>
+                    <a asp-controller="Home" asp-action="Privacy" class="hover:text-caramel">Terms of Use</a>
+                </div>
+                <p class="text-right">
+                    &copy; @DateTime.Now.Year BrewStop. Crafted with precision &amp; passion.<br />
+                    UC Banilad Campus Coffee Shop Ordering &amp; Pickup System &middot; Payment is made at pickup.
+                </p>
+            </div>
+        </div>
+    </footer>
 
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>

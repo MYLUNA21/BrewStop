@@ -1,91 +1,123 @@
 ﻿@{
-    ViewData["Title"] = "Home";
+    ViewData["Title"] = "Welcome to BrewStop";
 }
 
-<div class="container my-4">
-    <!-- Hero Banner -->
-    <div class="hero-banner p-5 p-lg-5 mb-5 text-white">
-        <div class="row align-items-center">
-            <div class="col-lg-7 py-4">
-                <div class="mb-3">
-                    <span class="animated-badge-bg">
-                        <i class="fa-solid fa-sparkles me-1 text-dark"></i> UC Banilad Campus Coffee
-                    </span>
-                </div>
-                <h1 class="display-4 fw-bold font-serif mb-3">Elevate Your Daily Brew, Right on Campus.</h1>
-                <p class="lead text-light mb-4" style="opacity: 0.9;">
+<div class="tw">
+    <div class="mx-auto max-w-7xl px-4 pt-16 pb-12">
+        <!-- Hero Banner -->
+        <div class="relative overflow-hidden rounded-3xl border border-white/10 bg-card px-6 py-20 text-center sm:px-12 lg:px-20 lg:py-32">
+
+            <!-- Right-side Image Box Integration -->
+            <div class="absolute right-0 top-0 bottom-0 w-1/3 hidden lg:block overflow-hidden rounded-r-3xl opacity-40 pointer-events-none">
+                <div class="absolute inset-0 bg-gradient-to-r from-card via-card/50 to-transparent z-10"></div>
+                <img src="https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?auto=format&fit=crop&w=1000&q=80"
+                     alt="Cafe Background"
+                     class="w-full h-full object-cover" />
+            </div>
+
+            <!-- Optional subtle background icon/texture -->
+            <div class="absolute -right-20 -top-20 z-0 text-[300px] text-white/[0.02]">
+                <i class="fa-solid fa-mug-hot"></i>
+            </div>
+
+            <div class="relative z-10 mx-auto flex max-w-3xl flex-col items-center">
+                <span class="mb-4 rounded-full bg-caramel/10 px-4 py-1.5 text-xs font-bold tracking-widest text-caramel uppercase">
+                    <i class="fa-solid fa-sparkles me-1"></i> UC Banilad Campus Coffee
+                </span>
+
+                <h1 class="font-serif text-5xl font-bold tracking-tight text-cream sm:text-6xl lg:text-7xl">
+                    Elevate Your Daily Brew, <span class="text-caramel">Right on Campus.</span>
+                </h1>
+
+                <p class="mt-6 max-w-2xl text-lg text-neutral-400 sm:text-xl">
                     Skip the line. Order your handcrafted espresso, specialty cold brews, and fresh pastries instantly with live status tracking.
                 </p>
-                <div class="d-flex gap-3">
-                    <a href="#menu" class="btn btn-caramel btn-lg px-4 rounded-pill fw-semibold text-dark">
+
+                <div class="mt-10 flex flex-wrap justify-center gap-4">
+                    <a href="#menu" class="rounded-full bg-caramel px-8 py-3.5 text-sm font-semibold text-black shadow-lg shadow-caramel/20 transition hover:bg-cream">
                         Explore Menu <i class="fa-solid fa-arrow-down ms-1"></i>
+                    </a>
+                    <a asp-controller="Account" asp-action="Register"
+                       class="rounded-full border border-white/15 px-8 py-3.5 text-sm font-semibold text-cream transition hover:border-caramel hover:text-caramel">
+                        Join Rewards
                     </a>
                 </div>
             </div>
         </div>
-    </div>
 
-    <!-- Box Menu Section -->
-    <div id="menu" class="mb-5">
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <div>
-                <h2 class="fw-bold font-serif mb-1">Our Signature Menu</h2>
-                <p class="text-light mb-0">Handpicked beans, expertly roasted and customized for you.</p>
+        <!-- Quick Feature Highlight -->
+        <div class="mt-12 grid gap-6 sm:grid-cols-3">
+            <div class="rounded-3xl border border-white/10 bg-card p-6 text-center">
+                <i class="fa-solid fa-mobile-screen-button mb-3 text-2xl text-caramel"></i>
+                <h3 class="font-serif text-lg font-semibold text-cream">Order Ahead</h3>
+                <p class="mt-2 text-sm text-neutral-400">Customize your drink and pay online.</p>
+            </div>
+            <div class="rounded-3xl border border-white/10 bg-card p-6 text-center">
+                <i class="fa-solid fa-bag-shopping mb-3 text-2xl text-caramel"></i>
+                <h3 class="font-serif text-lg font-semibold text-cream">Fast Pickup</h3>
+                <p class="mt-2 text-sm text-neutral-400">Grab your order at the designated counter.</p>
+            </div>
+            <div class="rounded-3xl border border-white/10 bg-card p-6 text-center">
+                <i class="fa-solid fa-star mb-3 text-2xl text-caramel"></i>
+                <h3 class="font-serif text-lg font-semibold text-cream">Earn Rewards</h3>
+                <p class="mt-2 text-sm text-neutral-400">Get free drinks and exclusive discounts.</p>
             </div>
         </div>
 
-        <div class="row g-4">
-            <!-- Bento Item 1: Caramel Macchiato -->
-            <div class="col-md-4">
-                <div class="bento-card h-100 d-flex flex-column justify-content-between">
-                    <div class="bento-img-wrapper">
-                        @* [UPDATED]: Replaced gstatic link with Unsplash link *@
-                        <img src="https://images.unsplash.com/photo-1534687941688-651ccaafbff8?auto=format&fit=crop&w=800&q=80" alt="Caramel Macchiato" class="bento-img" />
-                    </div>
-                    <div class="p-4 d-flex flex-column justify-content-between flex-grow-1">
-                        <div>
-                            <div class="d-flex justify-content-between align-items-center mb-3">
-                                <span class="badge bg-secondary text-light">Espresso Bar</span>
-                            </div>
-                            <h4 class="fw-bold mb-2">Caramel Macchiato</h4>
-                            <p class="text-muted small">Sweet caramel, smooth espresso.</p>
-                        </div>
-                    </div>
+        <!-- Box Menu Section -->
+        <div id="menu" class="mt-20 mb-12">
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-end mb-8">
+                <div>
+                    <h2 class="font-serif text-3xl font-bold tracking-tight text-cream mb-2">Our Signature Menu</h2>
+                    <p class="text-neutral-400">Handpicked beans, expertly roasted and customized for you.</p>
                 </div>
             </div>
 
-            <!-- Bento Item 2: Velvet Cold Foam Nitro -->
-            <div class="col-md-4">
-                <div class="bento-card h-100 d-flex flex-column justify-content-between">
-                    <div class="bento-img-wrapper">
-                        @* [UPDATED]: Replaced gstatic link with Unsplash link *@
-                        <img src="https://images.unsplash.com/photo-1517701550927-30cf4ba1dba5?auto=format&fit=crop&w=800&q=80" alt="Velvet Cold Foam Nitro" class="bento-img" />
+            <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                <!-- Bento Item 1: Caramel Macchiato -->
+                <div class="rounded-3xl border border-white/10 bg-card overflow-hidden flex flex-col justify-between transition hover:border-caramel/40">
+                    <div class="overflow-hidden h-56">
+                        <img src="https://images.unsplash.com/photo-1534687941688-651ccaafbff8?auto=format&fit=crop&w=800&q=80" alt="Caramel Macchiato" class="w-full h-full object-cover transition duration-300 hover:scale-105" />
                     </div>
-                    <div class="p-4 d-flex flex-column justify-content-between flex-grow-1">
+                    <div class="p-6 flex flex-col justify-between flex-grow-1">
                         <div>
-                            <div class="d-flex justify-content-between align-items-center mb-3">
-                                <span class="badge bg-secondary text-light">Cold Brew</span>
+                            <div class="flex justify-between items-center mb-3">
+                                <span class="rounded-full bg-white/5 border border-white/10 px-3 py-1 text-xs font-medium text-neutral-300">Espresso Bar</span>
                             </div>
-                            <h4 class="fw-bold mb-2">Velvet Cold Foam Nitro</h4>
-                            <p class="text-muted small">Bold cold brew, silky vanilla foam.</p>
+                            <h4 class="font-serif text-xl font-bold text-cream mb-2">Caramel Macchiato</h4>
+                            <p class="text-sm text-neutral-400">Sweet caramel, smooth espresso.</p>
                         </div>
                     </div>
                 </div>
-            </div>
 
-            <!-- Bento Item 3: Artisan Butter Croissant -->
-            <div class="col-md-4">
-                <div class="bento-card h-100 d-flex flex-column justify-content-between">
-                    <div class="bento-img-wrapper">
-                        <img src="https://images.unsplash.com/photo-1555507036-ab1f4038808a?auto=format&fit=crop&w=800&q=80" alt="Artisan Butter Croissant" class="bento-img" />
+                <!-- Bento Item 2: Velvet Cold Foam Nitro -->
+                <div class="rounded-3xl border border-white/10 bg-card overflow-hidden flex flex-col justify-between transition hover:border-caramel/40">
+                    <div class="overflow-hidden h-56">
+                        <img src="https://images.unsplash.com/photo-1517701550927-30cf4ba1dba5?auto=format&fit=crop&w=800&q=80" alt="Velvet Cold Foam Nitro" class="w-full h-full object-cover transition duration-300 hover:scale-105" />
                     </div>
-                    <div class="p-4 d-flex flex-column justify-content-between flex-grow-1">
+                    <div class="p-6 flex flex-col justify-between flex-grow-1">
                         <div>
-                            <div class="d-flex justify-content-between align-items-center mb-3">
-                                <span class="badge bg-secondary text-light">Bakery</span>
+                            <div class="flex justify-between items-center mb-3">
+                                <span class="rounded-full bg-white/5 border border-white/10 px-3 py-1 text-xs font-medium text-neutral-300">Cold Brew</span>
                             </div>
-                            <h4 class="fw-bold mb-2">Artisan Butter Croissant</h4>
-                            <p class="text-muted small">Golden, flaky, buttery perfection.</p>
+                            <h4 class="font-serif text-xl font-bold text-cream mb-2">Velvet Cold Foam Nitro</h4>
+                            <p class="text-sm text-neutral-400">Bold cold brew, silky vanilla foam.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Bento Item 3: Artisan Butter Croissant -->
+                <div class="rounded-3xl border border-white/10 bg-card overflow-hidden flex flex-col justify-between transition hover:border-caramel/40 sm:col-span-2 lg:col-span-1">
+                    <div class="overflow-hidden h-56">
+                        <img src="https://images.unsplash.com/photo-1555507036-ab1f4038808a?auto=format&fit=crop&w=800&q=80" alt="Artisan Butter Croissant" class="w-full h-full object-cover transition duration-300 hover:scale-105" />
+                    </div>
+                    <div class="p-6 flex flex-col justify-between flex-grow-1">
+                        <div>
+                            <div class="flex justify-between items-center mb-3">
+                                <span class="rounded-full bg-white/5 border border-white/10 px-3 py-1 text-xs font-medium text-neutral-300">Bakery</span>
+                            </div>
+                            <h4 class="font-serif text-xl font-bold text-cream mb-2">Artisan Butter Croissant</h4>
+                            <p class="text-sm text-neutral-400">Golden, flaky, buttery perfection.</p>
                         </div>
                     </div>
                 </div>
@@ -94,10 +126,3 @@
     </div>
 </div>
 
-<!-- Artisan Footer -->
-<footer class="footer text-muted py-4">
-    <div class="container text-center">
-        <p class="mb-1 text-light">&copy; 2026 <strong>BrewStop</strong>. Crafted with precision & passion.</p>
-        <small class="text-secondary">UC Banilad Campus Coffee Shop Ordering & Pickup System</small>
-    </div>
-</footer>

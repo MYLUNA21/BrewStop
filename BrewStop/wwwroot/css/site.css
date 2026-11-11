@@ -1,379 +1,418 @@
-/* ==========================================
-   Base Typography & Layout Reset
-   ========================================== */
-html {
-    font-size: 14px;
-    scroll-behavior: smooth;
-    height: 100%;
-}
 
-@media (min-width: 768px) {
     html {
-        font-size: 16px;
+        font-size: 14px;
+        scroll-behavior: smooth;
+        height: 100%;
     }
-}
 
-.btn:focus, .btn:active:focus, .btn-link.nav-link:focus, .form-control:focus, .form-check-input:focus {
-    box-shadow: 0 0 0 0.1rem white, 0 0 0 0.25rem #258cfb;
-}
+    @media (min-width: 768px) {
+        html {
+            font-size: 16px;
+        }
+    }
 
-:root {
-    --bg-espresso: #1a0f0d;
-    --card-espresso: #241411;
-    --accent-caramel: #d4a373;
-    --accent-caramel-hover: #faedcd;
-    --text-main: #fefae0;
-    --text-muted: #d4d4d4;
-    --glass-bg: rgba(26, 15, 13, 0.85);
-}
+    .btn:focus, .btn:active:focus, .btn-link.nav-link:focus, .form-control:focus, .form-check-input:focus {
+        box-shadow: 0 0 0 0.1rem white, 0 0 0 0.25rem #258cfb;
+    }
 
-body {
-    background-color: var(--bg-espresso) !important;
-    color: var(--text-main) !important;
-    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
-    margin: 0;
-    min-height: 100%;
-    padding-top: 76px;
-}
+    :root {
+        --bg-espresso: #1a0f0d;
+        --card-espresso: #241411;
+        --accent-caramel: #d4a373;
+        --accent-caramel-hover: #faedcd;
+        --text-main: #fefae0;
+        --text-muted: #d4d4d4;
+        --glass-bg: rgba(26, 15, 13, 0.85);
+    }
 
-.main-wrapper {
-    min-height: auto;
-}
+    body {
+        background-color: var(--bg-espresso) !important;
+        color: var(--text-main) !important;
+        font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+        margin: 0;
+        min-height: 100%;
+        padding-top: 76px;
+    }
 
-.glass-nav {
-    background: var(--glass-bg);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    border-bottom: 1px solid rgba(212, 163, 115, 0.15) !important;
-    transition: all 0.3s ease;
-}
+    .main-wrapper {
+        min-height: auto;
+    }
 
-.brand-icon-wrapper {
-    width: 38px;
-    height: 38px;
-    background: linear-gradient(135deg, #d4a373, #bc6c25);
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: #1a0f0d;
-    font-size: 1.1rem;
-    box-shadow: 0 4px 12px rgba(212, 163, 115, 0.3);
-}
+    .glass-nav {
+        background: var(--glass-bg);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border-bottom: 1px solid rgba(212, 163, 115, 0.15) !important;
+        transition: all 0.3s ease;
+    }
 
-.text-caramel {
-    color: var(--accent-caramel) !important;
-}
+    .brand-icon-wrapper {
+        width: 38px;
+        height: 38px;
+        background: linear-gradient(135deg, #d4a373, #bc6c25);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #1a0f0d;
+        font-size: 1.1rem;
+        box-shadow: 0 4px 12px rgba(212, 163, 115, 0.3);
+    }
 
-.hover-effect {
-    transition: all 0.2s ease-in-out;
-}
-
-    .hover-effect:hover {
-        background-color: rgba(212, 163, 115, 0.15);
+    .text-caramel {
         color: var(--accent-caramel) !important;
     }
 
-.btn-caramel {
-    background-color: var(--accent-caramel);
-    border: none;
-    transition: all 0.25s ease;
-}
-
-    .btn-caramel:hover {
-        background-color: var(--accent-caramel-hover);
-        transform: translateY(-2px);
-        box-shadow: 0 6px 15px rgba(212, 163, 115, 0.35);
+    .hover-effect {
+        transition: all 0.2s ease-in-out;
     }
 
-.hero-banner {
-    position: relative;
-    border-radius: 20px;
-    overflow: hidden;
-    background: linear-gradient(to right, rgba(26, 15, 13, 0.9), rgba(26, 15, 13, 0.6)), url('https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?auto=format&fit=crop&w=1920&q=80') center/cover no-repeat;
-    border: 1px solid rgba(212, 163, 115, 0.2);
-    box-shadow: 0 15px 35px rgba(0,0,0,0.5);
-    min-height: 420px;
-}
+        .hover-effect:hover {
+            background-color: rgba(212, 163, 115, 0.15);
+            color: var(--accent-caramel) !important;
+        }
 
-.bento-card {
-    background-color: var(--card-espresso);
-    border: 1px solid rgba(212, 163, 115, 0.12);
-    border-radius: 16px;
-    transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
-    overflow: hidden;
-}
-
-    .bento-card:hover {
-        transform: translateY(-5px);
-        border-color: var(--accent-caramel);
-        box-shadow: 0 12px 30px rgba(212, 163, 115, 0.2);
+    .btn-caramel {
+        background-color: var(--accent-caramel);
+        border: none;
+        transition: all 0.25s ease;
     }
 
-.footer {
-    background-color: #120a08;
-    border-top: 1px solid rgba(212, 163, 115, 0.1);
-    width: 100%;
-    margin-top: 80px;
-}
+        .btn-caramel:hover {
+            background-color: var(--accent-caramel-hover);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 15px rgba(212, 163, 115, 0.35);
+        }
 
-.hero-banner p.lead {
-    color: #fefae0 !important;
-    opacity: 0.9;
-}
-
-.bento-card p {
-    color: #d4d4d4 !important;
-    line-height: 1.5;
-}
-
-.bento-card h4 {
-    color: #fefae0 !important;
-}
-
-/* Bento Card HD Image Styles */
-.bento-img-wrapper {
-    width: 100%;
-    height: 190px;
-    overflow: hidden;
-    border-top-left-radius: 16px;
-    border-top-right-radius: 16px;
-}
-
-.bento-img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    transition: transform 0.4s ease;
-}
-
-.bento-card:hover .bento-img {
-    transform: scale(1.06);
-}
-
-/* --- Unique Animated Shimmer Badge --- */
-.animated-badge-bg {
-    display: inline-flex;
-    align-items: center;
-    padding: 8px 18px;
-    border-radius: 50rem;
-    font-weight: 700;
-    font-size: 0.85rem;
-    letter-spacing: 0.5px;
-    color: #1a0f0d;
-    background: linear-gradient(270deg, #d4a373, #faedcd, #bc6c25, #d4a373);
-    background-size: 300% 300%;
-    animation: luxuryShimmer 3s ease infinite;
-    box-shadow: 0 4px 15px rgba(212, 163, 115, 0.4);
-    border: 1px solid rgba(254, 250, 224, 0.3);
-}
-
-@keyframes luxuryShimmer {
-    0% {
-        background-position: 0% 50%;
+    .hero-banner {
+        position: relative;
+        border-radius: 20px;
+        overflow: hidden;
+        background: linear-gradient(to right, rgba(26, 15, 13, 0.9), rgba(26, 15, 13, 0.6)), url('https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?auto=format&fit=crop&w=1920&q=80') center/cover no-repeat;
+        border: 1px solid rgba(212, 163, 115, 0.2);
+        box-shadow: 0 15px 35px rgba(0,0,0,0.5);
+        min-height: 420px;
     }
 
-    50% {
-        background-position: 100% 50%;
+    .bento-card {
+        background-color: var(--card-espresso);
+        border: 1px solid rgba(212, 163, 115, 0.12);
+        border-radius: 16px;
+        transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+        overflow: hidden;
     }
 
-    100% {
-        background-position: 0% 50%;
-    }
-}
+        .bento-card:hover {
+            transform: translateY(-5px);
+            border-color: var(--accent-caramel);
+            box-shadow: 0 12px 30px rgba(212, 163, 115, 0.2);
+        }
 
-/* ==========================================
-   Privacy Page Luxury Animations & FX
-   ========================================== */
-
-/* Animated Icon Container Badge */
-.icon-badge-glow {
-    position: relative;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 52px;
-    height: 52px;
-    background: linear-gradient(135deg, #3d2620, #1e120f);
-    border: 1px solid rgba(212, 163, 115, 0.35);
-    border-radius: 14px;
-    color: #d4a373 !important; /* Elegant Caramel Orange/Gold - Always visible! */
-    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
-    transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.4s ease, box-shadow 0.4s ease;
-}
-
-    .icon-badge-glow i {
-        color: #d4a373 !important; /* Fix dark icon issue */
-        transition: transform 0.4s ease, color 0.4s ease;
+    .footer {
+        background-color: #120a08;
+        border-top: 1px solid rgba(212, 163, 115, 0.1);
+        width: 100%;
+        margin-top: 80px;
     }
 
-/* Glass Card Animated Hover Lift */
-.animated-glass-card {
-    background: rgba(255, 255, 255, 0.88) !important;
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
-    border: 1px solid rgba(212, 163, 115, 0.18) !important;
-    transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-    position: relative;
-    overflow: hidden;
-}
+    .hero-banner p.lead {
+        color: #fefae0 !important;
+        opacity: 0.9;
+    }
 
-    .animated-glass-card::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: -100%;
+    .bento-card p {
+        color: #d4d4d4 !important;
+        line-height: 1.5;
+    }
+
+    .bento-card h4 {
+        color: #fefae0 !important;
+    }
+
+    
+    .bento-img-wrapper {
+        width: 100%;
+        height: 190px;
+        overflow: hidden;
+        border-top-left-radius: 16px;
+        border-top-right-radius: 16px;
+    }
+
+    .bento-img {
         width: 100%;
         height: 100%;
-        background: linear-gradient(90deg, transparent, rgba(243, 194, 114, 0.15), transparent);
-        transition: left 0.7s ease;
+        object-fit: cover;
+        transition: transform 0.4s ease;
     }
 
-    .animated-glass-card:hover {
-        transform: translateY(-8px) scale(1.01);
-        border-color: rgba(212, 163, 115, 0.5) !important;
-        box-shadow: 0 20px 45px rgba(30, 18, 15, 0.15) !important;
+    .bento-card:hover .bento-img {
+        transform: scale(1.06);
     }
 
-        .animated-glass-card:hover::before {
-            left: 100%;
+
+    .animated-badge-bg {
+        display: inline-flex;
+        align-items: center;
+        padding: 8px 18px;
+        border-radius: 50rem;
+        font-weight: 700;
+        font-size: 0.85rem;
+        letter-spacing: 0.5px;
+        color: #1a0f0d;
+        background: linear-gradient(270deg, #d4a373, #faedcd, #bc6c25, #d4a373);
+        background-size: 300% 300%;
+        animation: luxuryShimmer 3s ease infinite;
+        box-shadow: 0 4px 15px rgba(212, 163, 115, 0.4);
+        border: 1px solid rgba(254, 250, 224, 0.3);
+    }
+
+    @keyframes luxuryShimmer {
+        0% {
+            background-position: 0% 50%;
         }
 
-        .animated-glass-card:hover .icon-badge-glow {
-            transform: rotate(6deg) scale(1.1);
-            border-color: var(--gold-primary);
-            box-shadow: 0 10px 25px rgba(243, 194, 114, 0.3);
+        50% {
+            background-position: 100% 50%;
         }
 
-            .animated-glass-card:hover .icon-badge-glow i {
-                transform: scale(1.15);
-                color: #ffffff !important;
+        100% {
+            background-position: 0% 50%;
+        }
+    }
+
+
+
+
+    .icon-badge-glow {
+        position: relative;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 52px;
+        height: 52px;
+        background: linear-gradient(135deg, #3d2620, #1e120f);
+        border: 1px solid rgba(212, 163, 115, 0.35);
+        border-radius: 14px;
+        color: #d4a373 !important; 
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
+        transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.4s ease, box-shadow 0.4s ease;
+    }
+
+        .icon-badge-glow i {
+            color: #d4a373 !important; 
+            transition: transform 0.4s ease, color 0.4s ease;
+        }
+
+    
+    .animated-glass-card {
+        background: rgba(255, 255, 255, 0.88) !important;
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+        border: 1px solid rgba(212, 163, 115, 0.18) !important;
+        transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        position: relative;
+        overflow: hidden;
+    }
+
+        .animated-glass-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(243, 194, 114, 0.15), transparent);
+            transition: left 0.7s ease;
+        }
+
+        .animated-glass-card:hover {
+            transform: translateY(-8px) scale(1.01);
+            border-color: rgba(212, 163, 115, 0.5) !important;
+            box-shadow: 0 20px 45px rgba(30, 18, 15, 0.15) !important;
+        }
+
+            .animated-glass-card:hover::before {
+                left: 100%;
             }
 
-/* Live Endpoint Code Pill Contrast Fix */
-.live-endpoint-pill {
-    transition: all 0.3s ease;
-    border: 1px solid rgba(212, 163, 115, 0.2);
-}
+            .animated-glass-card:hover .icon-badge-glow {
+                transform: rotate(6deg) scale(1.1);
+                border-color: var(--gold-primary);
+                box-shadow: 0 10px 25px rgba(243, 194, 114, 0.3);
+            }
 
-.live-endpoint-label {
-    transition: color 0.3s ease;
-}
+                .animated-glass-card:hover .icon-badge-glow i {
+                    transform: scale(1.15);
+                    color: #ffffff !important;
+                }
 
-/* Ensure text stays perfectly readable on dark background hover */
-.animated-glass-card:hover .live-endpoint-pill {
-    background-color: #2e1c18 !important;
-    border-color: var(--gold-primary);
-}
 
-.animated-glass-card:hover .live-endpoint-label {
-    color: #fefae0 !important; /* Crisp cream white for complete readability */
-}
-
-/* ==========================================
-   Starbucks-Inspired Menu Layout Styles
-   ========================================== */
-.max-w-1200 {
-    max-width: 1200px;
-    margin-left: auto;
-    margin-right: auto;
-}
-
-.glass-search-bar {
-    background-color: rgba(36, 20, 17, 0.85);
-    border: 1px solid rgba(212, 163, 115, 0.3);
-    border-radius: 50rem;
-    overflow: hidden;
-    backdrop-filter: blur(8px);
-    transition: border-color 0.3s ease, box-shadow 0.3s ease;
-}
-
-    .glass-search-bar:focus-within {
-        border-color: var(--accent-caramel);
-        box-shadow: 0 0 15px rgba(212, 163, 115, 0.25);
+    .live-endpoint-pill {
+        transition: all 0.3s ease;
+        border: 1px solid rgba(212, 163, 115, 0.2);
     }
 
-.menu-side-link {
-    color: var(--text-muted);
-    font-size: 0.92rem;
-    transition: color 0.2s ease, transform 0.2s ease;
-}
+    .live-endpoint-label {
+        transition: color 0.3s ease;
+    }
 
-    .menu-side-link:hover {
+
+    .animated-glass-card:hover .live-endpoint-pill {
+        background-color: #2e1c18 !important;
+        border-color: var(--gold-primary);
+    }
+
+    .animated-glass-card:hover .live-endpoint-label {
+        color: #fefae0 !important;
+    }
+
+
+    .max-w-1200 {
+        max-width: 1200px;
+        margin-left: auto;
+        margin-right: auto;
+    }
+
+    .glass-search-bar {
+        background-color: rgba(36, 20, 17, 0.85);
+        border: 1px solid rgba(212, 163, 115, 0.3);
+        border-radius: 50rem;
+        overflow: hidden;
+        backdrop-filter: blur(8px);
+        transition: border-color 0.3s ease, box-shadow 0.3s ease;
+    }
+
+        .glass-search-bar:focus-within {
+            border-color: var(--accent-caramel);
+            box-shadow: 0 0 15px rgba(212, 163, 115, 0.25);
+        }
+
+    .menu-side-link {
+        color: var(--text-muted);
+        font-size: 0.92rem;
+        transition: color 0.2s ease, transform 0.2s ease;
+    }
+
+        .menu-side-link:hover {
+            color: var(--accent-caramel) !important;
+            transform: translateX(4px);
+        }
+
+    .starbucks-cat-card {
+        background-color: var(--card-espresso);
+        border: 1px solid rgba(212, 163, 115, 0.12);
+        transition: transform 0.3s ease, background-color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+    }
+
+        .starbucks-cat-card:hover {
+            transform: translateY(-4px);
+            background-color: #2e1a16;
+            border-color: var(--accent-caramel);
+            box-shadow: 0 10px 25px rgba(212, 163, 115, 0.2);
+        }
+
+    .circle-avatar-wrapper {
+        width: 110px;
+        height: 110px;
+        border-radius: 50%;
+        overflow: hidden;
+        border: 2px solid rgba(212, 163, 115, 0.25);
+        background-color: #120a08;
+        transition: transform 0.3s ease, border-color 0.3s ease;
+    }
+
+    .starbucks-cat-card:hover .circle-avatar-wrapper {
+        transform: scale(1.05);
+        border-color: var(--accent-caramel);
+    }
+
+    .circle-avatar-img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+
+    #menuSearchInput::placeholder {
+        color: #ffffff !important;
+        opacity: 0.95 !important; 
+    }
+
+    #menuSearchInput::-webkit-input-placeholder {
+        color: #ffffff !important;
+        opacity: 0.95 !important;
+    }
+
+    #menuSearchInput::-moz-placeholder {
+        color: #ffffff !important;
+        opacity: 0.95 !important;
+    }
+
+    #menuSearchInput:-ms-input-placeholder {
+        color: #ffffff !important;
+        opacity: 0.95 !important;
+    }
+
+    
+    .active-side-link {
         color: var(--accent-caramel) !important;
-        transform: translateX(4px);
+        font-weight: 700 !important;
+        border-left: 3px solid var(--accent-caramel);
+        padding-left: 8px;
     }
 
-.starbucks-cat-card {
-    background-color: var(--card-espresso);
-    border: 1px solid rgba(212, 163, 115, 0.12);
-    transition: transform 0.3s ease, background-color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
-}
-
-    .starbucks-cat-card:hover {
-        transform: translateY(-4px);
-        background-color: #2e1a16;
-        border-color: var(--accent-caramel);
-        box-shadow: 0 10px 25px rgba(212, 163, 115, 0.2);
+    
+    .custom-placeholder-white::placeholder {
+        color: #ffffff !important;
+        opacity: 0.95 !important;
     }
 
-.circle-avatar-wrapper {
-    width: 110px;
-    height: 110px;
-    border-radius: 50%;
-    overflow: hidden;
-    border: 2px solid rgba(212, 163, 115, 0.25);
-    background-color: #120a08;
-    transition: transform 0.3s ease, border-color 0.3s ease;
-}
+    .custom-placeholder-white::-webkit-input-placeholder {
+        color: #ffffff !important;
+        opacity: 0.95 !important;
+    }
 
-.starbucks-cat-card:hover .circle-avatar-wrapper {
-    transform: scale(1.05);
-    border-color: var(--accent-caramel);
-}
+    .bs-footer ul {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+    }
 
-.circle-avatar-img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-}
+    .bs-footer a {
+        color: #e9c46a;
+        text-decoration: none;
+        transition: color 0.2s ease;
+    }
 
-/* Make placeholder text crisp white across all browsers */
-#menuSearchInput::placeholder {
-    color: #ffffff !important;
-    opacity: 0.95 !important; /* Prevents browser default dimming */
-}
+        .bs-footer a:hover,
+        .bs-footer a:focus-visible {
+            color: #fefae0;
+            text-decoration: none;
+        }
 
-#menuSearchInput::-webkit-input-placeholder {
-    color: #ffffff !important;
-    opacity: 0.95 !important;
-}
+    .bs-footer li > span {
+        color: #a3a3a3;
+    }
 
-#menuSearchInput::-moz-placeholder {
-    color: #ffffff !important;
-    opacity: 0.95 !important;
-}
+    .tw a {
+        text-decoration: none;
+    }
 
-#menuSearchInput:-ms-input-placeholder {
-    color: #ffffff !important;
-    opacity: 0.95 !important;
-}
+    .tw ul {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+    }
 
-/* Active Sidebar Category Highlight */
-.active-side-link {
-    color: var(--accent-caramel) !important;
-    font-weight: 700 !important;
-    border-left: 3px solid var(--accent-caramel);
-    padding-left: 8px;
-}
+    .tw button {
+        background-color: transparent;
+        border: 0;
+        padding: 0;
+        font: inherit;
+        color: inherit;
+        cursor: pointer;
+    }
 
-/* Crisp White Placeholder for Search Field */
-.custom-placeholder-white::placeholder {
-    color: #ffffff !important;
-    opacity: 0.95 !important;
-}
-
-.custom-placeholder-white::-webkit-input-placeholder {
-    color: #ffffff !important;
-    opacity: 0.95 !important;
-}
+        .tw button:disabled {
+            cursor: not-allowed;
+        }

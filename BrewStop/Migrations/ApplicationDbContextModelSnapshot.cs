@@ -473,7 +473,7 @@ namespace BrewStop.Migrations
                             BadgeText = "Bestseller",
                             CategoryId = 1,
                             Description = "Espresso, steamed milk, and house caramel.",
-                            ImageUrl = "/images/menu/caramel-latte.jpg",
+                            ImageUrl = "/images/menu/Caramel Cloud Latte.png",
                             Name = "Caramel Latte",
                             Price = 4.50m
                         },
@@ -483,7 +483,7 @@ namespace BrewStop.Migrations
                             BadgeText = "Bestseller",
                             CategoryId = 2,
                             Description = "Flaky, freshly baked all-butter croissant.",
-                            ImageUrl = "/images/menu/butter-croissant.jpg",
+                            ImageUrl = "/images/menu/Butter Croissant.png",
                             Name = "Butter Croissant",
                             Price = 3.25m
                         },
@@ -492,9 +492,9 @@ namespace BrewStop.Migrations
                             Id = 4,
                             BadgeText = "Bestseller",
                             CategoryId = 2,
-                            Description = "Delicate choux pastry filled with smooth vanilla cream and topped with rich chocolate glaze.",
-                            ImageUrl = "/images/menu/velvet-creme-eclair.jpg",
-                            Name = "Velvet Crème Éclair",
+                            Description = "Delicate choux pastry filled with smooth vanilla cream and topped with rich strawberry glaze.",
+                            ImageUrl = "/images/menu/Strawberry Eclair.png",
+                            Name = "Strawberry Crème Éclair",
                             Price = 3.95m
                         },
                         new
@@ -503,7 +503,7 @@ namespace BrewStop.Migrations
                             BadgeText = "New",
                             CategoryId = 2,
                             Description = "Flaky golden puff pastry filled with sweet honey custard and dusted with powdered sugar.",
-                            ImageUrl = "/images/menu/golden-honey-puff.jpg",
+                            ImageUrl = "/images/menu/Golden Honey Puff.png",
                             Name = "Golden Honey Puff",
                             Price = 3.25m
                         },
@@ -513,7 +513,7 @@ namespace BrewStop.Migrations
                             BadgeText = "Popular",
                             CategoryId = 2,
                             Description = "Buttery twisted pastry layered with dark cocoa filling and finished with chocolate drizzle.",
-                            ImageUrl = "/images/menu/midnight-cocoa-twist.jpg",
+                            ImageUrl = "/images/menu/Midnight Cocoa Twist.png",
                             Name = "Midnight Cocoa Twist",
                             Price = 3.75m
                         },
@@ -523,7 +523,7 @@ namespace BrewStop.Migrations
                             BadgeText = "Chef's Pick",
                             CategoryId = 2,
                             Description = "Crispy buttery tart shell filled with creamy custard and topped with fresh mixed berries.",
-                            ImageUrl = "/images/menu/roselle-berry-tart.jpg",
+                            ImageUrl = "/images/menu/Roselle Berry Tart.png",
                             Name = "Roselle Berry Tart",
                             Price = 4.50m
                         },
@@ -533,7 +533,7 @@ namespace BrewStop.Migrations
                             BadgeText = "Special",
                             CategoryId = 2,
                             Description = "Golden flaky croissant filled with almond cream and topped with toasted almond slices.",
-                            ImageUrl = "/images/menu/celestia-almond-croissant.jpg",
+                            ImageUrl = "/images/menu/Celestia Almond Croissant.png",
                             Name = "Celestia Almond Croissant",
                             Price = 4.25m
                         },
@@ -543,7 +543,7 @@ namespace BrewStop.Migrations
                             BadgeText = "Bestseller",
                             CategoryId = 1,
                             Description = "Smooth espresso blended with steamed milk and sweet caramel syrup, topped with creamy foam.",
-                            ImageUrl = "/images/menu/caramel-cloud-latte.jpg",
+                            ImageUrl = "/images/menu/Caramel Cloud Latte.png",
                             Name = "Caramel Cloud Latte",
                             Price = 4.25m
                         },
@@ -553,7 +553,7 @@ namespace BrewStop.Migrations
                             BadgeText = "Popular",
                             CategoryId = 1,
                             Description = "Rich espresso mixed with premium chocolate and steamed milk, finished with chocolate powder.",
-                            ImageUrl = "/images/menu/velvet-mocha-brew.jpg",
+                            ImageUrl = "/images/menu/Velvet Mocha Brew.png",
                             Name = "Velvet Mocha Brew",
                             Price = 4.50m
                         },
@@ -563,7 +563,7 @@ namespace BrewStop.Migrations
                             BadgeText = "New",
                             CategoryId = 1,
                             Description = "Bold espresso layered with creamy milk and sweet vanilla syrup for a smooth finish.",
-                            ImageUrl = "/images/menu/vanilla-silk-macchiato.jpg",
+                            ImageUrl = "/images/menu/Vanilla Silk Macchiato.png",
                             Name = "Vanilla Silk Macchiato",
                             Price = 4.75m
                         },
@@ -573,7 +573,7 @@ namespace BrewStop.Migrations
                             BadgeText = "Refreshing",
                             CategoryId = 1,
                             Description = "Slow-steeped coffee served over ice with a naturally smooth flavor and refreshing finish.",
-                            ImageUrl = "/images/menu/midnight-cold-brew.jpg",
+                            ImageUrl = "/images/menu/Midnight Cold Brew.png",
                             Name = "Midnight Cold Brew",
                             Price = 3.95m
                         },
@@ -583,7 +583,7 @@ namespace BrewStop.Migrations
                             BadgeText = "Special",
                             CategoryId = 1,
                             Description = "Freshly brewed espresso combined with steamed milk, velvety foam, and roasted hazelnut syrup.",
-                            ImageUrl = "/images/menu/hazelnut-dream-cappuccino.jpg",
+                            ImageUrl = "/images/menu/Hazelnut Dream Cappuccino.png",
                             Name = "Hazelnut Dream Cappuccino",
                             Price = 4.50m
                         });

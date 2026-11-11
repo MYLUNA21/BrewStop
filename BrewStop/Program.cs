@@ -45,6 +45,7 @@ builder.Services.ConfigureApplicationCookie(options =>       // SRS-NFR-05
 builder.Services.AddScoped<IEmailService, LoggingEmailService>();
 
 builder.Services.AddHttpContextAccessor();
+builder.Services.AddSingleton<IImageResolver, ImageResolver>();
 builder.Services.AddDistributedMemoryCache();
 builder.Services.AddSession(options =>
 {

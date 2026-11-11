@@ -78,7 +78,6 @@
                     <div class="d-flex align-items-center justify-content-between border-bottom border-secondary pb-2 mb-4">
                         <h2 class="fw-bold font-serif text-white mb-0">@category.Name</h2>
                         <span class="badge bg-dark border border-secondary text-caramel rounded-pill px-3 py-2">
-                            <!-- CHANGED: Count only available items -->
                             @category.Items.Count(i => i.IsAvailable) Available
                         </span>
                     </div>
@@ -90,7 +89,8 @@
                             <div class="col-md-6 category-item-card" data-search-text="@item.Name @item.Description @category.Name">
                                 <div class="bento-card h-100 d-flex flex-column justify-content-between">
                                     <div class="bento-img-wrapper position-relative">
-                                        <img src="@item.ImageUrl" alt="@item.Name" class="bento-img" />
+                                        @* [UPDATED]: Added lazy loading, no-referrer policy, and onerror fallback *@
+                                        <img src="@item.ImageUrl" alt="@item.Name" class="bento-img" loading="lazy" referrerpolicy="no-referrer" onerror="this.onerror=null;this.src='/images/placeholder.svg'" />
                                         <span class="position-absolute top-0 end-0 m-3 badge bg-dark text-caramel border border-warning shadow-sm">
                                             @item.BadgeText
                                         </span>
@@ -105,7 +105,6 @@
                                             <p class="text-muted small mb-3">@item.Description</p>
                                         </div>
 
-                                        <!-- CHANGED: Stock check and conditional checkout/sold out buttons -->
                                         @if (item.IsAvailable)
                                         {
                                             @if (item.Stock <= 5)

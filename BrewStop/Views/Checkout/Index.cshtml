@@ -13,12 +13,16 @@
             <ul class="mt-3 divide-y divide-white/10">
                 @foreach (var l in Model.Cart.Lines)
                 {
+                    @* [ADDED / UPDATED HERE]: Added item thumbnail image wrapper *@
                     <li class="flex items-start justify-between gap-4 py-3 text-sm">
-                        <div>
-                            <p class="text-cream">@l.Quantity &times; @l.Name</p>
-                            <p class="text-xs text-neutral-400">
-                                @(l.SizeName ?? "")@(l.SizeName is not null && l.AddOns.Count > 0 ? " · " : "")@string.Join(", ", l.AddOns.Select(a => a.Name))
-                            </p>
+                        <div class="flex items-start gap-3">
+                            <img src="@l.ImageUrl" alt="@l.Name" class="h-14 w-14 rounded-lg object-cover" />
+                            <div>
+                                <p class="text-cream">@l.Quantity &times; @l.Name</p>
+                                <p class="text-xs text-neutral-400">
+                                    @(l.SizeName ?? "")@(l.SizeName is not null && l.AddOns.Count > 0 ? " · " : "")@string.Join(", ", l.AddOns.Select(a => a.Name))
+                                </p>
+                            </div>
                         </div>
                         <span class="text-cream">&#8369;@l.LineTotal.ToString("N2")</span>
                     </li>

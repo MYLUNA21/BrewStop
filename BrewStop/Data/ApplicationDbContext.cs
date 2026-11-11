@@ -102,7 +102,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
                 Name = "Caramel Latte",
                 Description = "Espresso, steamed milk, and house caramel.",
                 Price = 4.50m,
-                ImageUrl = "/images/menu/Caramel Latte.png",
+                ImageUrl = "/images/menu/Caramel Cloud Latte.png",
                 BadgeText = "Bestseller",
                 CategoryId = 1
             },

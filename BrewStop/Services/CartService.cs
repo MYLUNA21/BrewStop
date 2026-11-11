@@ -17,7 +17,7 @@ public interface ICartService
     Task<CartViewModel> GetAsync();
 }
 
-public class CartService(ApplicationDbContext db, IHttpContextAccessor http, IInventoryService inventory) : ICartService
+public class CartService(ApplicationDbContext db, IHttpContextAccessor http, IInventoryService inventory, IImageResolver images) : ICartService
 {
     public const int MaxQuantity = 10;
     public const int MaxLines = 20;
@@ -153,7 +153,7 @@ public class CartService(ApplicationDbContext db, IHttpContextAccessor http, IIn
                 Key = e.Key,
                 MenuItemId = item.Id,
                 Name = item.Name,
-                ImageUrl = item.ImageUrl,
+                ImageUrl = images.Resolve(item.ImageUrl, item.Name),
                 SizeId = size?.Id,
                 SizeName = size?.Name,
                 AddOns = lineAddOns,

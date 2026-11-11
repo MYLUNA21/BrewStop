@@ -1,15 +1,16 @@
-﻿
-using BrewStop.Data;
+﻿using BrewStop.Data;
 using BrewStop.Models;
+using BrewStop.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
 namespace BrewStop.Controllers;
 
-public class MenuController : Controller
+
+public class MenuController(ApplicationDbContext db, IImageResolver images) : Controller
 {
-    private readonly ApplicationDbContext _db;
-    public MenuController(ApplicationDbContext db) => _db = db;
+    private readonly ApplicationDbContext _db = db;
+    private readonly IImageResolver _images = images; 
 
     public async Task<IActionResult> Index(string? category)
     {
@@ -19,7 +20,7 @@ public class MenuController : Controller
             .OrderBy(c => c.Id)
             .ToListAsync();
 
-            var stockDict = await _db.InventoryItems
+        var stockDict = await _db.InventoryItems
             .AsNoTracking()
             .ToDictionaryAsync(i => i.MenuItemId, i => i.Quantity);
 
@@ -30,20 +31,24 @@ public class MenuController : Controller
                 Slug = c.Slug,
                 Name = c.Name,
                 Group = c.Group,
-                ImageUrl = c.ImageUrl,
+
+
+                ImageUrl = _images.Resolve(c.ImageUrl, c.Name),
+
                 Items = c.MenuItems.Select(m => new MenuItemDto
                 {
                     Id = m.Id,
                     Name = m.Name,
                     Description = m.Description,
                     Price = m.Price,
-                    ImageUrl = m.ImageUrl,
+
+
+                    ImageUrl = _images.Resolve(m.ImageUrl, m.Name),
+
                     BadgeText = m.BadgeText,
                     CategorySlug = c.Slug,
                     CategoryName = c.Name,
-
                     Stock = stockDict.GetValueOrDefault(m.Id, 0)
-
                 }).ToList()
             }).ToList()
         };

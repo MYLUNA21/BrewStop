@@ -1,5 +1,8 @@
 ﻿@model BrewStop.Models.Order
 @inject BrewStop.Services.IPickupSlotService Slots
+@* [ADDED]: Inject ImageResolver *@
+@inject BrewStop.Services.IImageResolver Images
+
 @{
     ViewData["Title"] = "Order placed";
     var pickupLocal = Slots.ToLocal(Model.PickupAtUtc);
@@ -26,11 +29,15 @@
                 @foreach (var i in Model.Items)
                 {
                     <li class="flex items-start justify-between gap-4 py-3 text-sm">
-                        <div>
-                            <p class="text-cream">@i.Quantity &times; @i.ItemName</p>
-                            <p class="text-xs text-neutral-400">
-                                @(i.SizeName ?? "")@(i.SizeName is not null && i.AddOns.Count > 0 ? " · " : "")@string.Join(", ", i.AddOns.Select(a => a.Name))
-                            </p>
+                        <div class="flex items-start gap-3">
+                            @* [UPDATED]: Added resolved image thumbnail *@
+                            <img src="@Images.Resolve(i.MenuItem?.ImageUrl, i.ItemName)" alt="@i.ItemName" class="h-14 w-14 rounded-lg object-cover" />
+                            <div>
+                                <p class="text-cream">@i.Quantity &times; @i.ItemName</p>
+                                <p class="text-xs text-neutral-400">
+                                    @(i.SizeName ?? "")@(i.SizeName is not null && i.AddOns.Count > 0 ? " · " : "")@string.Join(", ", i.AddOns.Select(a => a.Name))
+                                </p>
+                            </div>
                         </div>
                         <span class="text-cream">&#8369;@((i.UnitPrice * i.Quantity).ToString("N2"))</span>
                     </li>

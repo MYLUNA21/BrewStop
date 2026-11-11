@@ -60,12 +60,11 @@ builder.Services.AddSession(options =>
 builder.Services.Configure<ShopOptions>(builder.Configuration.GetSection("Shop"));
 builder.Services.AddScoped<ICartService, CartService>();
 builder.Services.AddScoped<IPickupSlotService, PickupSlotService>();
-
 builder.Services.AddScoped<IInventoryService, InventoryService>();
 builder.Services.AddScoped<IAuditService, AuditService>();
-
+builder.Services.AddMemoryCache();
 builder.Services.Configure<CaptchaOptions>(builder.Configuration.GetSection("Captcha"));
-builder.Services.AddHttpClient<ICaptchaService, CaptchaService>(c => c.Timeout = TimeSpan.FromSeconds(5));
+builder.Services.AddScoped<ICaptchaService, CaptchaService>();
 
 builder.Services.AddControllersWithViews(options =>          // SRS-NFR-06
     options.Filters.Add(new AutoValidateAntiforgeryTokenAttribute()));

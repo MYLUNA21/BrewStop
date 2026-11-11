@@ -101,7 +101,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
                 Id = 1,
                 Name = "Caramel Latte",
                 Description = "Espresso, steamed milk, and house caramel.",
-                Price = 4.50m,
+                Price = 50.50m,
                 ImageUrl = "/images/menu/Caramel Cloud Latte.png",
                 BadgeText = "Bestseller",
                 CategoryId = 1
@@ -111,7 +111,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
                 Id = 2,
                 Name = "Butter Croissant",
                 Description = "Flaky, freshly baked all-butter croissant.",
-                Price = 3.25m,
+                Price = 30.25m,
                 ImageUrl = "/images/menu/Butter Croissant.png",
                 BadgeText = "Bestseller",
                 CategoryId = 2
@@ -121,7 +121,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
                 Id = 4,
                 Name = "Strawberry Crème Éclair",
                 Description = "Delicate choux pastry filled with smooth vanilla cream and topped with rich strawberry glaze.",
-                Price = 3.95m,
+                Price = 30.95m,
                 ImageUrl = "/images/menu/Strawberry Eclair.png",
                 BadgeText = "Bestseller",
                 CategoryId = 2
@@ -131,7 +131,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
                 Id = 5,
                 Name = "Golden Honey Puff",
                 Description = "Flaky golden puff pastry filled with sweet honey custard and dusted with powdered sugar.",
-                Price = 3.25m,
+                Price = 30.25m,
                 ImageUrl = "/images/menu/Golden Honey Puff.png",
                 BadgeText = "New",
                 CategoryId = 2
@@ -141,7 +141,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
                 Id = 6,
                 Name = "Midnight Cocoa Twist",
                 Description = "Buttery twisted pastry layered with dark cocoa filling and finished with chocolate drizzle.",
-                Price = 3.75m,
+                Price = 35.75m,
                 ImageUrl = "/images/menu/Midnight Cocoa Twist.png",
                 BadgeText = "Popular",
                 CategoryId = 2
@@ -151,7 +151,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
                 Id = 7,
                 Name = "Roselle Berry Tart",
                 Description = "Crispy buttery tart shell filled with creamy custard and topped with fresh mixed berries.",
-                Price = 4.50m,
+                Price = 50.50m,
                 ImageUrl = "/images/menu/Roselle Berry Tart.png",
                 BadgeText = "Chef's Pick",
                 CategoryId = 2
@@ -161,7 +161,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
                 Id = 8,
                 Name = "Celestia Almond Croissant",
                 Description = "Golden flaky croissant filled with almond cream and topped with toasted almond slices.",
-                Price = 4.25m,
+                Price = 40.25m,
                 ImageUrl = "/images/menu/Celestia Almond Croissant.png",
                 BadgeText = "Special",
                 CategoryId = 2
@@ -171,7 +171,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
                 Id = 9,
                 Name = "Caramel Cloud Latte",
                 Description = "Smooth espresso blended with steamed milk and sweet caramel syrup, topped with creamy foam.",
-                Price = 4.25m,
+                Price = 39.25m,
                 ImageUrl = "/images/menu/Caramel Cloud Latte.png",
                 BadgeText = "Bestseller",
                 CategoryId = 1
@@ -181,7 +181,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
                 Id = 10,
                 Name = "Velvet Mocha Brew",
                 Description = "Rich espresso mixed with premium chocolate and steamed milk, finished with chocolate powder.",
-                Price = 4.50m,
+                Price = 39.50m,
                 ImageUrl = "/images/menu/Velvet Mocha Brew.png",
                 BadgeText = "Popular",
                 CategoryId = 1
@@ -191,7 +191,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
                 Id = 11,
                 Name = "Vanilla Silk Macchiato",
                 Description = "Bold espresso layered with creamy milk and sweet vanilla syrup for a smooth finish.",
-                Price = 4.75m,
+                Price = 45.75m,
                 ImageUrl = "/images/menu/Vanilla Silk Macchiato.png",
                 BadgeText = "New",
                 CategoryId = 1
@@ -201,7 +201,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
                 Id = 12,
                 Name = "Midnight Cold Brew",
                 Description = "Slow-steeped coffee served over ice with a naturally smooth flavor and refreshing finish.",
-                Price = 3.95m,
+                Price = 45.95m,
                 ImageUrl = "/images/menu/Midnight Cold Brew.png",
                 BadgeText = "Refreshing",
                 CategoryId = 1
@@ -211,7 +211,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
                 Id = 13,
                 Name = "Hazelnut Dream Cappuccino",
                 Description = "Freshly brewed espresso combined with steamed milk, velvety foam, and roasted hazelnut syrup.",
-                Price = 4.50m,
+                Price = 50.50m,
                 ImageUrl = "/images/menu/Hazelnut Dream Cappuccino.png",
                 BadgeText = "Special",
                 CategoryId = 1

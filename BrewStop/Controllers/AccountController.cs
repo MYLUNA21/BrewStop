@@ -82,13 +82,21 @@ public class AccountController(
             : new InfoViewModel("Invalid link", "This verification link is invalid or expired."));
     }
 
-    // Login / Logout
     [HttpGet, AllowAnonymous]
     public IActionResult Login(string? returnUrl = null) => View(new LoginViewModel { ReturnUrl = returnUrl });
 
+
+    // Login / Logout
     [HttpPost, AllowAnonymous]
     public async Task<IActionResult> Login(LoginViewModel m)
     {
+        // NEW: Captcha verification for Login
+        if (!await captcha.VerifyAsync(Request, "login", HttpContext.RequestAborted))
+        {
+            ModelState.AddModelError(string.Empty, "Please complete the captcha.");
+            return View(m);
+        }
+
         if (!ModelState.IsValid) return View(m);
 
         var result = await signIn.PasswordSignInAsync(m.Email, m.Password,

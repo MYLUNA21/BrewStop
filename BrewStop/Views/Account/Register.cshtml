@@ -39,7 +39,7 @@
         <input asp-for="ConfirmPassword" class="@ViewData["Input"]" autocomplete="new-password" />
         <span asp-validation-for="ConfirmPassword" class="text-xs text-red-400"></span>
     </div>
-    <partial name="_Captcha" model='"register"' />
+    <partial name="_Captcha" model="@("register")" />
     <button type="submit" class="@ViewData["Btn"]">Register</button>
     <p class="text-sm text-stone-400 text-center">Have an account? <a asp-action="Login" class="hover:text-amber-400">Sign in</a></p>
 </form>

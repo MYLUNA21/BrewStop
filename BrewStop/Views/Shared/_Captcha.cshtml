@@ -1,242 +1,222 @@
 ﻿@model string
-@inject Microsoft.Extensions.Options.IOptions<BrewStop.Services.CaptchaOptions> Captcha
 @{
-    var id = "bs-captcha-" + Guid.NewGuid().ToString("N").Substring(0, 8);
+    var id = "bs-cc-" + Guid.NewGuid().ToString("N")[..8];
 }
+<div id="@id" class="group/cc my-1" data-state="idle" data-action="@Model">
 
-<div id="@id" class="bs-captcha" data-state="idle" data-sitekey="@Captcha.Value.SiteKey" data-action="@Model">
-
-    <!-- 1. Moved the original visible Cloudflare widget ABOVE the custom checkbox -->
-    <div class="bs-captcha-widget" style="min-height:65px"></div>
-
-    <!-- 2. Custom checkbox is now BELOW the widget -->
-    <label class="bs-captcha-box">
-        <input type="checkbox" class="bs-captcha-check" aria-describedby="@id-status" />
-        <span class="bs-captcha-mark" aria-hidden="true"></span>
-        <span class="bs-captcha-text">I'm not a robot</span>
-        <span class="bs-captcha-brand">Cloudflare Turnstile</span>
+    @* Trigger checkbox (Unchanged dark theme for the main page) *@
+    <label class="flex cursor-pointer select-none items-center gap-3 rounded-xl border border-stone-700 bg-stone-800/50 px-3.5 py-3 transition hover:border-amber-400
+        group-data-[state=success]/cc:cursor-default group-data-[state=success]/cc:border-green-400
+        group-data-[state=error]/cc:border-red-400">
+        <input type="checkbox" class="bs-cc-check peer sr-only" aria-describedby="@id-status" aria-haspopup="dialog" />
+        <span aria-hidden="true"
+              class="grid size-6 flex-none place-items-center rounded-md border-2 border-stone-400
+            peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-amber-400
+            group-data-[state=success]/cc:border-green-400 group-data-[state=success]/cc:bg-green-400">
+            <svg viewBox="0 0 20 20" class="hidden size-4 text-stone-950 group-data-[state=success]/cc:block" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M4 10.5l4 4 8-9" />
+            </svg>
+        </span>
+        <span class="flex-1 text-sm">I am not a robot</span>
+        <span class="text-xl" aria-hidden="true">&#9749;</span>
     </label>
 
-    <p id="@id-status" class="bs-captcha-status" role="status" aria-live="polite"></p>
+    <p id="@id-status" class="mt-1.5 min-h-4 px-0.5 text-xs text-stone-400 group-data-[state=error]/cc:text-red-300" role="status" aria-live="polite"></p>
+
+    <input type="hidden" name="bs-captcha-token" class="bs-cc-token" />
+
+    @* Modal - Replaced with Starbucks/reCAPTCHA light theme *@
+    <dialog class="bs-cc-dialog m-auto w-[calc(100%-2rem)] max-w-[400px] overflow-hidden rounded-sm border border-stone-300 bg-white p-0 text-stone-900 shadow-2xl backdrop:bg-black/50"
+            aria-labelledby="@id-title">
+        <div class="p-2">
+            <div id="@id-title" class="bg-blue-600 px-5 py-4 text-white">
+                <p class="text-sm leading-tight">Select all images with</p>
+                <p class="text-2xl font-bold leading-tight">coffee</p>
+            </div>
+
+            <div class="bs-cc-grid mt-0.5 grid grid-cols-3 gap-0.5 bg-white" role="group" aria-labelledby="@id-title"></div>
+
+            <p class="bs-cc-error mt-2 hidden px-1 text-sm text-red-600" role="alert">Please try again.</p>
+
+            <div class="mt-2 flex items-center justify-between border-t border-stone-200 px-1 pt-2">
+                <div class="flex items-center gap-1 text-stone-500">
+                    <button type="button" class="bs-cc-refresh grid size-9 place-items-center rounded hover:bg-stone-100" aria-label="Get a new challenge">
+                        <svg viewBox="0 0 24 24" class="size-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 12a9 9 0 1 1-3-6.7" />
+                            <path d="M21 3v6h-6" />
+                        </svg>
+                    </button>
+                    <button type="button" class="bs-cc-cancel rounded px-2 py-1 text-xs hover:bg-stone-100">Cancel</button>
+                </div>
+                <button type="button" disabled
+                        class="bs-cc-verify rounded-sm bg-blue-600 px-6 py-3 text-sm font-semibold uppercase text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50">
+                    Verify
+                </button>
+            </div>
+        </div>
+    </dialog>
+
+    @* Tile template - Replaced with blue checkmark styling *@
+    <template class="bs-cc-tile">
+        <button type="button" aria-pressed="false" aria-label="Image option"
+                class="group/tile relative aspect-square overflow-hidden bg-stone-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-600">
+            <img alt="" draggable="false"
+                 class="size-full object-cover transition-transform duration-150 group-aria-pressed/tile:scale-[0.8]" />
+            <span class="pointer-events-none absolute left-1 top-1 hidden size-6 place-items-center rounded-full bg-blue-600 text-white group-aria-pressed/tile:grid">
+                <svg viewBox="0 0 20 20" class="size-4" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M4 10.5l4 4 8-9" />
+                </svg>
+            </span>
+        </button>
+    </template>
 </div>
-
-<style>
-    .bs-captcha {
-        margin: 4px 0;
-    }
-
-    .bs-captcha-box {
-        position: relative;
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        padding: 12px 14px;
-        border: 1px solid rgba(255,255,255,.18);
-        border-radius: 12px;
-        background: rgba(255,255,255,.04);
-        cursor: pointer;
-        user-select: none;
-    }
-
-        .bs-captcha-box:hover {
-            border-color: #d4a373;
-        }
-
-    .bs-captcha-check {
-        position: absolute;
-        opacity: 0;
-        width: 1px;
-        height: 1px;
-    }
-
-        .bs-captcha-check:focus-visible + .bs-captcha-mark {
-            outline: 2px solid #d4a373;
-            outline-offset: 2px;
-        }
-
-    .bs-captcha-mark {
-        flex: none;
-        width: 26px;
-        height: 26px;
-        border: 2px solid #a8a29e;
-        border-radius: 6px;
-        position: relative;
-        background: transparent;
-    }
-
-    .bs-captcha-text {
-        flex: 1;
-        font-size: 14px;
-        color: #f5f5f4;
-    }
-
-    .bs-captcha-brand {
-        font-size: 10px;
-        color: #a8a29e;
-    }
-
-    /* Changed margin from top to bottom so it pushes the checkbox down */
-    .bs-captcha-widget {
-        margin-bottom: 8px;
-    }
-
-    .bs-captcha-status {
-        margin: 6px 2px 0;
-        font-size: 12px;
-        min-height: 16px;
-        color: #a8a29e;
-    }
-
-    .bs-captcha[data-state="loading"] .bs-captcha-mark {
-        border-color: #d4a373 transparent #d4a373 #d4a373;
-        border-radius: 50%;
-        animation: bs-spin .8s linear infinite;
-    }
-
-    .bs-captcha[data-state="success"] .bs-captcha-mark {
-        background: #4ade80;
-        border-color: #4ade80;
-    }
-
-        .bs-captcha[data-state="success"] .bs-captcha-mark::after {
-            content: "";
-            position: absolute;
-            left: 7px;
-            top: 2px;
-            width: 6px;
-            height: 12px;
-            border: solid #052e16;
-            border-width: 0 3px 3px 0;
-            transform: rotate(45deg);
-        }
-
-    .bs-captcha[data-state="success"] .bs-captcha-box {
-        cursor: default;
-        border-color: #4ade80;
-    }
-
-    .bs-captcha[data-state="error"] .bs-captcha-box {
-        border-color: #f87171;
-    }
-
-    .bs-captcha[data-state="error"] .bs-captcha-status {
-        color: #fca5a5;
-    }
-
-    @@keyframes bs-spin {
-        to {
-            transform: rotate(360deg);
-        }
-    }
-</style>
-
-<script src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" async defer></script>
 
 <script>
     (function() {
         const root = document.getElementById('@id');
         const form = root.closest('form');
-        const check = root.querySelector('.bs-captcha-check');
-        const mount = root.querySelector('.bs-captcha-widget');
-        const status = root.querySelector('.bs-captcha-status');
+        const base = '@Url.Content("~/captcha")';
+        const action = root.dataset.action;
 
-        const MSG_FIX = 'Please fix the highlighted fields, then tick the box again.';
+        const check = root.querySelector('.bs-cc-check');
+        const status = root.querySelector('[role="status"]');
+        const tokenInput = root.querySelector('.bs-cc-token');
+        const dialog = root.querySelector('.bs-cc-dialog');
+        const grid = root.querySelector('.bs-cc-grid');
+        const errorEl = root.querySelector('.bs-cc-error');
+        const verifyBtn = root.querySelector('.bs-cc-verify');
+        const cancelBtn = root.querySelector('.bs-cc-cancel');
+        const refreshBtn = root.querySelector('.bs-cc-refresh');
+        const tileTpl = root.querySelector('.bs-cc-tile');
 
-        let widgetId = null;
-        let ticked = false;       // user ticked "I'm not a robot"
-        let tokenReady = false;   // Cloudflare widget produced a valid token
-        let failed = false;
-        let notice = '';          // message that survives the widget re-running after a reset
+        let challengeId = null;
+        let verified = false;
+        let expiresAt = 0;
 
-        function paint() {
-            let state = 'idle', msg = notice;
-            if (failed) { state = 'error'; msg = 'Verification failed. Tick the box to try again.'; }
-            else if (ticked && tokenReady) { state = 'success'; msg = 'Verified.'; }
-            else if (ticked) { state = 'loading'; msg = 'Verifying…'; }
-            else if (notice) { state = 'error'; }
-            else if (tokenReady) { msg = 'Cloudflare check passed. Tick the box to continue.'; }
-
+        function setState(state, msg) {
             root.dataset.state = state;
-            status.textContent = msg;
-            check.checked = ticked;
+            status.textContent = msg || '';
         }
 
-        // Un-verifies everything and re-runs the Cloudflare widget for a fresh token.
-        function resetCaptcha(message) {
-            const needsReset = ticked || tokenReady || failed;
-            ticked = false;
-            tokenReady = false;
-            failed = false;
-            notice = message || '';
-            if (needsReset && widgetId !== null && window.turnstile) turnstile.reset(widgetId);
-            paint();
+        function reset() {
+            verified = false;
+            expiresAt = 0;
+            tokenInput.value = '';
+            check.checked = false;
+            check.disabled = false;
+            setState('idle');
         }
 
-        function whenReady(fn) {
-            if (window.turnstile) fn(); else setTimeout(function() { whenReady(fn); }, 100);
+        function openChallenge() {
+            check.checked = true;
+            setState('idle');
+            if (!dialog.open) dialog.showModal();
+            loadChallenge();
         }
 
-        // Render the visible Cloudflare widget as soon as the page loads.
-        whenReady(function() {
-            widgetId = turnstile.render(mount, {
-                sitekey: root.dataset.sitekey,
-                action: root.dataset.action,
-                theme: 'dark',
-                appearance: 'always',
-                callback: function() { tokenReady = true; failed = false; paint(); },
-                'error-callback': function() { tokenReady = false; ticked = false; failed = true; paint(); },
-                'expired-callback': function() { resetCaptcha('Verification expired. Tick the box again.'); },
-                'timeout-callback': function() { resetCaptcha('Verification timed out. Tick the box again.'); }
+        function antiforgery() {
+            const el = form && form.querySelector('input[name="__RequestVerificationToken"]');
+            return el ? el.value : '';
+        }
+
+        function selected() {
+            return [...grid.querySelectorAll('[aria-pressed="true"]')];
+        }
+
+        function buildTile(t, i) {
+            const node = tileTpl.content.firstElementChild.cloneNode(true);
+            node.dataset.id = t.id;
+            node.setAttribute('aria-label', 'Image ' + (i + 1));
+            node.querySelector('img').src = t.src;
+            node.addEventListener('click', function() {
+                node.setAttribute('aria-pressed', node.getAttribute('aria-pressed') === 'true' ? 'false' : 'true');
+                errorEl.classList.add('hidden');
+                verifyBtn.disabled = selected().length === 0;
             });
-        });
+            return node;
+        }
+
+        async function loadChallenge() {
+            verifyBtn.disabled = true;
+            errorEl.classList.add('hidden');
+
+            // Restore grid structure in case the previous load errored out
+            grid.className = 'bs-cc-grid mt-0.5 grid grid-cols-3 gap-0.5 bg-white';
+            grid.setAttribute('aria-busy', 'true');
+
+            grid.replaceChildren(...Array.from({ length: 9 }, function() {
+                const s = document.createElement('div');
+                s.className = 'aspect-square animate-pulse bg-stone-200';
+                return s;
+            }));
+
+            try {
+                const r = await fetch(base + '/challenge?action=' + encodeURIComponent(action), { cache: 'no-store' });
+                if (!r.ok) throw new Error('challenge');
+                const data = await r.json();
+                challengeId = data.id;
+                grid.replaceChildren(...data.tiles.map(buildTile));
+            } catch (e) {
+                challengeId = null;
+                grid.textContent = 'Could not load the challenge. Close this window and try again.';
+                grid.className = 'bs-cc-grid p-4 text-sm text-red-600';
+            } finally {
+                grid.removeAttribute('aria-busy');
+            }
+        }
+
+        async function verify() {
+            if (!challengeId) return;
+            verifyBtn.disabled = true;
+            const tiles = selected().map(function(b) { return b.dataset.id; });
+
+            let data = { ok: false };
+            try {
+                const r = await fetch(base + '/verify', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': antiforgery() },
+                    body: JSON.stringify({ challengeId: challengeId, tiles: tiles, action: action })
+                });
+                if (r.ok) data = await r.json();
+            } catch (e) { /* treated as failure */ }
+
+            if (data.ok) {
+                verified = true;
+                expiresAt = Date.now() + Math.max(30, (data.expiresIn || 600) - 15) * 1000;
+                tokenInput.value = data.token;
+                check.checked = true;
+                check.disabled = true;
+                setState('success', 'Verified.');
+                dialog.close('success');
+            } else {
+                await loadChallenge();
+                errorEl.classList.remove('hidden');
+            }
+        }
 
         check.addEventListener('change', function() {
-            if (ticked && tokenReady) { check.checked = true; return; }   // locked once verified
-
-            ticked = check.checked;
-            notice = '';
-            if (failed && widgetId !== null) {                             // retry after an error
-                failed = false;
-                tokenReady = false;
-                turnstile.reset(widgetId);
-            }
-            paint();
+            if (verified) { check.checked = true; return; }
+            if (check.checked) openChallenge();
         });
 
-        // 1) jQuery unobtrusive validation fires "invalid-form" whenever validation fails.
-        //    jQuery loads after this partial, so bind once the DOM is ready.
-        function bindValidationHook() {
-            if (window.jQuery) {
-                window.jQuery(form).on('invalid-form.bsCaptcha', function() { resetCaptcha(MSG_FIX); });
-            }
-        }
-        if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bindValidationHook);
-        else bindValidationHook();
+        dialog.addEventListener('close', function() {
+            if (!verified) reset();
+        });
 
-        // 2) Submit gate: check validity first, then the captcha. The server still verifies the token (SRS-FR-07).
+        dialog.addEventListener('click', function(e) { if (e.target === dialog) dialog.close(); });
+        cancelBtn.addEventListener('click', function() { dialog.close(); });
+        refreshBtn.addEventListener('click', loadChallenge);
+        verifyBtn.addEventListener('click', verify);
+
         form.addEventListener('submit', function(e) {
-            const jq = window.jQuery;
-            if (jq && jq.fn.valid && !jq(form).valid()) {
-                e.preventDefault();
-                resetCaptcha(MSG_FIX);
-                return;
-            }
-
-            if (!(ticked && tokenReady)) {
-                e.preventDefault();
-                if (ticked) {
-                    status.textContent = 'Still verifying, one moment…';
-                } else {
-                    notice = 'Please tick "I\'m not a robot" first.';
-                    paint();
-                }
-                check.focus();
-            }
+            if (verified && Date.now() < expiresAt) return;
+            e.preventDefault();
+            reset();
+            openChallenge();
         });
 
-        // 3) Coming back via the browser's Back button would show a stale "Verified" state.
         window.addEventListener('pageshow', function(e) {
-            if (e.persisted) resetCaptcha('');
+            if (e.persisted) reset();
         });
     })();
 </script>

@@ -16,6 +16,7 @@ public class CheckoutController(
     ICaptchaService captcha,
     IInventoryService inventory,
     IAuditService audit,
+    IQrTokenService qr,
     ApplicationDbContext db,
     ILogger<CheckoutController> log) : Controller
 {
@@ -117,6 +118,8 @@ public class CheckoutController(
         foreach (var itemId in result.SoldOutItemIds)
             audit.Add(null, "ItemSoldOut", $"MenuItemId={itemId}; OrderId={order.Id}");
         await db.SaveChangesAsync(ct);
+
+        await qr.IssueAsync(order, ct);
 
         await tx.CommitAsync(ct);
         cart.Clear();

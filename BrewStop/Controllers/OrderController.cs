@@ -1,6 +1,7 @@
 ﻿using System.Security.Claims;
 using BrewStop.Data;
 using BrewStop.Models;
+using BrewStop.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -8,7 +9,7 @@ using Microsoft.EntityFrameworkCore;
 namespace BrewStop.Controllers;
 
 [Authorize]
-public class OrderController(ApplicationDbContext db) : Controller
+public class OrderController(ApplicationDbContext db, IQrTokenService qr, IAuditService audit) : Controller
 {
     private string? UserId => User.FindFirstValue(ClaimTypes.NameIdentifier);
 
@@ -76,6 +77,9 @@ public class OrderController(ApplicationDbContext db) : Controller
             Details = $"OrderId={order.Id}",
             CreatedAtUtc = DateTime.UtcNow
         });
+
+        await qr.RevokeAsync(order.Id);                                              
+        audit.Add(UserId, "OrderStatusChanged", $"OrderId={order.Id}; Placed->Cancelled"); 
 
         await db.SaveChangesAsync();
         await tx.CommitAsync();

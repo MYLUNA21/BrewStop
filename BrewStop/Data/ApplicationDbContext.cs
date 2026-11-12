@@ -17,6 +17,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<OrderItemAddOn> OrderItemAddOns => Set<OrderItemAddOn>();
     public DbSet<InventoryItem> InventoryItems => Set<InventoryItem>();
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
+    public DbSet<OrderQrToken> OrderQrTokens => Set<OrderQrToken>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -25,6 +26,13 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
         modelBuilder.Entity<ApplicationUser>()
             .HasIndex(u => u.CampusId)
             .IsUnique();
+
+        modelBuilder.Entity<OrderQrToken>(e =>
+        {
+            e.HasIndex(t => t.Nonce).IsUnique();
+            e.HasIndex(t => t.OrderId).IsUnique();
+            e.HasOne(t => t.Order).WithMany().HasForeignKey(t => t.OrderId).OnDelete(DeleteBehavior.Cascade);
+        });
 
         modelBuilder.Entity<Category>(e =>
         {

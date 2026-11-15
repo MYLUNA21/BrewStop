@@ -40,11 +40,16 @@ public class ImageResolver(IHttpContextAccessor http) : IImageResolver
 
     public string Resolve(string? imageUrl, string? name = null)
     {
+        // 0) File uploaded by an admin
+        if (!string.IsNullOrWhiteSpace(imageUrl) &&
+            imageUrl.StartsWith("/uploads/menu/", StringComparison.OrdinalIgnoreCase))
+            return $"{PathBase}{imageUrl}";
+
         // 1) Curated photo by item name
         if (!string.IsNullOrWhiteSpace(name) && Catalog.TryGetValue(name.Trim(), out var stock))
             return stock;
 
-        // 2) Absolute http(s) URL stored in DB (e.g. added by an admin)
+        // 2) Absolute http(s) URL stored in DB
         if (!string.IsNullOrWhiteSpace(imageUrl) &&
             Uri.TryCreate(imageUrl, UriKind.Absolute, out var abs) &&
             (abs.Scheme == Uri.UriSchemeHttp || abs.Scheme == Uri.UriSchemeHttps))

@@ -1,0 +1,97 @@
+﻿@inject BrewStop.Services.IImageResolver Images
+@model List<BrewStop.Models.MenuItem>
+@{
+    ViewData["Title"] = "Manage Menu";
+    var stock = (Dictionary<int, int>)ViewBag.Stock;
+    var n = 0;
+}
+
+<div class="tw">
+    <div class="mx-auto max-w-6xl p-6 pt-28 text-cream">
+        <div class="mb-5 flex items-center justify-between">
+            <h1 class="font-serif text-2xl font-bold">Menu <span class="text-caramel">Management</span></h1>
+            <div class="flex gap-2">
+                <a asp-controller="Inventory" asp-action="Index"
+                   class="rounded-lg border border-white/20 px-4 py-2 text-sm text-cream hover:border-caramel hover:text-caramel">
+                    <i class="fa-solid fa-boxes-stacked mr-1"></i> Inventory
+                </a>
+                <a asp-action="Create" class="rounded-lg bg-caramel px-4 py-2 text-sm font-semibold text-espresso hover:opacity-90">
+                    <i class="fa-solid fa-plus mr-1"></i> Add New Item
+                </a>
+            </div>
+        </div>
+
+        @if (TempData["Success"] is string ok)
+        {
+            <div class="mb-3 rounded-lg border border-green-500/30 bg-green-500/10 p-3 text-green-300">@ok</div>
+        }
+        @if (TempData["Error"] is string err)
+        {
+            <div class="mb-3 rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-red-300">@err</div>
+        }
+
+        <div class="overflow-x-auto rounded-xl border border-white/10 bg-card">
+            <table class="min-w-full text-left text-sm">
+                <thead class="bg-black/30 text-xs uppercase tracking-wider text-caramel">
+                    <tr>
+                        <th class="px-4 py-3">#</th>
+                        <th class="px-4 py-3">Item</th>
+                        <th class="px-4 py-3">Category</th>
+                        <th class="px-4 py-3">Price</th>
+                        <th class="px-4 py-3">Status</th>
+                        <th class="px-4 py-3 text-right">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var m in Model)
+                    {
+                        var qty = stock.GetValueOrDefault(m.Id, 0);
+                        <tr class="border-t border-white/10 hover:bg-white/5">
+                            <td class="px-4 py-3 text-neutral-400">@(++n)</td>
+                            <td class="px-4 py-3">
+                                <div class="flex items-center gap-3">
+                                    <img src="@Images.Resolve(m.ImageUrl, m.Name)" alt="" class="h-10 w-10 rounded-full object-cover ring-1 ring-white/10" />
+                                    <span class="font-medium">@m.Name</span>
+                                </div>
+                            </td>
+                            <td class="px-4 py-3 text-neutral-300">@m.Category.Name</td>
+                            <td class="px-4 py-3 text-caramel">₱@m.Price.ToString("N2")</td>
+                            <td class="px-4 py-3">
+                                @if (qty == 0)
+                                {
+                                    <span class="inline-flex items-center gap-2"><span class="h-2 w-2 rounded-full bg-red-500"></span>Sold out</span>
+                                }
+                                else if (qty <= 5)
+                                {
+                                    <span class="inline-flex items-center gap-2"><span class="h-2 w-2 rounded-full bg-amber-400"></span>Low (@qty)</span>
+                                }
+                                else
+                                {
+                                    <span class="inline-flex items-center gap-2"><span class="h-2 w-2 rounded-full bg-green-500"></span>Available (@qty)</span>
+                                }
+                            </td>
+                            <td class="px-4 py-3">
+                                <div class="flex items-center justify-end gap-2">
+                                    <a asp-action="Edit" asp-route-id="@m.Id" title="Edit"
+                                       class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-caramel/20 text-caramel hover:bg-caramel hover:text-espresso">
+                                        <i class="fa-solid fa-pen text-xs"></i>
+                                    </a>
+                                    <form asp-action="Delete" asp-route-id="@m.Id" method="post"
+                                          onsubmit="return confirm('Delete @m.Name?');">
+                                        <button title="Delete"
+                                                class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-red-500/20 text-red-400 hover:bg-red-500 hover:text-white">
+                                            <i class="fa-solid fa-xmark text-xs"></i>
+                                        </button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+            <div class="border-t border-white/10 px-4 py-3 text-xs text-neutral-400">
+                Showing <b class="text-cream">@Model.Count</b> entries
+            </div>
+        </div>
+    </div>
+</div>

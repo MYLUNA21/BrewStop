@@ -1,0 +1,95 @@
+﻿@inject BrewStop.Services.IImageResolver Images
+@model BrewStop.Models.MenuItem
+@{
+    var isEdit = Model.Id > 0;
+    ViewData["Title"] = isEdit ? "Edit Menu Item" : "New Menu Item";
+    var preview = isEdit ? Images.Resolve(Model.ImageUrl, Model.Name) : "";
+    var hasUpload = Model.ImageUrl?.StartsWith("/uploads/menu/") == true;
+    var input = "mt-1 w-full rounded-lg border border-white/10 bg-card p-2.5 text-cream placeholder-neutral-500 focus:border-caramel focus:outline-none";
+}
+
+<div class="tw">
+    <div class="mx-auto max-w-xl p-6 pt-28 text-cream">
+        <h1 class="mb-5 font-serif text-2xl font-bold">@ViewData["Title"]</h1>
+
+        <form method="post" enctype="multipart/form-data" class="space-y-4">
+            @Html.AntiForgeryToken()
+            <input type="hidden" asp-for="Id" />
+            <div asp-validation-summary="ModelOnly" class="text-sm text-red-400"></div>
+
+            <div>
+                <label asp-for="Name" class="block text-sm font-medium"></label>
+                <input asp-for="Name" class="@input" />
+                <span asp-validation-for="Name" class="text-sm text-red-400"></span>
+            </div>
+            <div>
+                <label asp-for="Description" class="block text-sm font-medium"></label>
+                <textarea asp-for="Description" rows="3" class="@input"></textarea>
+                <span asp-validation-for="Description" class="text-sm text-red-400"></span>
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label asp-for="Price" class="block text-sm font-medium"></label>
+                    <input asp-for="Price" type="number" step="0.01" min="0" class="@input" />
+                    <span asp-validation-for="Price" class="text-sm text-red-400"></span>
+                </div>
+                <div>
+                    <label asp-for="CategoryId" class="block text-sm font-medium"></label>
+                    <select asp-for="CategoryId" asp-items="(SelectList)ViewBag.Categories" class="@input [&>option]:bg-card"></select>
+                    <span asp-validation-for="CategoryId" class="text-sm text-red-400"></span>
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium">Image</label>
+                <label for="image" id="dropzone"
+                       class="mt-1 flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-caramel/40 bg-card p-6 text-center hover:border-caramel">
+                    <img id="preview" src="@preview" alt="" class="@(isEdit ? "" : "hidden") h-40 w-40 rounded-lg object-cover" />
+                    <i class="fa-solid fa-cloud-arrow-up text-3xl text-caramel"></i>
+                    <span class="text-sm">Click to upload or drag &amp; drop</span>
+                    <span class="text-xs text-neutral-400">JPG, PNG or WEBP · max 2 MB</span>
+                </label>
+                <input type="file" id="image" name="image" accept="image/png,image/jpeg,image/webp" class="hidden" />
+                @if (isEdit && hasUpload)
+                {
+                    <label class="mt-2 flex items-center gap-2 text-sm text-neutral-300">
+                        <input type="checkbox" name="removeImage" value="true" /> Remove current image
+                    </label>
+                }
+            </div>
+
+            <div>
+                <label asp-for="BadgeText" class="block text-sm font-medium"></label>
+                <input asp-for="BadgeText" class="@input" />
+            </div>
+
+            <div class="flex gap-2 pt-2">
+                <button class="rounded-lg bg-caramel px-5 py-2 font-semibold text-espresso hover:opacity-90">Save</button>
+                <a asp-action="Index" class="rounded-lg border border-white/20 px-5 py-2 text-cream hover:border-caramel hover:text-caramel">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        const fileInput = document.getElementById('image');
+        const preview = document.getElementById('preview');
+        const zone = document.getElementById('dropzone');
+
+        function showFile(f) {
+            if (!f) return;
+            if (f.size > 2 * 1024 * 1024) { alert('Image must be 2 MB or smaller.'); fileInput.value = ''; return; }
+            preview.src = URL.createObjectURL(f);
+            preview.classList.remove('hidden');
+        }
+
+        fileInput.addEventListener('change', () => showFile(fileInput.files[0]));
+        ['dragenter', 'dragover'].forEach(e => zone.addEventListener(e, ev => { ev.preventDefault(); zone.classList.add('border-caramel'); }));
+        ['dragleave', 'drop'].forEach(e => zone.addEventListener(e, ev => { ev.preventDefault(); zone.classList.remove('border-caramel'); }));
+        zone.addEventListener('drop', ev => {
+            if (ev.dataTransfer.files.length) { fileInput.files = ev.dataTransfer.files; showFile(fileInput.files[0]); }
+        });
+    </script>
+}

@@ -32,7 +32,10 @@ public class OrderController(ApplicationDbContext db, IQrTokenService qr, IAudit
             .Include(o => o.Items).ThenInclude(i => i.AddOns)
             .FirstOrDefaultAsync(o => o.Id == id && o.UserId == UserId);
 
-        return order is null ? NotFound() : View(order);
+        if (order is null) return NotFound();
+
+        ViewBag.QrToken = await QrFor(order);
+        return View(order);
     }
 
     [HttpGet]
@@ -43,8 +46,16 @@ public class OrderController(ApplicationDbContext db, IQrTokenService qr, IAudit
             .Include(o => o.Items).ThenInclude(i => i.MenuItem)
             .FirstOrDefaultAsync(o => o.Id == id && o.UserId == UserId);
 
-        return order is null ? NotFound() : View(order);
+        if (order is null) return NotFound();
+
+        ViewBag.QrToken = await QrFor(order);
+        return View(order);
     }
+
+    private Task<string?> QrFor(Order o) =>
+        o.Status is OrderStatus.Placed or OrderStatus.Preparing or OrderStatus.Ready
+            ? qr.GetTokenAsync(o.Id)
+            : Task.FromResult<string?>(null);
 
     [HttpPost, ValidateAntiForgeryToken]
     public async Task<IActionResult> Cancel(int id)
@@ -78,8 +89,8 @@ public class OrderController(ApplicationDbContext db, IQrTokenService qr, IAudit
             CreatedAtUtc = DateTime.UtcNow
         });
 
-        await qr.RevokeAsync(order.Id);                                              
-        audit.Add(UserId, "OrderStatusChanged", $"OrderId={order.Id}; Placed->Cancelled"); 
+        await qr.RevokeAsync(order.Id);
+        audit.Add(UserId, "OrderStatusChanged", $"OrderId={order.Id}; Placed->Cancelled");
 
         await db.SaveChangesAsync();
         await tx.CommitAsync();

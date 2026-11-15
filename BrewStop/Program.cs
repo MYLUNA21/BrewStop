@@ -60,7 +60,7 @@ builder.Services.AddRateLimiter(o =>
     };
 
     static bool IsOrder(HttpContext c) => HttpMethods.IsPost(c.Request.Method)
-        && c.Request.Path.StartsWithSegments("/Checkout/Place", StringComparison.OrdinalIgnoreCase);
+    && c.Request.Path.StartsWithSegments("/Order/Checkout", StringComparison.OrdinalIgnoreCase);
 
     static bool IsAuth(HttpContext c) => HttpMethods.IsPost(c.Request.Method)
         && (c.Request.Path.StartsWithSegments("/Account/Login", StringComparison.OrdinalIgnoreCase)

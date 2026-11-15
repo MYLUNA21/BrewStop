@@ -35,7 +35,7 @@ public class CheckoutController(
         return View(Build(c, new CheckoutInput()));
     }
 
-    [HttpPost]
+    [HttpPost("/Order/Checkout")]
     public async Task<IActionResult> Place([Bind(Prefix = "Input")] CheckoutInput input)
     {
         var ct = HttpContext.RequestAborted;

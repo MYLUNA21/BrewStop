@@ -7,15 +7,22 @@ using Microsoft.Extensions.Options;
 
 namespace BrewStop.Services;
 
-public class QrOptions { public string SigningKey { get; set; } = string.Empty; }
+public class QrOptions
+{
+    public string SigningKey { get; set; } = string.Empty;
+}
 
-public enum ScanResult { Ok, Invalid, Expired, AlreadyUsed, Revoked, WrongStatus }
+public enum ScanResult
+{
+    Ok, Invalid, Expired, AlreadyUsed, Revoked, WrongStatus
+}
 
 public interface IQrTokenService
 {
     Task<string> IssueAsync(Order order, CancellationToken ct = default);
     Task<(ScanResult Result, int? OrderId)> ClaimAsync(string token, string baristaId, CancellationToken ct = default);
     Task RevokeAsync(int orderId, CancellationToken ct = default);
+    Task<string?> GetTokenAsync(int orderId, CancellationToken ct = default);
 }
 
 public class QrTokenService(ApplicationDbContext db, IOptions<QrOptions> opt, IAuditService audit) : IQrTokenService
@@ -77,7 +84,7 @@ public class QrTokenService(ApplicationDbContext db, IOptions<QrOptions> opt, IA
 
         await using var tx = await db.Database.BeginTransactionAsync(ct);
 
-        // Atomic claim: only one concurrent scan can flip IsUsed (SRS-NFR-09).
+        
         var rows = await db.OrderQrTokens
             .Where(x => x.Id == t.Id && !x.IsUsed && !x.IsRevoked)
             .ExecuteUpdateAsync(s => s
@@ -100,4 +107,15 @@ public class QrTokenService(ApplicationDbContext db, IOptions<QrOptions> opt, IA
     public Task RevokeAsync(int orderId, CancellationToken ct = default) =>
         db.OrderQrTokens.Where(x => x.OrderId == orderId)
             .ExecuteUpdateAsync(s => s.SetProperty(x => x.IsRevoked, true), ct);
+
+    public async Task<string?> GetTokenAsync(int orderId, CancellationToken ct = default)
+    {
+        var t = await db.OrderQrTokens.AsNoTracking()
+            .FirstOrDefaultAsync(x => x.OrderId == orderId && !x.IsRevoked && !x.IsUsed, ct);
+        if (t is null) return null;
+
+        var exp = new DateTimeOffset(DateTime.SpecifyKind(t.ExpiresAtUtc, DateTimeKind.Utc)).ToUnixTimeSeconds();
+        var payload = $"{orderId}|{t.Nonce}|{exp}";
+        return $"{B64(Encoding.UTF8.GetBytes(payload))}.{B64(Sign(payload))}";
+    }
 }

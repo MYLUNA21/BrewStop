@@ -29,7 +29,6 @@
                 {
                     <li class="flex items-start justify-between gap-4 py-3 text-sm">
                         <div class="flex items-start gap-3">
-                            
                             <img src="@Images.Resolve(i.MenuItem?.ImageUrl, i.ItemName)" alt="@i.ItemName" class="h-14 w-14 rounded-lg object-cover" />
                             <div>
                                 <p class="text-cream">@i.Quantity &times; @i.ItemName</p>
@@ -52,6 +51,8 @@
                 <span class="text-neutral-300">Total (pay at pickup)</span>
                 <span class="text-2xl font-bold text-caramel">&#8369;@Model.Total.ToString("N2")</span>
             </div>
+
+            <partial name="_Qr" />
 
             <a asp-controller="Menu" asp-action="Index" class="mt-6 inline-block rounded-full border border-white/20 px-5 py-2 text-sm text-cream hover:border-caramel">Back to menu</a>
         </div>

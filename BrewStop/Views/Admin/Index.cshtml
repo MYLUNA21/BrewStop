@@ -1,0 +1,14 @@
+﻿@{
+    ViewData["Title"] = "Admin";
+}
+
+<div class="tw">
+    <div class="mx-auto max-w-3xl px-4 pt-24 pb-12">
+        <h1 class="font-serif text-3xl font-bold text-cream">Admin</h1>
+        <div class="mt-6 grid gap-4 sm:grid-cols-3">
+            <a asp-controller="MenuItems" asp-action="Index" class="rounded-2xl border border-white/10 bg-card p-5 text-cream hover:border-caramel">Menu items</a>
+            <a asp-controller="Inventory" asp-action="Index" class="rounded-2xl border border-white/10 bg-card p-5 text-cream hover:border-caramel">Inventory</a>
+            <a asp-controller="Barista" asp-action="Index" class="rounded-2xl border border-white/10 bg-card p-5 text-cream hover:border-caramel">Barista queue</a>
+        </div>
+    </div>
+</div>

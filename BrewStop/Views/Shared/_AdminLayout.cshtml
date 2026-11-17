@@ -1,0 +1,80 @@
+﻿@{
+    var path = Context.Request.Path.Value ?? string.Empty;
+    var links = new (string Href, string Label, string Icon)[]
+    {
+        ("/Admin/Dashboard", "Dashboard", "fa-gauge"),
+        ("/Admin/Orders", "Order Management", "fa-receipt"),
+        ("/Admin/Customers", "Customer Management", "fa-users"),
+        ("/Admin/Payments", "Payment Management", "fa-credit-card"),
+        ("/Admin/Promotions", "Discounts & Promotions", "fa-tags"),
+        ("/Admin/Reports", "Reports & Records", "fa-chart-line"),
+        ("/Admin/MenuItems", "Manage Items", "fa-mug-hot"),
+        ("/Admin/Inventory", "Inventory Management", "fa-boxes-stacked"),
+    };
+
+    bool IsActive(string href) =>
+        path.StartsWith(href, StringComparison.OrdinalIgnoreCase)
+        || (href == "/Admin/Dashboard" && path.Equals("/Admin", StringComparison.OrdinalIgnoreCase));
+}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - BrewStop Admin</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+    <script>
+            tailwind.config = {
+                important: '.tw',
+                corePlugins: { preflight: false },
+                theme: { extend: { colors: { espresso: '#1a0f0d', card: '#241411', caramel: '#d4a373', cream: '#fefae0' } } }
+            };
+    </script>
+</head>
+<body style="margin:0 !important; padding:0 !important; background:#1a0f0d !important;">
+    <div class="tw">
+        <div class="flex min-h-screen w-full flex-col bg-espresso md:flex-row">
+            <aside class="flex w-full shrink-0 flex-col border-b border-white/10 bg-card md:sticky md:top-0 md:h-screen md:w-64 md:overflow-y-auto md:border-b-0 md:border-r">
+                <a href="/Admin/Dashboard" class="flex items-center gap-2 border-b border-white/10 px-5 py-5 no-underline">
+                    <i class="fa-solid fa-mug-hot text-caramel"></i>
+                    <span class="font-serif text-lg font-bold tracking-wider text-cream">Brew<span class="text-caramel">Stop</span> <span class="text-xs font-normal text-neutral-400">Admin</span></span>
+                </a>
+
+                <nav class="flex-1 space-y-1 px-3 py-4">
+                    @foreach (var l in links)
+                    {
+                        var active = IsActive(l.Href);
+                        <a href="@l.Href"
+                           class="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium no-underline transition @(active ? "bg-caramel/15 text-caramel" : "text-neutral-300 hover:bg-white/5 hover:text-cream")">
+                            <i class="fa-solid @l.Icon w-4 text-center"></i>
+                            <span>@l.Label</span>
+                        </a>
+                    }
+                </nav>
+
+                <div class="border-t border-white/10 p-3">
+                    <form method="post" action="/Account/Logout">
+                        @Html.AntiForgeryToken()
+                        <button type="submit" class="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-medium text-neutral-300 hover:bg-white/5 hover:text-cream">
+                            <i class="fa-solid fa-right-from-bracket w-4 text-center"></i>
+                            <span>Logout</span>
+                        </button>
+                    </form>
+                </div>
+            </aside>
+
+            <main role="main" class="min-w-0 flex-1 p-6 text-cream">
+                @RenderBody()
+            </main>
+        </div>
+    </div>
+
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

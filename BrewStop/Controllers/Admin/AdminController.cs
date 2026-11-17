@@ -11,6 +11,9 @@ public class AdminController : Controller
     [HttpGet(""), HttpGet("Index")]
     public IActionResult Index() => View("~/Views/Admin/Index.cshtml");
 
+    [HttpGet("Dashboard")]
+    public IActionResult Dashboard() => View();
+
     [HttpGet("Menu")]
     public IActionResult Menu() => RedirectToAction("Index", "MenuItems");
 }

@@ -9,7 +9,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace BrewStop.Controllers;
 
-[Authorize]
+[Authorize(Policy = "CustomerOnly")]
 public class CheckoutController(
     ICartService cart,
     IPickupSlotService slots,

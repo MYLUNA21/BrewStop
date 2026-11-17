@@ -1,4 +1,5 @@
     using BrewStop.Models;
+    using BrewStop.Data;
     using Microsoft.AspNetCore.Mvc;
     using System.Diagnostics;
 
@@ -8,7 +9,10 @@
         {
             public IActionResult Index()
             {
-                return View();
+            if (User.IsInRole(AppRoles.Admin))
+                return RedirectToAction("Dashboard", "Admin");
+
+            return View();
             }
 
             public IActionResult Privacy()

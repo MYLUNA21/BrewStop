@@ -34,6 +34,9 @@ builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
     .AddEntityFrameworkStores<ApplicationDbContext>()
     .AddDefaultTokenProviders();
 
+builder.Services.AddAuthorizationBuilder()
+    .AddPolicy("CustomerOnly", policy => policy.RequireRole(AppRoles.Student, AppRoles.Faculty));
+
 builder.Services.ConfigureApplicationCookie(options =>       // SRS-NFR-05
 {
     options.Cookie.HttpOnly = true;

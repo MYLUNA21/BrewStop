@@ -9,7 +9,7 @@
 }
 
 <div class="tw">
-    <div class="mx-auto max-w-xl p-6 pt-28 text-cream">
+    <div class="mx-auto max-w-xl p-6 text-cream">
         <h1 class="mb-5 font-serif text-2xl font-bold">@ViewData["Title"]</h1>
 
         <form method="post" enctype="multipart/form-data" class="space-y-4">
@@ -63,7 +63,7 @@
                 <input asp-for="BadgeText" class="@input" />
             </div>
 
-            <div class="flex gap-2 pt-2">
+            <div class="flex gap-2  ">
                 <button class="rounded-lg bg-caramel px-5 py-2 font-semibold text-espresso hover:opacity-90">Save</button>
                 <a asp-action="Index" class="rounded-lg border border-white/20 px-5 py-2 text-cream hover:border-caramel hover:text-caramel">Cancel</a>
             </div>

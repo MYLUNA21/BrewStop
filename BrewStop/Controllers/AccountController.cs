@@ -26,7 +26,7 @@ public class AccountController(
     {
         if (!ModelState.IsValid) return View(m);
 
-        // SRS-FR-07: reject bots before touching the database.
+        
         if (!await captcha.VerifyAsync(Request, "register", HttpContext.RequestAborted))
         {
             ModelState.AddModelError(string.Empty, "Captcha verification failed. Please try again.");

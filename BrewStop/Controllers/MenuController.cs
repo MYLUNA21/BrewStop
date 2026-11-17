@@ -10,6 +10,10 @@ public class MenuController(ApplicationDbContext db, IImageResolver images) : Co
 {
     public async Task<IActionResult> Index(string? category)
     {
+
+        if (User.IsInRole(AppRoles.Admin))
+            return RedirectToAction("Dashboard", "Admin");
+
         var categories = await db.Categories
             .AsNoTracking()
             .Include(c => c.MenuItems)

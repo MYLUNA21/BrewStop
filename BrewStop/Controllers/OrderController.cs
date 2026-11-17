@@ -8,7 +8,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace BrewStop.Controllers;
 
-[Authorize]
+[Authorize(Policy = "CustomerOnly")]
 public class OrderController(ApplicationDbContext db, IQrTokenService qr, IAuditService audit) : Controller
 {
     private string? UserId => User.FindFirstValue(ClaimTypes.NameIdentifier);

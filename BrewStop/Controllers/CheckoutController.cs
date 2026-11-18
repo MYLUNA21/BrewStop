@@ -17,6 +17,7 @@ public class CheckoutController(
     IInventoryService inventory,
     IAuditService audit,
     IQrTokenService qr,
+    IPromotionService promotions,
     ApplicationDbContext db,
     ILogger<CheckoutController> log) : Controller
 {
@@ -85,7 +86,8 @@ public class CheckoutController(
                 }).ToList()
             });
         }
-        order.Total = order.Items.Sum(i => i.UnitPrice * i.Quantity);
+        var subtotal = order.Items.Sum(i => i.UnitPrice * i.Quantity);
+        order.Total = subtotal;
 
         // SRS-NFR-09 / FR-15: stock deduction and order creation commit together or not at all.
         await using var tx = await db.Database.BeginTransactionAsync(ct);
@@ -108,11 +110,24 @@ public class CheckoutController(
             return View("Index", Build(await cart.GetAsync(), input));
         }
 
+        var promo = await promotions.ApplyPromotionAsync(input.PromoCode, subtotal, ct);
+        if (!promo.Ok)
+        {
+            await tx.RollbackAsync(ct);
+            ModelState.AddModelError("Input.PromoCode", promo.Error!);
+            return View("Index", Build(await cart.GetAsync(), input));
+        }
+        order.PromoCode = promo.Code;
+        order.DiscountAmount = promo.Discount;
+        order.Total = subtotal - promo.Discount;
+
         db.Orders.Add(order);
         await db.SaveChangesAsync(ct);   // order.Id is available after this
 
         // SRS-FR-20: audit entries are saved inside the same transaction.
         audit.Add(userId, "OrderPlaced", $"OrderId={order.Id}; Status=Placed; Total={order.Total:0.00}");
+        if (promo.PromotionId is not null)
+            audit.Add(userId, "PromoApplied", $"OrderId={order.Id}; Code={promo.Code}; Discount={promo.Discount:0.00}");
         foreach (var (itemId, qty) in wanted)
             audit.Add(userId, "InventoryDeducted", $"MenuItemId={itemId}; Qty={qty}; OrderId={order.Id}");
         foreach (var itemId in result.SoldOutItemIds)

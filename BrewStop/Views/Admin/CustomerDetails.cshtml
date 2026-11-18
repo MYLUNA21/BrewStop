@@ -1,0 +1,96 @@
+﻿@model AdminCustomerDetailsViewModel
+@{
+    Layout = "_AdminLayout";
+    ViewData["Title"] = Model.User.FullName;
+    var currentRole = Model.Roles.FirstOrDefault();
+}
+
+<div class="tw">
+    <div class="mx-auto max-w-5xl">
+        <div class="mb-5 flex items-center justify-between">
+            <h1 class="font-serif text-2xl font-bold">@Model.User.FullName</h1>
+            <a href="/Admin/Customers" class="rounded-lg border border-white/20 px-4 py-2 text-sm text-cream no-underline hover:border-caramel hover:text-caramel">
+                <i class="fa-solid fa-arrow-left mr-1"></i> Back to Customers
+            </a>
+        </div>
+
+        @if (TempData["Success"] is string ok)
+        {
+            <div class="mb-3 rounded-lg border border-green-500/30 bg-green-500/10 p-3 text-green-300">@ok</div>
+        }
+        @if (TempData["Error"] is string err)
+        {
+            <div class="mb-3 rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-red-300">@err</div>
+        }
+
+        <div class="grid grid-cols-1 gap-4 rounded-xl border border-white/10 bg-card p-5 sm:grid-cols-2">
+            <div><div class="text-xs uppercase text-neutral-400">Campus ID</div>@Model.User.CampusId</div>
+            <div><div class="text-xs uppercase text-neutral-400">Email</div>@Model.User.Email</div>
+            <div><div class="text-xs uppercase text-neutral-400">Role(s)</div>@(Model.Roles.Count == 0 ? "—" : string.Join(", ", Model.Roles))</div>
+            <div><div class="text-xs uppercase text-neutral-400">Email Confirmed</div>@(Model.User.EmailConfirmed ? "Yes" : "No")</div>
+            <div><div class="text-xs uppercase text-neutral-400">Account</div>@(Model.IsLocked ? "Locked" : "Active")</div>
+        </div>
+
+        <div class="mt-4 flex flex-wrap items-end gap-4 rounded-xl border border-white/10 bg-card p-5">
+            <form method="post" action="/Admin/UpdateUserRole" class="flex items-end gap-2">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="id" value="@Model.User.Id" />
+                <div>
+                    <label class="mb-1 block text-xs uppercase text-neutral-400">Assign Role</label>
+                    <select name="role" class="rounded-lg border border-white/20 bg-black/30 px-3 py-2 text-sm text-cream">
+                        @foreach (var r in AppRoles.All)
+                        {
+                            <option value="@r" selected="@(r == currentRole)">@r</option>
+                        }
+                    </select>
+                </div>
+                <button type="submit" class="rounded-lg bg-caramel px-4 py-2 text-sm font-semibold text-espresso">Update Role</button>
+            </form>
+
+            <form method="post" action="/Admin/ToggleUserLock"
+                  onsubmit="return confirm('@(Model.IsLocked ? "Unlock" : "Lock") this account?');">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="id" value="@Model.User.Id" />
+                <button type="submit"
+                        class="rounded-lg px-4 py-2 text-sm font-semibold @(Model.IsLocked ? "bg-green-500/20 text-green-300 hover:bg-green-500/30" : "border border-red-500/40 text-red-300 hover:bg-red-500/10")">
+                    @(Model.IsLocked ? "Unlock Account" : "Lock Account")
+                </button>
+            </form>
+        </div>
+
+        <h2 class="mb-2 mt-6 font-serif text-lg font-bold">Order <span class="text-caramel">History</span></h2>
+        <div class="overflow-x-auto rounded-xl border border-white/10 bg-card">
+            <table class="min-w-full text-left text-sm">
+                <thead class="bg-black/30 text-xs uppercase tracking-wider text-caramel">
+                    <tr>
+                        <th class="px-4 py-3">Order</th>
+                        <th class="px-4 py-3">Placed</th>
+                        <th class="px-4 py-3">Pickup</th>
+                        <th class="px-4 py-3">Total</th>
+                        <th class="px-4 py-3">Status</th>
+                        <th class="px-4 py-3">Payment</th>
+                        <th class="px-4 py-3"></th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-white/5">
+                    @foreach (var o in Model.Orders)
+                    {
+                        <tr>
+                            <td class="px-4 py-3">#@o.Id</td>
+                            <td class="px-4 py-3">@o.CreatedAtUtc.ToLocalTime().ToString("MMM d, h:mm tt")</td>
+                            <td class="px-4 py-3">@o.PickupAtUtc.ToLocalTime().ToString("MMM d, h:mm tt")</td>
+                            <td class="px-4 py-3">₱@o.Total.ToString("N2")</td>
+                            <td class="px-4 py-3">@o.Status</td>
+                            <td class="px-4 py-3">@o.PaymentStatus (@o.PaymentMethod)</td>
+                            <td class="px-4 py-3 text-right"><a href="/Admin/OrderDetails/@o.Id" class="text-caramel no-underline hover:underline">View</a></td>
+                        </tr>
+                    }
+                    @if (Model.Orders.Count == 0)
+                    {
+                        <tr><td colspan="7" class="px-4 py-8 text-center text-neutral-400">No orders yet.</td></tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

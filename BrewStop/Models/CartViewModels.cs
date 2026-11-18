@@ -58,6 +58,10 @@ public class CheckoutInput
     [RegularExpression(@"^[^<>\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]*$",
         ErrorMessage = "Note contains characters that are not allowed.")]
     public string? Note { get; set; }
+
+    [StringLength(30, ErrorMessage = "Promo code must be 30 characters or fewer.")]
+    [Display(Name = "Promo code")]
+    public string? PromoCode { get; set; }
 }
 
 public class CheckoutViewModel
@@ -66,4 +70,3 @@ public class CheckoutViewModel
     public IReadOnlyList<Services.PickupSlot> Slots { get; set; } = Array.Empty<Services.PickupSlot>();
     public CheckoutInput Input { get; set; } = new();
 }
-

@@ -98,12 +98,13 @@ builder.Services.AddSession(options =>
 });
 
 builder.Services.Configure<ShopOptions>(builder.Configuration.GetSection("Shop"));
-builder.Services.Configure<QrOptions>(builder.Configuration.GetSection("Qr")); 
-builder.Services.AddScoped<IQrTokenService, QrTokenService>();               
+builder.Services.Configure<QrOptions>(builder.Configuration.GetSection("Qr"));
+builder.Services.AddScoped<IQrTokenService, QrTokenService>();
 builder.Services.AddScoped<ICartService, CartService>();
 builder.Services.AddScoped<IPickupSlotService, PickupSlotService>();
 builder.Services.AddScoped<IInventoryService, InventoryService>();
 builder.Services.AddScoped<IAuditService, AuditService>();
+builder.Services.AddScoped<IPromotionService, PromotionService>();
 builder.Services.AddMemoryCache();
 builder.Services.Configure<CaptchaOptions>(builder.Configuration.GetSection("Captcha"));
 builder.Services.AddScoped<ICaptchaService, CaptchaService>();
@@ -142,7 +143,7 @@ app.Use(async (ctx, next) =>
 app.UseRouting();
 app.UseSession();
 app.UseAuthentication();
-app.UseRateLimiter(); 
+app.UseRateLimiter();
 app.UseAuthorization();
 
 app.MapControllerRoute(

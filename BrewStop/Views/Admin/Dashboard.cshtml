@@ -1,5 +1,76 @@
-﻿@{
+﻿@model AdminDashboardViewModel
+@{
+    Layout = "_AdminLayout";
     ViewData["Title"] = "Dashboard";
 }
 
-<h1 class="font-serif text-2xl font-bold text-cream">Admin <span class="text-caramel">Dashboard</span></h1>
+<h1 class="font-serif text-2xl font-bold text-cream mb-5">Admin <span class="text-caramel">Dashboard</span></h1>
+
+<div class="tw">
+    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <div class="rounded-xl border border-white/10 bg-card p-5">
+            <div class="text-xs uppercase tracking-wider text-neutral-400">Total Revenue</div>
+            <div class="mt-2 text-2xl font-bold text-caramel">₱@Model.TotalRevenue.ToString("N2")</div>
+        </div>
+        <div class="rounded-xl border border-white/10 bg-card p-5">
+            <div class="text-xs uppercase tracking-wider text-neutral-400">Total Customers</div>
+            <div class="mt-2 text-2xl font-bold">@Model.TotalCustomers</div>
+        </div>
+        <div class="rounded-xl border border-white/10 bg-card p-5">
+            <div class="text-xs uppercase tracking-wider text-neutral-400">Total Orders</div>
+            <div class="mt-2 text-2xl font-bold">@Model.TotalOrders</div>
+            <div class="mt-1 text-xs text-amber-300">@Model.PendingOrders pending / active</div>
+        </div>
+        <div class="rounded-xl border border-white/10 bg-card p-5">
+            <div class="text-xs uppercase tracking-wider text-neutral-400">Best-Selling Coffee</div>
+            <div class="mt-2 text-lg font-bold">@(Model.BestSellerName ?? "—")</div>
+            <div class="mt-1 text-xs text-neutral-400">@Model.BestSellerUnits units sold</div>
+        </div>
+    </div>
+
+    <div class="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <div class="rounded-xl border border-white/10 bg-card p-5">
+            <div class="text-xs uppercase tracking-wider text-neutral-400">Today</div>
+            <div class="mt-2 text-xl font-bold text-caramel">₱@Model.TodayRevenue.ToString("N2")</div>
+        </div>
+        <div class="rounded-xl border border-white/10 bg-card p-5">
+            <div class="text-xs uppercase tracking-wider text-neutral-400">Last 7 Days</div>
+            <div class="mt-2 text-xl font-bold text-caramel">₱@Model.WeekRevenue.ToString("N2")</div>
+        </div>
+        <div class="rounded-xl border border-white/10 bg-card p-5">
+            <div class="text-xs uppercase tracking-wider text-neutral-400">This Month</div>
+            <div class="mt-2 text-xl font-bold text-caramel">₱@Model.MonthRevenue.ToString("N2")</div>
+        </div>
+    </div>
+
+    <div class="mt-4 rounded-xl border border-white/10 bg-card p-5">
+        <div class="mb-3 text-sm font-semibold">Daily Revenue — Last 7 Days</div>
+        <div class="relative h-72"><canvas id="revenueChart"></canvas></div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <script>
+        new Chart(document.getElementById('revenueChart'), {
+            type: 'bar',
+            data: {
+                labels: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.ChartLabels)),
+                datasets: [{
+                    label: 'Revenue (₱)',
+                    data: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.ChartValues)),
+                    backgroundColor: '#d4a373',
+                    borderRadius: 6
+                }]
+            },
+            options: {
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    x: { ticks: { color: '#d4d4d4' }, grid: { display: false } },
+                    y: { beginAtZero: true, ticks: { color: '#d4d4d4' }, grid: { color: 'rgba(255,255,255,0.08)' } }
+                }
+            }
+        });
+    </script>
+}

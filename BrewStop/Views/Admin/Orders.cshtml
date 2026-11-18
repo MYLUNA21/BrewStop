@@ -1,0 +1,70 @@
+﻿@model AdminOrdersViewModel
+@{
+    Layout = "_AdminLayout";
+    ViewData["Title"] = "Order Management";
+    var filters = new[] { "All", "Placed", "Preparing", "Ready", "Claimed", "Cancelled" };
+}
+
+<div class="tw">
+    <div class="mb-5 flex items-center justify-between">
+        <h1 class="font-serif text-2xl font-bold">Order <span class="text-caramel">Management</span></h1>
+        <span class="rounded-full bg-amber-500/15 px-3 py-1 text-xs font-semibold text-amber-300">
+            @Model.PendingCount pending (Placed / Preparing)
+        </span>
+    </div>
+
+    @if (TempData["Success"] is string ok)
+    {
+        <div class="mb-3 rounded-lg border border-green-500/30 bg-green-500/10 p-3 text-green-300">@ok</div>
+    }
+    @if (TempData["Error"] is string err)
+    {
+        <div class="mb-3 rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-red-300">@err</div>
+    }
+
+    <div class="mb-4 flex flex-wrap gap-2">
+        @foreach (var f in filters)
+        {
+            var on = Model.Filter == f;
+            <a href="/Admin/Orders?status=@f"
+               class="rounded-full border px-4 py-1.5 text-sm no-underline @(on ? "border-caramel bg-caramel/15 text-caramel" : "border-white/20 text-neutral-300 hover:border-caramel hover:text-caramel")">@f</a>
+        }
+    </div>
+
+    <div class="overflow-x-auto rounded-xl border border-white/10 bg-card">
+        <table class="min-w-full text-left text-sm">
+            <thead class="bg-black/30 text-xs uppercase tracking-wider text-caramel">
+                <tr>
+                    <th class="px-4 py-3">Order</th>
+                    <th class="px-4 py-3">Customer</th>
+                    <th class="px-4 py-3">Pickup</th>
+                    <th class="px-4 py-3">Total</th>
+                    <th class="px-4 py-3">Status</th>
+                    <th class="px-4 py-3"></th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-white/5">
+                @foreach (var o in Model.Orders)
+                {
+                    var pending = o.Status is OrderStatus.Placed or OrderStatus.Preparing;
+                    <tr>
+                        <td class="px-4 py-3">#@o.Id<div class="text-xs text-neutral-400">@o.CreatedAtUtc.ToLocalTime().ToString("MMM d, h:mm tt")</div></td>
+                        <td class="px-4 py-3">@o.User.FullName<div class="text-xs text-neutral-400">@o.User.CampusId</div></td>
+                        <td class="px-4 py-3">@o.PickupAtUtc.ToLocalTime().ToString("MMM d, h:mm tt")</td>
+                        <td class="px-4 py-3">₱@o.Total.ToString("N2")</td>
+                        <td class="px-4 py-3">
+                            <span class="rounded-full px-2.5 py-1 text-xs font-semibold @(pending ? "bg-amber-500/15 text-amber-300" : o.Status == OrderStatus.Cancelled ? "bg-red-500/15 text-red-300" : "bg-green-500/15 text-green-300")">@o.Status</span>
+                        </td>
+                        <td class="px-4 py-3 text-right">
+                            <a href="/Admin/OrderDetails/@o.Id" class="text-caramel no-underline hover:underline">View</a>
+                        </td>
+                    </tr>
+                }
+                @if (Model.Orders.Count == 0)
+                {
+                    <tr><td colspan="6" class="px-4 py-8 text-center text-neutral-400">No orders found.</td></tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

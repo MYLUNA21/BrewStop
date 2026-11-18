@@ -18,6 +18,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<InventoryItem> InventoryItems => Set<InventoryItem>();
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
     public DbSet<OrderQrToken> OrderQrTokens => Set<OrderQrToken>();
+    public DbSet<Promotion> Promotions => Set<Promotion>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -64,8 +65,11 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
         {
             e.Property(o => o.Total).HasPrecision(10, 2);
             e.Property(o => o.Status).HasConversion<string>().HasMaxLength(20);
+            e.Property(o => o.PaymentMethod).HasConversion<string>().HasMaxLength(20);
+            e.Property(o => o.PaymentStatus).HasConversion<string>().HasMaxLength(20);
             e.HasIndex(o => new { o.UserId, o.CreatedAtUtc });
             e.HasIndex(o => new { o.Status, o.PickupAtUtc });
+            e.HasIndex(o => new { o.PaymentStatus, o.PaymentMethod });
             e.HasOne(o => o.User).WithMany().HasForeignKey(o => o.UserId).OnDelete(DeleteBehavior.Restrict);
         });
 

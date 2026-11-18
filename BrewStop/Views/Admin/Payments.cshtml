@@ -1,0 +1,132 @@
+﻿@model AdminPaymentsViewModel
+@{
+    Layout = "_AdminLayout";
+    ViewData["Title"] = "Payment Management";
+}
+
+<div class="tw">
+    <h1 class="mb-5 font-serif text-2xl font-bold">Payment <span class="text-caramel">Management</span></h1>
+
+    @if (TempData["Success"] is string ok)
+    {
+        <div class="mb-3 rounded-lg border border-green-500/30 bg-green-500/10 p-3 text-green-300">@ok</div>
+    }
+    @if (TempData["Error"] is string err)
+    {
+        <div class="mb-3 rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-red-300">@err</div>
+    }
+
+    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5">
+        <div class="rounded-xl border border-white/10 bg-card p-5">
+            <div class="text-xs uppercase tracking-wider text-neutral-400">Today's Collected</div>
+            <div class="mt-2 text-xl font-bold text-caramel">₱@Model.TodayCollected.ToString("N2")</div>
+        </div>
+        <div class="rounded-xl border border-white/10 bg-card p-5">
+            <div class="text-xs uppercase tracking-wider text-neutral-400">Unpaid (Pending Pickup)</div>
+            <div class="mt-2 text-xl font-bold text-amber-300">₱@Model.UnpaidPending.ToString("N2")</div>
+        </div>
+        <div class="rounded-xl border border-white/10 bg-card p-5">
+            <div class="text-xs uppercase tracking-wider text-neutral-400">Cash Total</div>
+            <div class="mt-2 text-xl font-bold">₱@Model.CashTotal.ToString("N2")</div>
+        </div>
+        <div class="rounded-xl border border-white/10 bg-card p-5">
+            <div class="text-xs uppercase tracking-wider text-neutral-400">GCash Total</div>
+            <div class="mt-2 text-xl font-bold">₱@Model.GCashTotal.ToString("N2")</div>
+        </div>
+        <div class="rounded-xl border border-white/10 bg-card p-5">
+            <div class="text-xs uppercase tracking-wider text-neutral-400">Refunded Total</div>
+            <div class="mt-2 text-xl font-bold text-red-300">₱@Model.RefundedTotal.ToString("N2")</div>
+        </div>
+    </div>
+
+    <form method="get" action="/Admin/Payments" class="mb-4 mt-6 flex flex-wrap items-end gap-3">
+        <div>
+            <label class="mb-1 block text-xs uppercase text-neutral-400">Payment Status</label>
+            <select name="paymentStatus" class="rounded-lg border border-white/20 bg-black/30 px-3 py-2 text-sm text-cream">
+                @foreach (var s in new[] { "All", "Paid", "Unpaid", "Refunded" })
+                {
+                    <option value="@s" selected="@(Model.PaymentStatusFilter == s)">@s</option>
+                }
+            </select>
+        </div>
+        <div>
+            <label class="mb-1 block text-xs uppercase text-neutral-400">Method</label>
+            <select name="method" class="rounded-lg border border-white/20 bg-black/30 px-3 py-2 text-sm text-cream">
+                @foreach (var m in new[] { "All", "Cash", "GCash" })
+                {
+                    <option value="@m" selected="@(Model.MethodFilter == m)">@m</option>
+                }
+            </select>
+        </div>
+        <div>
+            <label class="mb-1 block text-xs uppercase text-neutral-400">Date</label>
+            <input type="date" name="date" value="@Model.Date" class="rounded-lg border border-white/20 bg-black/30 px-3 py-2 text-sm text-cream" />
+        </div>
+        <button type="submit" class="rounded-lg bg-caramel px-4 py-2 text-sm font-semibold text-espresso">Apply</button>
+        <a href="/Admin/Payments" class="rounded-lg border border-white/20 px-4 py-2 text-sm text-cream no-underline">Reset</a>
+    </form>
+
+    <div class="overflow-x-auto rounded-xl border border-white/10 bg-card">
+        <table class="min-w-full text-left text-sm">
+            <thead class="bg-black/30 text-xs uppercase tracking-wider text-caramel">
+                <tr>
+                    <th class="px-4 py-3">Order</th>
+                    <th class="px-4 py-3">Customer</th>
+                    <th class="px-4 py-3">Placed</th>
+                    <th class="px-4 py-3">Order Status</th>
+                    <th class="px-4 py-3">Method</th>
+                    <th class="px-4 py-3">Amount</th>
+                    <th class="px-4 py-3">Payment</th>
+                    <th class="px-4 py-3"></th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-white/5">
+                @foreach (var o in Model.Orders)
+                {
+                    <tr>
+                        <td class="px-4 py-3"><a href="/Admin/OrderDetails/@o.Id" class="text-caramel no-underline hover:underline">#@o.Id</a></td>
+                        <td class="px-4 py-3">@o.User.FullName<div class="text-xs text-neutral-400">@o.User.CampusId</div></td>
+                        <td class="px-4 py-3">@o.CreatedAtUtc.ToLocalTime().ToString("MMM d, h:mm tt")</td>
+                        <td class="px-4 py-3">@o.Status</td>
+                        <td class="px-4 py-3">@o.PaymentMethod</td>
+                        <td class="px-4 py-3">₱@o.Total.ToString("N2")</td>
+                        <td class="px-4 py-3">
+                            <span class="rounded-full px-2.5 py-1 text-xs font-semibold @(o.PaymentStatus == PaymentStatus.Paid ? "bg-green-500/15 text-green-300" : o.PaymentStatus == PaymentStatus.Refunded ? "bg-red-500/15 text-red-300" : "bg-amber-500/15 text-amber-300")">@o.PaymentStatus</span>
+                        </td>
+                        <td class="px-4 py-3 text-right">
+                            @if (o.PaymentStatus == PaymentStatus.Unpaid && o.Status != OrderStatus.Cancelled)
+                            {
+                                <form method="post" action="/Admin/UpdatePaymentStatus" class="inline">
+                                    @Html.AntiForgeryToken()
+                                    <input type="hidden" name="id" value="@o.Id" />
+                                    <input type="hidden" name="status" value="Paid" />
+                                    <input type="hidden" name="fp" value="@(Model.PaymentStatusFilter == "All" ? "" : Model.PaymentStatusFilter)" />
+                                    <input type="hidden" name="fm" value="@(Model.MethodFilter == "All" ? "" : Model.MethodFilter)" />
+                                    <input type="hidden" name="fd" value="@Model.Date" />
+                                    <button type="submit" class="rounded-lg bg-caramel px-3 py-1.5 text-xs font-semibold text-espresso">Mark Paid</button>
+                                </form>
+                            }
+                            else if (o.PaymentStatus == PaymentStatus.Paid)
+                            {
+                                <form method="post" action="/Admin/UpdatePaymentStatus" class="inline"
+                                      onsubmit="return confirm('Refund order #@o.Id?');">
+                                    @Html.AntiForgeryToken()
+                                    <input type="hidden" name="id" value="@o.Id" />
+                                    <input type="hidden" name="status" value="Refunded" />
+                                    <input type="hidden" name="fp" value="@(Model.PaymentStatusFilter == "All" ? "" : Model.PaymentStatusFilter)" />
+                                    <input type="hidden" name="fm" value="@(Model.MethodFilter == "All" ? "" : Model.MethodFilter)" />
+                                    <input type="hidden" name="fd" value="@Model.Date" />
+                                    <button type="submit" class="rounded-lg border border-red-500/40 px-3 py-1.5 text-xs font-semibold text-red-300 hover:bg-red-500/10">Refund</button>
+                                </form>
+                            }
+                        </td>
+                    </tr>
+                }
+                @if (Model.Orders.Count == 0)
+                {
+                    <tr><td colspan="8" class="px-4 py-8 text-center text-neutral-400">No transactions found.</td></tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

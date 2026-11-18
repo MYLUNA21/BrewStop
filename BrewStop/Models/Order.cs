@@ -3,6 +3,8 @@
 namespace BrewStop.Models;
 
 public enum OrderStatus { Placed, Preparing, Ready, Claimed, Cancelled }
+public enum PaymentMethod { Cash, GCash }
+public enum PaymentStatus { Unpaid, Paid, Refunded }
 
 public class Order
 {
@@ -19,7 +21,16 @@ public class Order
     [MaxLength(200)]
     public string? Note { get; set; }
 
-    public decimal Total { get; set; }
+    [MaxLength(30)]
+    public string? PromoCode { get; set; }
+    public decimal DiscountAmount { get; set; }
+
+    public decimal Total { get; set; } // net total (after DiscountAmount)
+
+    public PaymentMethod PaymentMethod { get; set; } = PaymentMethod.Cash;
+    public PaymentStatus PaymentStatus { get; set; } = PaymentStatus.Unpaid;
+    public DateTime? PaidAtUtc { get; set; } // needed for "Today's Collected Revenue"
+
     public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
 
     public List<OrderItem> Items { get; set; } = new();

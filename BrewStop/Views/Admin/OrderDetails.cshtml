@@ -1,0 +1,95 @@
+﻿@model Order
+@{
+    Layout = "_AdminLayout";
+    ViewData["Title"] = $"Order #{Model.Id}";
+    var next = AdminOrderRules.NextOptions(Model.Status);
+}
+
+<div class="tw">
+    <div class="mx-auto max-w-4xl">
+        <div class="mb-5 flex items-center justify-between">
+            <h1 class="font-serif text-2xl font-bold">Order <span class="text-caramel">#@Model.Id</span></h1>
+            <a href="/Admin/Orders" class="rounded-lg border border-white/20 px-4 py-2 text-sm text-cream no-underline hover:border-caramel hover:text-caramel">
+                <i class="fa-solid fa-arrow-left mr-1"></i> Back to Orders
+            </a>
+        </div>
+
+        @if (TempData["Success"] is string ok)
+        {
+            <div class="mb-3 rounded-lg border border-green-500/30 bg-green-500/10 p-3 text-green-300">@ok</div>
+        }
+        @if (TempData["Error"] is string err)
+        {
+            <div class="mb-3 rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-red-300">@err</div>
+        }
+
+        <div class="grid grid-cols-1 gap-4 rounded-xl border border-white/10 bg-card p-5 sm:grid-cols-2">
+            <div><div class="text-xs uppercase text-neutral-400">Customer</div>@Model.User.FullName</div>
+            <div><div class="text-xs uppercase text-neutral-400">Campus ID</div>@Model.User.CampusId</div>
+            <div><div class="text-xs uppercase text-neutral-400">Pickup Slot</div>@Model.PickupAtUtc.ToLocalTime().ToString("ddd, MMM d · h:mm tt")</div>
+            <div><div class="text-xs uppercase text-neutral-400">Status</div><span class="font-semibold text-caramel">@Model.Status</span></div>
+            <div class="sm:col-span-2"><div class="text-xs uppercase text-neutral-400">Order Note</div>@(string.IsNullOrWhiteSpace(Model.Note) ? "—" : Model.Note)</div>
+        </div>
+
+        <div class="mt-4 overflow-x-auto rounded-xl border border-white/10 bg-card">
+            <table class="min-w-full text-left text-sm">
+                <thead class="bg-black/30 text-xs uppercase tracking-wider text-caramel">
+                    <tr>
+                        <th class="px-4 py-3">Item</th>
+                        <th class="px-4 py-3">Size</th>
+                        <th class="px-4 py-3">Add-ons</th>
+                        <th class="px-4 py-3">Unit Price</th>
+                        <th class="px-4 py-3">Qty</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-white/5">
+                    @foreach (var i in Model.Items)
+                    {
+                        <tr>
+                            <td class="px-4 py-3">@i.ItemName</td>
+                            <td class="px-4 py-3">@(i.SizeName ?? "—")</td>
+                            <td class="px-4 py-3">
+                                @if (i.AddOns.Count == 0)
+                                {
+                                    <span>—</span>
+                                }
+                                else
+                                {
+
+                                    @string.Join(", ", i.AddOns.Select(a => $"{a.Name} (+₱{a.Price:N2})"))
+                                }
+                            </td>
+                            <td class="px-4 py-3">₱@i.UnitPrice.ToString("N2")</td>
+                            <td class="px-4 py-3">@i.Quantity</td>
+                        </tr>
+                    }
+                </tbody>
+                <tfoot>
+                    <tr class="border-t border-white/10">
+                        <td colspan="4" class="px-4 py-3 text-right font-semibold">Total</td>
+                        <td class="px-4 py-3 font-semibold text-caramel">₱@Model.Total.ToString("N2")</td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+
+        @if (next.Length > 0)
+        {
+            <div class="mt-4 flex flex-wrap gap-3">
+                @foreach (var s in next)
+                {
+                    <form method="post" action="/Admin/UpdateOrderStatus"
+                          onsubmit="@(s == OrderStatus.Cancelled ? "return confirm('Cancel this order? Stock will be restored.');" : "return true;")">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="id" value="@Model.Id" />
+                        <input type="hidden" name="status" value="@s" />
+                        <button type="submit"
+                                class="rounded-lg px-4 py-2 text-sm font-semibold @(s == OrderStatus.Cancelled ? "border border-red-500/40 text-red-300 hover:bg-red-500/10" : "bg-caramel text-espresso hover:opacity-90")">
+                            @(s == OrderStatus.Cancelled ? "Cancel Order" : $"Mark as {s}")
+                        </button>
+                    </form>
+                }
+            </div>
+        }
+    </div>
+</div>

@@ -1,0 +1,123 @@
+﻿@model ManageViewModel
+@{
+    Layout = "_Layout";   // overrides Account/_ViewStart (_AuthLayout)
+    ViewData["Title"] = "My Account";
+    const string label = "mb-1.5 block text-xs font-semibold uppercase tracking-wider text-neutral-300";
+    const string field = "w-full rounded-xl border border-white/15 bg-transparent px-3 py-3 text-sm text-cream placeholder:text-neutral-500 focus:border-caramel focus:outline-none";
+    const string err = "mt-1 block text-xs text-red-300";
+}
+
+<div class="tw">
+    <div class="mx-auto max-w-3xl px-4 pt-24 pb-16">
+        <h1 class="font-serif text-3xl font-bold text-cream">My Account</h1>
+        <p class="mt-1 text-sm text-neutral-400">@Model.Email</p>
+
+        @if (TempData["Success"] is string ok)
+        {
+            <p class="mt-4 rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3 text-sm text-emerald-300" role="status">@ok</p>
+        }
+
+        <div class="mt-6 space-y-6">
+
+            <!-- Profile -->
+            <section class="rounded-3xl border border-white/10 bg-card p-5 sm:p-6">
+                <h2 class="font-serif text-xl font-semibold text-cream">Profile</h2>
+
+                @if (string.IsNullOrEmpty(Model.Profile.CampusId))
+                {
+                    <p class="mt-3 rounded-xl border border-yellow-500/40 bg-yellow-500/10 px-4 py-3 text-sm text-yellow-200">
+                        Add your Campus ID to complete your profile.
+                    </p>
+                }
+
+                <form asp-action="UpdateProfile" method="post" class="mt-4 space-y-4">
+                    <div asp-validation-summary="ModelOnly" class="text-sm text-red-300"></div>
+
+                    <div>
+                        <label class="@label" for="profile-email">Email</label>
+                        <input id="profile-email" value="@Model.Email" readonly disabled class="@field cursor-not-allowed opacity-60" />
+                    </div>
+                    <div>
+                        <label asp-for="Profile.FullName" class="@label"></label>
+                        <input asp-for="Profile.FullName" maxlength="150" autocomplete="name" class="@field" />
+                        <span asp-validation-for="Profile.FullName" class="@err"></span>
+                    </div>
+                    <div>
+                        <label asp-for="Profile.CampusId" class="@label"></label>
+                        <input asp-for="Profile.CampusId" maxlength="30" autocomplete="off" class="@field" />
+                        <span asp-validation-for="Profile.CampusId" class="@err"></span>
+                    </div>
+
+                    <button type="submit"
+                            class="rounded-full bg-caramel px-6 py-2.5 text-sm font-semibold text-black transition hover:bg-cream">
+                        Save changes
+                    </button>
+                </form>
+            </section>
+
+            <!-- Password -->
+            <section class="rounded-3xl border border-white/10 bg-card p-5 sm:p-6">
+                <h2 class="font-serif text-xl font-semibold text-cream">@(Model.HasPassword ? "Change password" : "Set a password")</h2>
+                @if (!Model.HasPassword)
+                {
+                    <p class="mt-1 text-sm text-neutral-400">You signed in with Google. Set a password to also sign in with your email.</p>
+                }
+
+                <form asp-action="ChangePassword" method="post" class="mt-4 space-y-4">
+                    @if (Model.HasPassword)
+                    {
+                        <div>
+                            <label asp-for="Password.CurrentPassword" class="@label"></label>
+                            <input asp-for="Password.CurrentPassword" autocomplete="current-password" class="@field" />
+                            <span asp-validation-for="Password.CurrentPassword" class="@err"></span>
+                        </div>
+                    }
+                    <div>
+                        <label asp-for="Password.NewPassword" class="@label"></label>
+                        <input asp-for="Password.NewPassword" autocomplete="new-password" class="@field" />
+                        <span asp-validation-for="Password.NewPassword" class="@err"></span>
+                        <p class="mt-1 text-xs text-neutral-500">At least 8 characters with an uppercase letter, a lowercase letter and a number.</p>
+                    </div>
+                    <div>
+                        <label asp-for="Password.ConfirmPassword" class="@label"></label>
+                        <input asp-for="Password.ConfirmPassword" autocomplete="new-password" class="@field" />
+                        <span asp-validation-for="Password.ConfirmPassword" class="@err"></span>
+                    </div>
+
+                    <button type="submit"
+                            class="rounded-full bg-caramel px-6 py-2.5 text-sm font-semibold text-black transition hover:bg-cream">
+                        @(Model.HasPassword ? "Update password" : "Set password")
+                    </button>
+                </form>
+            </section>
+
+            <!-- Shortcuts -->
+            <section class="rounded-3xl border border-white/10 bg-card p-5 sm:p-6">
+                <h2 class="font-serif text-xl font-semibold text-cream">Shortcuts</h2>
+                <div class="mt-4 flex flex-wrap gap-3">
+                    @if (Model.IsCustomer)
+                    {
+                        <a asp-controller="Order" asp-action="Index"
+                           class="inline-flex items-center gap-2 rounded-full border border-white/20 px-5 py-2.5 text-sm font-semibold text-cream transition hover:border-caramel hover:text-caramel">
+                            <i class="fa-solid fa-receipt"></i> Order history
+                        </a>
+                        <a asp-controller="Menu" asp-action="Index"
+                           class="inline-flex items-center gap-2 rounded-full border border-white/20 px-5 py-2.5 text-sm font-semibold text-cream transition hover:border-caramel hover:text-caramel">
+                            <i class="fa-solid fa-mug-hot"></i> Browse menu
+                        </a>
+                    }
+                    <form asp-action="Logout" method="post">
+                        <button type="submit"
+                                class="inline-flex items-center gap-2 rounded-full border border-red-400/40 px-5 py-2.5 text-sm font-semibold text-red-300 transition hover:bg-red-500/10">
+                            <i class="fa-solid fa-right-from-bracket"></i> Sign out
+                        </button>
+                    </form>
+                </div>
+            </section>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

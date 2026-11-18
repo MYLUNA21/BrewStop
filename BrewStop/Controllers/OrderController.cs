@@ -20,6 +20,7 @@ public class OrderController(ApplicationDbContext db, IQrTokenService qr, IAudit
             .Where(o => o.UserId == UserId)
             .Include(o => o.Items)
             .OrderByDescending(o => o.CreatedAtUtc)
+            .Take(50)
             .ToListAsync();
 
         return View(orders);
@@ -34,8 +35,22 @@ public class OrderController(ApplicationDbContext db, IQrTokenService qr, IAudit
 
         if (order is null) return NotFound();
 
-        ViewBag.QrToken = await QrFor(order);
+        ViewBag.QrToken = order.Status == OrderStatus.Ready
+            ? await qr.GetTokenAsync(order.Id, HttpContext.RequestAborted) ?? await IssueAndGetAsync(order)
+            : null;
+
+        if (order.Status == OrderStatus.Claimed)
+            ViewBag.Reviews = await db.ProductReviews.AsNoTracking()
+                .Where(r => r.UserId == UserId && r.OrderId == order.Id)
+                .ToDictionaryAsync(r => r.MenuItemId);
+
         return View(order);
+    }
+
+    private async Task<string?> IssueAndGetAsync(Order order)
+    {
+        await qr.IssueAsync(order, HttpContext.RequestAborted);
+        return await qr.GetTokenAsync(order.Id, HttpContext.RequestAborted);
     }
 
     [HttpGet]

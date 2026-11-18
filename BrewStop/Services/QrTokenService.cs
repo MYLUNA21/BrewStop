@@ -84,7 +84,6 @@ public class QrTokenService(ApplicationDbContext db, IOptions<QrOptions> opt, IA
 
         await using var tx = await db.Database.BeginTransactionAsync(ct);
 
-        
         var rows = await db.OrderQrTokens
             .Where(x => x.Id == t.Id && !x.IsUsed && !x.IsRevoked)
             .ExecuteUpdateAsync(s => s
@@ -95,7 +94,10 @@ public class QrTokenService(ApplicationDbContext db, IOptions<QrOptions> opt, IA
         if (rows == 0) { await tx.RollbackAsync(ct); return await Fail(ScanResult.AlreadyUsed, orderId, "Race"); }
 
         await db.Orders.Where(o => o.Id == orderId)
-            .ExecuteUpdateAsync(s => s.SetProperty(o => o.Status, OrderStatus.Claimed), ct);
+            .ExecuteUpdateAsync(s => s
+                .SetProperty(o => o.Status, OrderStatus.Claimed)
+                .SetProperty(o => o.PaymentStatus, PaymentStatus.Paid)
+                .SetProperty(o => o.PaidAtUtc, o => o.PaidAtUtc ?? DateTime.UtcNow), ct);
 
         audit.Add(baristaId, "QrScanAccepted", $"OrderId={orderId}");
         audit.Add(baristaId, "OrderStatusChanged", $"OrderId={orderId}; Ready->Claimed");

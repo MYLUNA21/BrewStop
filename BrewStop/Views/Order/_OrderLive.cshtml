@@ -1,0 +1,66 @@
+﻿@{
+    var reload = ViewData["LiveReload"] is true;
+}
+<div class="tw">
+    <div id="order-toast-host" aria-live="polite"
+         class="pointer-events-none fixed inset-x-0 top-20 z-[1100] flex flex-col items-center gap-2 px-4"></div>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.7/signalr.min.js"></script>
+<script>
+    (function() {
+        if (!window.signalR) return;
+        var RELOAD = @(reload ? "true" : "false");
+        var ORDER = ['Placed', 'Preparing', 'Ready', 'Claimed'];
+        var host = document.getElementById('order-toast-host');
+
+        function toast(text, tone) {
+            var el = document.createElement('div');
+            el.setAttribute('role', 'status');
+            el.className = 'pointer-events-auto flex w-full max-w-md items-center gap-3 rounded-2xl border px-4 py-3 text-sm font-semibold shadow-xl backdrop-blur ' +
+                (tone === 'ready'
+                    ? 'border-emerald-400/50 bg-emerald-500/90 text-black'
+                    : 'border-caramel/40 bg-card/95 text-cream');
+            var icon = document.createElement('i');
+            icon.className = 'fa-solid ' + (tone === 'ready' ? 'fa-bell' : 'fa-mug-hot');
+            var span = document.createElement('span');
+            span.className = 'flex-1';
+            span.textContent = text;
+            var close = document.createElement('button');
+            close.type = 'button';
+            close.setAttribute('aria-label', 'Dismiss');
+            close.className = 'text-lg leading-none opacity-70 hover:opacity-100';
+            close.textContent = '\u00d7';
+            close.onclick = function() { el.remove(); };
+            el.append(icon, span, close);
+            host.appendChild(el);
+            setTimeout(function() { el.remove(); }, 9000);
+        }
+
+        function render(orderId, status) {
+            document.querySelectorAll('[data-order-status="' + orderId + '"]').forEach(function(e) {
+                e.dataset.status = status;
+                e.textContent = status;
+            });
+            var idx = ORDER.indexOf(status);
+            document.querySelectorAll('[data-progress="' + orderId + '"] [data-step]').forEach(function(li, i) {
+                li.dataset.state = status === 'Claimed' || i < idx ? 'done' : i === idx ? 'active' : 'todo';
+            });
+        }
+
+        var conn = new signalR.HubConnectionBuilder()
+            .withUrl('/hubs/orders')
+            .withAutomaticReconnect()
+            .build();
+
+        conn.on('OrderStatusChanged', function(u) {
+            if (!u || !u.orderId || !u.status) return;
+            render(u.orderId, u.status);
+            if (u.status === 'Ready') toast('Order #' + u.orderId + ' is ready for pickup! Show your QR code at the counter.', 'ready');
+            else if (u.status === 'Preparing') toast('Order #' + u.orderId + ' is now being prepared.', 'info');
+            else if (u.status === 'Claimed') toast('Order #' + u.orderId + ' was picked up. Enjoy!', 'info');
+            if (RELOAD && (u.status === 'Ready' || u.status === 'Claimed')) setTimeout(function() { location.reload(); }, 1800);
+        });
+        conn.onreconnected(function() { if (RELOAD) location.reload(); });
+        conn.start().catch(function(e) { console.warn('Order hub unavailable', e); });
+    })();
+</script>

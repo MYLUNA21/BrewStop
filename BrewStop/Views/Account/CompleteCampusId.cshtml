@@ -1,0 +1,20 @@
+﻿@model CompleteCampusIdViewModel
+@{
+    ViewData["Title"] = "Complete your profile";
+}
+<h1 class="text-xl font-semibold mb-1">Complete your profile</h1>
+<p class="text-sm text-stone-400 mb-5">
+    You signed in with Google. Enter your <span class="text-amber-400">Campus ID</span> to start ordering.
+</p>
+
+<form asp-action="CompleteCampusId" method="post" class="space-y-4">
+    <input type="hidden" asp-for="ReturnUrl" />
+    <div asp-validation-summary="ModelOnly" class="text-sm text-red-400"></div>
+    <div>
+        <label asp-for="CampusId" class="block text-sm mb-1"></label>
+        <input asp-for="CampusId" class="@ViewData["Input"]" maxlength="30"
+               autocomplete="off" autofocus placeholder="e.g. 2021-12345" />
+        <span asp-validation-for="CampusId" class="text-xs text-red-400"></span>
+    </div>
+    <button type="submit" class="@ViewData["Btn"]">Save and continue</button>
+</form>

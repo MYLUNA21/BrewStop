@@ -68,6 +68,7 @@
                                                     <span class="rounded-full bg-caramel/10 px-2.5 py-0.5 text-xs text-caramel">+ @a.Name</span>
                                                 }
                                             </div>
+                                            <p class="mt-1.5 text-xs text-neutral-400">&#8369;@l.UnitPrice.ToString("N2") each</p>
                                         </div>
                                         <p class="shrink-0 text-lg font-bold text-cream">&#8369;@l.LineTotal.ToString("N2")</p>
                                     </div>
@@ -107,7 +108,6 @@
                                         </div>
 
                                         <div class="flex items-center gap-4">
-                                            <p class="hidden text-xs text-neutral-400 sm:block">&#8369;@l.UnitPrice.ToString("N2") each</p>
                                             <form asp-controller="Cart" asp-action="Remove" method="post">
                                                 <input type="hidden" name="key" value="@l.Key" />
                                                 <button type="submit" aria-label="Remove @l.Name"
@@ -129,19 +129,24 @@
 
                     <dl class="mt-5 space-y-3 text-sm">
                         <div class="flex justify-between text-neutral-300">
-                            <dt>Items (@Model.ItemCount)</dt>
+                            <dt>Subtotal (@Model.ItemCount item@(Model.ItemCount == 1 ? "" : "s"))</dt>
                             <dd>&#8369;@Model.Total.ToString("N2")</dd>
                         </div>
                         <div class="flex justify-between text-neutral-300">
+                            <dt>Promo code</dt>
+                            <dd class="text-neutral-400">Applied at checkout</dd>
+                        </div>
+                        <div class="flex justify-between text-neutral-300">
                             <dt>Payment</dt>
-                            <dd>At pickup</dd>
+                            <dd>Cash or GCash at pickup</dd>
                         </div>
                     </dl>
 
                     <div class="mt-5 flex items-baseline justify-between border-t border-white/10 pt-5">
-                        <span class="text-neutral-300">Total</span>
+                        <span class="text-neutral-300">Grand total</span>
                         <span class="text-3xl font-bold text-caramel">&#8369;@Model.Total.ToString("N2")</span>
                     </div>
+                    <p class="mt-1 text-right text-xs text-neutral-500">Before any promo discount</p>
 
                     @if (Model.HasStockProblem)
                     {

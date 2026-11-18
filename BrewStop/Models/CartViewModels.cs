@@ -62,6 +62,15 @@ public class CheckoutInput
     [StringLength(30, ErrorMessage = "Promo code must be 30 characters or fewer.")]
     [Display(Name = "Promo code")]
     public string? PromoCode { get; set; }
+
+    [Required]
+    [Display(Name = "Payment method")]
+    public PaymentMethod PaymentMethod { get; set; } = PaymentMethod.Cash;
+
+    [StringLength(40, ErrorMessage = "Reference must be 40 characters or fewer.")]
+    [RegularExpression(@"^[A-Za-z0-9\-]*$", ErrorMessage = "Reference may contain letters, numbers and hyphens only.")]
+    [Display(Name = "GCash reference no.")]
+    public string? PaymentReference { get; set; }
 }
 
 public class CheckoutViewModel

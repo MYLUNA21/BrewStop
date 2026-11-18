@@ -1,0 +1,28 @@
+﻿@model BrewStop.Models.Order
+@inject BrewStop.Services.IPickupSlotService Slots
+@{
+    var local = Slots.ToLocal(Model.PickupAtUtc);
+    var isActive = Model.Status is OrderStatus.Placed or OrderStatus.Preparing or OrderStatus.Ready;
+    var names = string.Join(", ", Model.Items.Select(i => $"{i.Quantity}× {i.ItemName}"));
+}
+<a asp-action="Details" asp-route-id="@Model.Id"
+   class="block rounded-3xl border border-white/10 bg-card p-4 transition hover:border-caramel sm:p-5">
+    <div class="flex items-start justify-between gap-3">
+        <div class="min-w-0">
+            <div class="flex flex-wrap items-center gap-2">
+                <p class="font-serif text-lg font-semibold text-cream">Order #@Model.Id</p>
+                <partial name="_StatusBadge" model="Model" />
+            </div>
+            <p class="mt-1 truncate text-sm text-neutral-300">@names</p>
+        </div>
+        <p class="shrink-0 text-lg font-bold text-caramel">&#8369;@Model.Total.ToString("N2")</p>
+    </div>
+    <dl class="mt-3 flex flex-wrap gap-x-6 gap-y-1 text-xs text-neutral-400">
+        <div><dt class="inline">@(isActive ? "Ready by " : "Pickup ")</dt><dd class="inline text-cream">@local.ToString("ddd, MMM d · h:mm tt")</dd></div>
+        <div><dt class="inline">Payment </dt><dd class="inline text-cream">@Model.PaymentMethod · @Model.PaymentStatus.Label()</dd></div>
+    </dl>
+    @if (isActive)
+    {
+        <div class="mt-4"><partial name="_Progress" model="Model" /></div>
+    }
+</a>

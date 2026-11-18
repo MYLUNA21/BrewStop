@@ -1,16 +1,22 @@
 ﻿using System.Security.Claims;
 using BrewStop.Data;
+using BrewStop.Hubs;
 using BrewStop.Models;
 using BrewStop.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 
 namespace BrewStop.Controllers;
 
 [Authorize(Roles = $"{AppRoles.Barista},{AppRoles.Admin}")]
 [Route("Barista")]
-public class BaristaController(ApplicationDbContext db, IQrTokenService qr, IAuditService audit) : Controller
+public class BaristaController(
+    ApplicationDbContext db,
+    IQrTokenService qr,
+    IAuditService audit,
+    IHubContext<OrderHub> hub) : Controller
 {
     private string UserId => User.FindFirstValue(ClaimTypes.NameIdentifier)!;
 
@@ -55,6 +61,9 @@ public class BaristaController(ApplicationDbContext db, IQrTokenService qr, IAud
         }
 
         await audit.LogAsync(UserId, "OrderStatusChanged", $"OrderId={id}; {from}->{to}");
+        await hub.Clients.Group($"user:{order.UserId}")
+            .SendAsync("OrderStatusChanged", new { orderId = id, status = to.ToString() });
+
         TempData["Success"] = $"Order #{id} is now {to}.";
         return RedirectToAction(nameof(Index));
     }
@@ -71,7 +80,15 @@ public class BaristaController(ApplicationDbContext db, IQrTokenService qr, IAud
         var (result, orderId) = await qr.ClaimAsync(token.Trim(), UserId, HttpContext.RequestAborted);
 
         if (result == ScanResult.Ok)
+        {
+            var ownerId = await db.Orders.AsNoTracking()
+                .Where(o => o.Id == orderId).Select(o => o.UserId).FirstOrDefaultAsync();
+            if (ownerId is not null)
+                await hub.Clients.Group($"user:{ownerId}")
+                    .SendAsync("OrderStatusChanged", new { orderId, status = nameof(OrderStatus.Claimed) });
+
             TempData["Success"] = $"Order #{orderId} claimed. Collect payment at the counter.";
+        }
         else
             TempData["Error"] = result switch
             {

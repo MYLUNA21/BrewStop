@@ -25,11 +25,15 @@ public class Order
     public string? PromoCode { get; set; }
     public decimal DiscountAmount { get; set; }
 
-    public decimal Total { get; set; } // net total (after DiscountAmount)
+    public decimal Total { get; set; } 
 
     public PaymentMethod PaymentMethod { get; set; } = PaymentMethod.Cash;
     public PaymentStatus PaymentStatus { get; set; } = PaymentStatus.Unpaid;
-    public DateTime? PaidAtUtc { get; set; } // needed for "Today's Collected Revenue"
+
+    [MaxLength(40)]
+    public string? PaymentReference { get; set; }  
+
+    public DateTime? PaidAtUtc { get; set; } 
 
     public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
 

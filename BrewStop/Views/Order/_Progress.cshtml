@@ -1,0 +1,31 @@
+﻿@model BrewStop.Models.Order
+@{
+    var steps = new[] { OrderStatus.Placed, OrderStatus.Preparing, OrderStatus.Ready, OrderStatus.Claimed };
+    var current = Array.IndexOf(steps, Model.Status);
+}
+@if (Model.Status == OrderStatus.Cancelled)
+{
+    <p data-progress="@Model.Id" class="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">
+        <i class="fa-solid fa-ban me-1"></i> This order was cancelled.
+    </p>
+}
+else
+{
+    <ol data-progress="@Model.Id" class="flex items-start" aria-label="Order progress">
+        @for (var i = 0; i < steps.Length; i++)
+        {
+            var state = Model.Status == OrderStatus.Claimed || i < current ? "done" : i == current ? "active" : "todo";
+            <li data-step="@steps[i]" data-state="@state" class="group relative flex flex-1 flex-col items-center text-center">
+                @if (i > 0)
+                {
+                    <span class="absolute right-1/2 top-4 h-0.5 w-full bg-white/15 group-data-[state=done]:bg-caramel group-data-[state=active]:bg-caramel"></span>
+                }
+                <span class="relative z-10 grid size-8 place-items-center rounded-full border border-white/20 bg-card text-xs font-bold text-neutral-500 group-data-[state=active]:border-caramel group-data-[state=active]:text-caramel group-data-[state=active]:ring-4 group-data-[state=active]:ring-caramel/20 group-data-[state=done]:border-caramel group-data-[state=done]:bg-caramel group-data-[state=done]:text-black">
+                    <i class="fa-solid fa-check hidden group-data-[state=done]:inline"></i>
+                    <span class="group-data-[state=done]:hidden">@(i + 1)</span>
+                </span>
+                <span class="mt-2 text-[11px] font-semibold text-neutral-500 group-data-[state=active]:text-caramel group-data-[state=done]:text-cream sm:text-xs">@steps[i]</span>
+            </li>
+        }
+    </ol>
+}

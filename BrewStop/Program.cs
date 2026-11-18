@@ -1,7 +1,9 @@
 using BrewStop.Data;
-using BrewStop.Hubs; // Add once SignalR Hub is created
+using BrewStop.Hubs;
 using BrewStop.Models;
 using BrewStop.Services;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Google;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -34,6 +36,37 @@ builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
     .AddEntityFrameworkStores<ApplicationDbContext>()
     .AddDefaultTokenProviders();
 
+var googleClientId = builder.Configuration["Authentication:Google:ClientId"];
+var googleClientSecret = builder.Configuration["Authentication:Google:ClientSecret"];
+
+if (!string.IsNullOrWhiteSpace(googleClientId) && !string.IsNullOrWhiteSpace(googleClientSecret))
+{
+    builder.Services.AddAuthentication()
+        .AddGoogle(GoogleDefaults.AuthenticationScheme, o =>
+        {
+            o.ClientId = googleClientId;
+            o.ClientSecret = googleClientSecret;
+            o.SignInScheme = IdentityConstants.ExternalScheme;
+            o.CallbackPath = "/signin-google";
+            o.SaveTokens = false;
+            o.Scope.Add("email");
+            o.Scope.Add("profile");
+            o.ClaimActions.MapJsonKey("urn:google:verified_email", "verified_email", ClaimValueTypes.Boolean);
+            // Correlation cookie must survive the cross-site return from Google
+            o.CorrelationCookie.SameSite = SameSiteMode.None;
+            o.CorrelationCookie.SecurePolicy = CookieSecurePolicy.Always;
+        });
+}
+
+// Identity.External must be Lax so it is sent on Google's cross-site redirect back; main app cookie stays Strict
+builder.Services.ConfigureExternalCookie(options =>
+{
+    options.Cookie.HttpOnly = true;
+    options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+    options.Cookie.SameSite = SameSiteMode.Lax;
+    options.ExpireTimeSpan = TimeSpan.FromMinutes(10);
+});
+
 builder.Services.AddAuthorizationBuilder()
     .AddPolicy("CustomerOnly", policy => policy.RequireRole(AppRoles.Student, AppRoles.Faculty));
 
@@ -46,12 +79,33 @@ builder.Services.ConfigureApplicationCookie(options =>       // SRS-NFR-05
     options.ExpireTimeSpan = TimeSpan.FromMinutes(30);
     options.LoginPath = "/Account/Login";
     options.AccessDeniedPath = "/Account/AccessDenied";
+
+    options.Events.OnRedirectToLogin = ctx =>
+    {
+        if (ctx.Request.Path.StartsWithSegments("/api", StringComparison.OrdinalIgnoreCase))
+        {
+            ctx.Response.StatusCode = StatusCodes.Status401Unauthorized;
+            return ctx.Response.WriteAsJsonAsync(new { success = false, message = "Authentication required." });
+        }
+        ctx.Response.Redirect(ctx.RedirectUri);
+        return Task.CompletedTask;
+    };
+    options.Events.OnRedirectToAccessDenied = ctx =>
+    {
+        if (ctx.Request.Path.StartsWithSegments("/api", StringComparison.OrdinalIgnoreCase))
+        {
+            ctx.Response.StatusCode = StatusCodes.Status403Forbidden;
+            return ctx.Response.WriteAsJsonAsync(new { success = false, message = "Access denied." });
+        }
+        ctx.Response.Redirect(ctx.RedirectUri);
+        return Task.CompletedTask;
+    };
 });
 
 builder.Services.AddRateLimiter(o =>
 {
     o.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
-    o.OnRejected = (ctx, _) =>
+    o.OnRejected = async (ctx, ct) =>
     {
         if (ctx.Lease.TryGetMetadata(MetadataName.RetryAfter, out var ra))
             ctx.HttpContext.Response.Headers.RetryAfter = ((int)ra.TotalSeconds).ToString();
@@ -59,15 +113,22 @@ builder.Services.AddRateLimiter(o =>
         ctx.HttpContext.RequestServices.GetRequiredService<ILoggerFactory>()
             .CreateLogger("RateLimit")
             .LogWarning("Rate limit hit {Path} from {Ip}", ctx.HttpContext.Request.Path, ctx.HttpContext.Connection.RemoteIpAddress);
-        return ValueTask.CompletedTask;
+
+        if (ctx.HttpContext.Request.Path.StartsWithSegments("/api", StringComparison.OrdinalIgnoreCase))
+            await ctx.HttpContext.Response.WriteAsJsonAsync(
+                new { success = false, message = "Too many requests. Try again later." }, ct);
     };
 
     static bool IsOrder(HttpContext c) => HttpMethods.IsPost(c.Request.Method)
-    && c.Request.Path.StartsWithSegments("/Order/Checkout", StringComparison.OrdinalIgnoreCase);
+        && c.Request.Path.StartsWithSegments("/Order/Checkout", StringComparison.OrdinalIgnoreCase);
 
     static bool IsAuth(HttpContext c) => HttpMethods.IsPost(c.Request.Method)
         && (c.Request.Path.StartsWithSegments("/Account/Login", StringComparison.OrdinalIgnoreCase)
-         || c.Request.Path.StartsWithSegments("/Account/Register", StringComparison.OrdinalIgnoreCase));
+         || c.Request.Path.StartsWithSegments("/Account/Register", StringComparison.OrdinalIgnoreCase)
+         || c.Request.Path.StartsWithSegments("/Account/ExternalLogin", StringComparison.OrdinalIgnoreCase));
+
+    static bool IsScan(HttpContext c) => HttpMethods.IsPost(c.Request.Method)
+        && c.Request.Path.StartsWithSegments("/api/barista/scan", StringComparison.OrdinalIgnoreCase);
 
     static FixedWindowRateLimiterOptions Win(int n) => new()
     { PermitLimit = n, Window = TimeSpan.FromMinutes(1), QueueLimit = 0 };
@@ -76,10 +137,13 @@ builder.Services.AddRateLimiter(o =>
         PartitionedRateLimiter.Create<HttpContext, string>(c =>
             IsOrder(c) ? RateLimitPartition.GetFixedWindowLimiter("ord-ip:" + c.Connection.RemoteIpAddress, _ => Win(5))
           : IsAuth(c) ? RateLimitPartition.GetFixedWindowLimiter("auth-ip:" + c.Connection.RemoteIpAddress, _ => Win(10))
+          : IsScan(c) ? RateLimitPartition.GetFixedWindowLimiter("scan-ip:" + c.Connection.RemoteIpAddress, _ => Win(30))
           : RateLimitPartition.GetNoLimiter("none")),
         PartitionedRateLimiter.Create<HttpContext, string>(c =>
             IsOrder(c) && c.User.Identity?.IsAuthenticated == true
                 ? RateLimitPartition.GetFixedWindowLimiter("ord-user:" + c.User.FindFirstValue(ClaimTypes.NameIdentifier), _ => Win(5))
+          : IsScan(c) && c.User.Identity?.IsAuthenticated == true
+                ? RateLimitPartition.GetFixedWindowLimiter("scan-user:" + c.User.FindFirstValue(ClaimTypes.NameIdentifier), _ => Win(30))
                 : RateLimitPartition.GetNoLimiter("none")));
 });
 
@@ -109,7 +173,6 @@ builder.Services.AddMemoryCache();
 builder.Services.Configure<CaptchaOptions>(builder.Configuration.GetSection("Captcha"));
 builder.Services.AddScoped<ICaptchaService, CaptchaService>();
 
-
 builder.Services.AddSignalR();
 
 builder.Services.AddControllersWithViews(options =>          // SRS-NFR-06
@@ -125,7 +188,6 @@ if (!app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 app.UseStaticFiles();
-
 
 app.Use(async (ctx, next) =>
 {
@@ -149,7 +211,6 @@ app.UseAuthorization();
 app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Home}/{action=Index}/{id?}");
-
 
 app.MapHub<OrderHub>("/hubs/orders");
 

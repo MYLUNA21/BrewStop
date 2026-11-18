@@ -19,6 +19,8 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
     public DbSet<OrderQrToken> OrderQrTokens => Set<OrderQrToken>();
     public DbSet<Promotion> Promotions => Set<Promotion>();
+    public DbSet<FavoriteItem> FavoriteItems => Set<FavoriteItem>();
+    public DbSet<ProductReview> ProductReviews => Set<ProductReview>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -99,6 +101,23 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
         {
             e.HasIndex(a => a.CreatedAtUtc);
             e.HasIndex(a => a.UserId);
+        });
+
+        modelBuilder.Entity<FavoriteItem>(e =>
+        {
+            e.HasIndex(f => new { f.UserId, f.MenuItemId }).IsUnique();
+            e.HasOne(f => f.User).WithMany().HasForeignKey(f => f.UserId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(f => f.MenuItem).WithMany().HasForeignKey(f => f.MenuItemId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<ProductReview>(e =>
+        {
+            e.HasIndex(r => new { r.UserId, r.OrderId, r.MenuItemId }).IsUnique();
+            e.HasIndex(r => new { r.MenuItemId, r.CreatedAtUtc });
+            e.HasOne(r => r.User).WithMany().HasForeignKey(r => r.UserId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne(r => r.MenuItem).WithMany().HasForeignKey(r => r.MenuItemId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne(r => r.Order).WithMany().HasForeignKey(r => r.OrderId).OnDelete(DeleteBehavior.Cascade);
+            e.ToTable(t => t.HasCheckConstraint("CK_ProductReviews_Rating", "`Rating` BETWEEN 1 AND 5"));
         });
 
         // ---------- Seed data ----------

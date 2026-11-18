@@ -48,10 +48,13 @@ public class CheckoutController(
         if (input.PickupSlot is null || !TryParseSlot(input.PickupSlot, out pickupUtc) || !slots.IsValid(pickupUtc))
             ModelState.AddModelError("Input.PickupSlot", "Please choose an available pickup time.");
 
+        if (!Enum.IsDefined(input.PaymentMethod))
+            ModelState.AddModelError("Input.PaymentMethod", "Please choose Cash or GCash.");
+
         if (!ModelState.IsValid)
             return View("Index", Build(c, input));
 
-        // SRS-FR-07: verified before anything is written.
+        
         if (!await captcha.VerifyAsync(Request, "checkout", ct))
         {
             ModelState.AddModelError(string.Empty, "Captcha verification failed. Please try again.");
@@ -60,12 +63,20 @@ public class CheckoutController(
 
         var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
 
+        var reference = input.PaymentMethod == PaymentMethod.GCash
+            ? input.PaymentReference?.Trim().ToUpperInvariant()
+            : null;
+        if (string.IsNullOrWhiteSpace(reference)) reference = null;
+
         var order = new Order
         {
             UserId = userId,
             PickupAtUtc = pickupUtc,
             Note = SanitizeNote(input.Note),
             Status = OrderStatus.Placed,
+            PaymentMethod = input.PaymentMethod,
+            PaymentStatus = PaymentStatus.Unpaid, 
+            PaymentReference = reference,
             CreatedAtUtc = DateTime.UtcNow
         };
 
@@ -89,7 +100,7 @@ public class CheckoutController(
         var subtotal = order.Items.Sum(i => i.UnitPrice * i.Quantity);
         order.Total = subtotal;
 
-        // SRS-NFR-09 / FR-15: stock deduction and order creation commit together or not at all.
+        
         await using var tx = await db.Database.BeginTransactionAsync(ct);
 
         var wanted = c.Lines.GroupBy(l => l.MenuItemId)
@@ -125,7 +136,8 @@ public class CheckoutController(
         await db.SaveChangesAsync(ct);   // order.Id is available after this
 
         // SRS-FR-20: audit entries are saved inside the same transaction.
-        audit.Add(userId, "OrderPlaced", $"OrderId={order.Id}; Status=Placed; Total={order.Total:0.00}");
+        audit.Add(userId, "OrderPlaced",
+            $"OrderId={order.Id}; Status=Placed; Total={order.Total:0.00}; Payment={order.PaymentMethod}");
         if (promo.PromotionId is not null)
             audit.Add(userId, "PromoApplied", $"OrderId={order.Id}; Code={promo.Code}; Discount={promo.Discount:0.00}");
         foreach (var (itemId, qty) in wanted)

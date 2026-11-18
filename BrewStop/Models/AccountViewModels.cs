@@ -56,3 +56,41 @@ public class ResetPasswordViewModel
     [Required, DataType(DataType.Password), Compare(nameof(Password)), Display(Name = "Confirm password")]
     public string ConfirmPassword { get; set; } = string.Empty;
 }
+
+public class CompleteCampusIdViewModel
+{
+    [Required, MaxLength(30), Display(Name = "Campus ID")]
+    public string CampusId { get; set; } = string.Empty;
+
+    public string? ReturnUrl { get; set; }
+}
+
+public class ProfileInput
+{
+    [Required, StringLength(150), Display(Name = "Full name")]
+    public string FullName { get; set; } = string.Empty;
+
+    [Required, StringLength(30), Display(Name = "Campus ID")]
+    public string CampusId { get; set; } = string.Empty;
+}
+
+public class ChangePasswordInput
+{
+    [DataType(DataType.Password), Display(Name = "Current password")]
+    public string? CurrentPassword { get; set; }
+
+    [Required, StringLength(100, MinimumLength = 8), DataType(DataType.Password), Display(Name = "New password")]
+    public string NewPassword { get; set; } = string.Empty;
+
+    [Required, DataType(DataType.Password), Compare(nameof(NewPassword)), Display(Name = "Confirm new password")]
+    public string ConfirmPassword { get; set; } = string.Empty;
+}
+
+public class ManageViewModel
+{
+    public ProfileInput Profile { get; set; } = new();
+    public ChangePasswordInput Password { get; set; } = new();
+    public string Email { get; set; } = string.Empty;
+    public bool HasPassword { get; set; }
+    public bool IsCustomer { get; set; }
+}

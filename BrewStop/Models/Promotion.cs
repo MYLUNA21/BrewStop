@@ -20,4 +20,8 @@ public class Promotion
     public int? MaxUses { get; set; }
     public int TimesUsed { get; set; }
     public bool IsActive { get; set; } = true;
+
+    /// <summary>When set, only this user may apply the code (loyalty reward vouchers).</summary>
+    [MaxLength(255)]
+    public string? OwnerUserId { get; set; }
 }

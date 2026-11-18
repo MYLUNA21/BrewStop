@@ -2,75 +2,440 @@
 @{
     Layout = "_AdminLayout";
     ViewData["Title"] = "Dashboard";
+
+    var top = Model.TopSellingDrinks;
+    var spotlight = top.FirstOrDefault();
+    var hasPayments = Model.PaymentMethodCounts.Sum() > 0;
+    var todayLocal = DateOnly.FromDateTime(Model.NowLocal);
+
+    const string card = "rounded-2xl border border-white/10 bg-card p-5";
+    const string h2 = "font-serif text-lg font-semibold text-cream";
+    const string field = "rounded-lg border border-white/15 bg-transparent px-3 py-2 text-sm text-cream focus:border-caramel focus:outline-none [color-scheme:dark]";
 }
 
-<h1 class="font-serif text-2xl font-bold text-cream mb-5">Admin <span class="text-caramel">Dashboard</span></h1>
+@functions {
+    static string StatusCls(OrderStatus s) => s switch
+    {
+        OrderStatus.Placed => "bg-sky-500/15 text-sky-300",
+        OrderStatus.Preparing => "bg-amber-500/15 text-amber-300",
+        OrderStatus.Ready => "bg-emerald-500/15 text-emerald-300",
+        OrderStatus.Claimed => "bg-white/10 text-neutral-300",
+        OrderStatus.Cancelled => "bg-red-500/15 text-red-300",
+        _ => "bg-white/10 text-neutral-300"
+    };
+
+    static string PayCls(PaymentStatus s) => s switch
+    {
+        PaymentStatus.Paid => "bg-emerald-500/15 text-emerald-300",
+        PaymentStatus.Refunded => "bg-white/10 text-neutral-300",
+        _ => "bg-amber-500/15 text-amber-300"
+    };
+}
+
+<style media="print">
+    aside, [data-no-print] { display: none !important; }
+    body, main { background: #fff !important; color: #000 !important; }
+    .tw * { color: #000 !important; background: transparent !important; border-color: #ccc !important; box-shadow: none !important; }
+    canvas { max-width: 100% !important; }
+</style>
 
 <div class="tw">
-    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <div class="rounded-xl border border-white/10 bg-card p-5">
-            <div class="text-xs uppercase tracking-wider text-neutral-400">Total Revenue</div>
-            <div class="mt-2 text-2xl font-bold text-caramel">₱@Model.TotalRevenue.ToString("N2")</div>
+    <!-- Top bar -->
+    <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+        <div>
+            <h1 class="font-serif text-2xl font-bold text-cream sm:text-3xl">BrewStop <span class="text-caramel">Admin Overview</span></h1>
+            <p class="mt-1 text-sm text-neutral-400">@Model.NowLocal.ToString("dddd, MMMM d, yyyy")</p>
         </div>
-        <div class="rounded-xl border border-white/10 bg-card p-5">
-            <div class="text-xs uppercase tracking-wider text-neutral-400">Total Customers</div>
-            <div class="mt-2 text-2xl font-bold">@Model.TotalCustomers</div>
-        </div>
-        <div class="rounded-xl border border-white/10 bg-card p-5">
-            <div class="text-xs uppercase tracking-wider text-neutral-400">Total Orders</div>
-            <div class="mt-2 text-2xl font-bold">@Model.TotalOrders</div>
-            <div class="mt-1 text-xs text-amber-300">@Model.PendingOrders pending / active</div>
-        </div>
-        <div class="rounded-xl border border-white/10 bg-card p-5">
-            <div class="text-xs uppercase tracking-wider text-neutral-400">Best-Selling Coffee</div>
-            <div class="mt-2 text-lg font-bold">@(Model.BestSellerName ?? "—")</div>
-            <div class="mt-1 text-xs text-neutral-400">@Model.BestSellerUnits units sold</div>
+
+        <form method="get" asp-controller="Admin" asp-action="Dashboard" data-no-print
+              class="flex flex-wrap items-end gap-3 rounded-2xl border border-white/10 bg-card p-3">
+            <div>
+                <label for="startDate" class="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-neutral-400">From</label>
+                <input id="startDate" name="startDate" type="date" value="@Model.StartDate.ToString("yyyy-MM-dd")" max="@todayLocal.ToString("yyyy-MM-dd")" class="@field" />
+            </div>
+            <div>
+                <label for="endDate" class="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-neutral-400">To</label>
+                <input id="endDate" name="endDate" type="date" value="@Model.EndDate.ToString("yyyy-MM-dd")" max="@todayLocal.ToString("yyyy-MM-dd")" class="@field" />
+            </div>
+            <button type="submit" class="rounded-lg bg-caramel px-4 py-2 text-sm font-semibold text-black transition hover:bg-cream">Apply</button>
+            <div class="flex gap-1.5 text-xs">
+                <a href="/Admin/Dashboard?startDate=@todayLocal.AddDays(-6).ToString("yyyy-MM-dd")&endDate=@todayLocal.ToString("yyyy-MM-dd")"
+                   class="rounded-full border border-white/15 px-3 py-1.5 text-neutral-300 hover:border-caramel hover:text-caramel">7 days</a>
+                <a href="/Admin/Dashboard?startDate=@todayLocal.AddDays(-29).ToString("yyyy-MM-dd")&endDate=@todayLocal.ToString("yyyy-MM-dd")"
+                   class="rounded-full border border-white/15 px-3 py-1.5 text-neutral-300 hover:border-caramel hover:text-caramel">30 days</a>
+            </div>
+        </form>
+    </div>
+
+    <!-- Row 1 -->
+    <div class="mt-6 grid grid-cols-1 gap-6 xl:grid-cols-12">
+        <!-- Left: trends + KPIs -->
+        <section class="@card xl:col-span-8" aria-labelledby="trend-h">
+            <div class="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                    <h2 id="trend-h" class="@h2">Sales &amp; Order Trends</h2>
+                    <p class="text-xs text-neutral-400">
+                        @Model.StartDate.ToString("MMM d") &ndash; @Model.EndDate.ToString("MMM d, yyyy")
+                        &middot; &#8369;@Model.RangeRevenue.ToString("N2") from @Model.RangeOrders order@(Model.RangeOrders == 1 ? "" : "s") (cancelled excluded)
+                    </p>
+                </div>
+                <div class="inline-flex rounded-full border border-white/15 p-0.5 text-xs font-semibold" role="group" aria-label="Chart metric">
+                    <button type="button" data-metric="revenue" aria-pressed="true"
+                            class="rounded-full bg-caramel px-3 py-1.5 text-black transition aria-[pressed=false]:bg-transparent aria-[pressed=false]:text-neutral-300">
+                        Revenue &#8369;
+                    </button>
+                    <button type="button" data-metric="orders" aria-pressed="false"
+                            class="rounded-full px-3 py-1.5 text-neutral-300 transition aria-[pressed=true]:bg-caramel aria-[pressed=true]:text-black">
+                        Orders
+                    </button>
+                </div>
+            </div>
+
+            <div class="relative mt-4 h-72">
+                <canvas id="trendChart" role="img" aria-label="Daily revenue and order count line chart"></canvas>
+            </div>
+
+            <div class="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-3">
+                <div class="rounded-xl border border-white/10 bg-espresso/60 p-4">
+                    <p class="text-[11px] font-semibold uppercase tracking-wider text-neutral-400">Revenue today</p>
+                    <p class="mt-1 text-2xl font-bold text-caramel">&#8369;@Model.RevenueToday.ToString("N2")</p>
+                    <p class="mt-1 text-xs">
+                        @if (Model.RevenueChangePercent is { } pct)
+                        {
+                            <span class="@(pct >= 0 ? "text-emerald-300" : "text-red-300")">
+                                <i class="fa-solid @(pct >= 0 ? "fa-arrow-trend-up" : "fa-arrow-trend-down")"></i>
+                                @(pct >= 0 ? "+" : "")@pct.ToString("0.#")%
+                            </span>
+                            <span class="text-neutral-400">vs yesterday (&#8369;@Model.RevenueYesterday.ToString("N2"))</span>
+                        }
+                        else
+                        {
+                            <span class="text-neutral-400">No sales yesterday to compare</span>
+                        }
+                    </p>
+                </div>
+                <div class="rounded-xl border border-white/10 bg-espresso/60 p-4">
+                    <p class="text-[11px] font-semibold uppercase tracking-wider text-neutral-400">Average order value</p>
+                    <p class="mt-1 text-2xl font-bold text-cream">&#8369;@Model.AverageOrderValue.ToString("N2")</p>
+                    <p class="mt-1 text-xs text-neutral-400">Selected date range</p>
+                </div>
+                <div class="rounded-xl border border-white/10 bg-espresso/60 p-4">
+                    <p class="text-[11px] font-semibold uppercase tracking-wider text-neutral-400">Orders today</p>
+                    <p class="mt-1 text-2xl font-bold text-cream">@Model.OrdersToday</p>
+                    <p class="mt-1 text-xs text-amber-300">@Model.PendingPickupCount awaiting pickup</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Right: best sellers + breakdown -->
+        <div class="space-y-6 xl:col-span-4">
+            <section class="@card" aria-labelledby="best-h">
+                <h2 id="best-h" class="@h2">Best-Selling Drinks</h2>
+                @if (spotlight is null)
+                {
+                    <p class="mt-3 text-sm text-neutral-400">No drink sales in this range.</p>
+                }
+                else
+                {
+                    <div class="relative mt-3 aspect-[16/9] overflow-hidden rounded-xl bg-espresso">
+                        <img src="@spotlight.ImageUrl" alt="@spotlight.MenuItemName" class="size-full object-cover" referrerpolicy="no-referrer"
+                             onerror="this.onerror=null;this.src='@Url.Content("~/images/placeholder.svg")'" />
+                        <div class="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-3">
+                            <p class="text-[11px] font-semibold uppercase tracking-wider text-caramel">#1 this period</p>
+                            <p class="font-serif text-lg font-semibold text-cream">@spotlight.MenuItemName</p>
+                        </div>
+                    </div>
+                    <ol class="mt-3 divide-y divide-white/10">
+                        @for (var i = 0; i < top.Count; i++)
+                        {
+                            var t = top[i];
+                            <li class="flex items-center gap-3 py-2.5 text-sm">
+                                <span class="grid size-6 shrink-0 place-items-center rounded-full text-xs font-bold @(i == 0 ? "bg-caramel text-black" : "bg-white/10 text-neutral-300")">@(i + 1)</span>
+                                <span class="min-w-0 flex-1 truncate text-cream">@t.MenuItemName</span>
+                                <span class="shrink-0 text-right">
+                                    <span class="block font-semibold text-cream">@t.UnitsSold sold</span>
+                                    <span class="block text-xs text-neutral-400">&#8369;@t.TotalRevenue.ToString("N2")</span>
+                                </span>
+                            </li>
+                        }
+                    </ol>
+                }
+            </section>
+
+            <section class="@card" aria-labelledby="mix-h">
+                <div class="flex items-center justify-between gap-3">
+                    <h2 id="mix-h" class="@h2">Payment &amp; Status</h2>
+                    <div class="inline-flex rounded-full border border-white/15 p-0.5 text-xs font-semibold" role="group" aria-label="Breakdown type">
+                        <button type="button" data-mix="payment" aria-pressed="true"
+                                class="rounded-full bg-caramel px-3 py-1.5 text-black transition aria-[pressed=false]:bg-transparent aria-[pressed=false]:text-neutral-300">
+                            Payment
+                        </button>
+                        <button type="button" data-mix="status" aria-pressed="false"
+                                class="rounded-full px-3 py-1.5 text-neutral-300 transition aria-[pressed=true]:bg-caramel aria-[pressed=true]:text-black">
+                            Status
+                        </button>
+                    </div>
+                </div>
+                <div class="relative mx-auto mt-4 h-56">
+                    <canvas id="mixChart" role="img" aria-label="Payment method and order status donut chart"></canvas>
+                </div>
+                <p id="mixEmpty" class="@(hasPayments ? "hidden" : "") mt-2 text-center text-sm text-neutral-400">No orders in this range.</p>
+            </section>
         </div>
     </div>
 
-    <div class="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <div class="rounded-xl border border-white/10 bg-card p-5">
-            <div class="text-xs uppercase tracking-wider text-neutral-400">Today</div>
-            <div class="mt-2 text-xl font-bold text-caramel">₱@Model.TodayRevenue.ToString("N2")</div>
-        </div>
-        <div class="rounded-xl border border-white/10 bg-card p-5">
-            <div class="text-xs uppercase tracking-wider text-neutral-400">Last 7 Days</div>
-            <div class="mt-2 text-xl font-bold text-caramel">₱@Model.WeekRevenue.ToString("N2")</div>
-        </div>
-        <div class="rounded-xl border border-white/10 bg-card p-5">
-            <div class="text-xs uppercase tracking-wider text-neutral-400">This Month</div>
-            <div class="mt-2 text-xl font-bold text-caramel">₱@Model.MonthRevenue.ToString("N2")</div>
-        </div>
+    <!-- Row 2 -->
+    <div class="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <section class="@card" aria-labelledby="attn-h">
+            <div class="flex items-center justify-between">
+                <h2 id="attn-h" class="@h2">Needs Your Attention</h2>
+                @if (Model.AttentionAlerts.Count > 0)
+                {
+                    <span class="rounded-full bg-red-500/15 px-2.5 py-0.5 text-xs font-semibold text-red-300">@Model.AttentionAlerts.Count</span>
+                }
+            </div>
+
+            @if (Model.AttentionAlerts.Count == 0)
+            {
+                <p class="mt-4 flex items-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-300">
+                    <i class="fa-solid fa-circle-check"></i> All clear. Stock is healthy and no rejected scans this week.
+                </p>
+            }
+            else
+            {
+                <ul class="mt-3 space-y-2">
+                    @foreach (var a in Model.AttentionAlerts)
+                    {
+                        var danger = a.Kind is "OutOfStock" or "RejectedScan";
+                        <li class="flex items-start gap-3 rounded-xl border px-3.5 py-3 @(danger ? "border-red-500/30 bg-red-500/10" : "border-yellow-500/30 bg-yellow-500/10")">
+                            <i class="fa-solid mt-0.5 @(a.Kind == "RejectedScan" ? "fa-shield-halved" : "fa-box-open") @(danger ? "text-red-300" : "text-yellow-300")"></i>
+                            <div class="min-w-0 flex-1">
+                                <p class="truncate text-sm font-semibold text-cream">@a.Title</p>
+                                <p class="text-xs text-neutral-300">@a.Detail</p>
+                                @if (a.OccurredAt is { } at)
+                                {
+                                    <p class="mt-0.5 text-[11px] text-neutral-500">@at.ToString("MMM d · h:mm tt")</p>
+                                }
+                            </div>
+                            @if (!string.IsNullOrEmpty(a.ActionUrl))
+                            {
+                                <a href="@a.ActionUrl" class="shrink-0 rounded-full border border-caramel/50 px-3 py-1 text-xs font-semibold text-caramel hover:bg-caramel/10">@a.ActionLabel</a>
+                            }
+                        </li>
+                    }
+                </ul>
+            }
+        </section>
+
+        <section class="@card" aria-labelledby="shift-h">
+            <h2 id="shift-h" class="@h2">Barista Shift Overview</h2>
+            <dl class="mt-4 grid grid-cols-3 gap-3 text-center">
+                <div class="rounded-xl border border-white/10 bg-espresso/60 p-3">
+                    <dd class="text-2xl font-bold text-emerald-300">@Model.BaristasOnShiftCount</dd>
+                    <dt class="mt-0.5 text-[11px] uppercase tracking-wider text-neutral-400">On shift now</dt>
+                </div>
+                <div class="rounded-xl border border-white/10 bg-espresso/60 p-3">
+                    <dd class="text-2xl font-bold text-cream">@Model.ScheduledShiftsTodayCount</dd>
+                    <dt class="mt-0.5 text-[11px] uppercase tracking-wider text-neutral-400">Scheduled today</dt>
+                </div>
+                <div class="rounded-xl border border-white/10 bg-espresso/60 p-3">
+                    <dd class="text-2xl font-bold text-cream">@Model.CompletedShiftsTodayCount</dd>
+                    <dt class="mt-0.5 text-[11px] uppercase tracking-wider text-neutral-400">Completed</dt>
+                </div>
+            </dl>
+
+            <h3 class="mt-5 text-xs font-semibold uppercase tracking-wider text-neutral-400">Quick actions</h3>
+            <div class="mt-2 grid grid-cols-2 gap-2">
+                <a href="/Admin/MenuItems" class="flex items-center gap-2 rounded-xl border border-white/10 px-3 py-2.5 text-sm text-cream transition hover:border-caramel hover:text-caramel"><i class="fa-solid fa-mug-hot w-4 text-center text-caramel"></i> Menu</a>
+                <a href="/Admin/Inventory" class="flex items-center gap-2 rounded-xl border border-white/10 px-3 py-2.5 text-sm text-cream transition hover:border-caramel hover:text-caramel"><i class="fa-solid fa-boxes-stacked w-4 text-center text-caramel"></i> Inventory</a>
+                <a href="/Admin/Promotions" class="flex items-center gap-2 rounded-xl border border-white/10 px-3 py-2.5 text-sm text-cream transition hover:border-caramel hover:text-caramel"><i class="fa-solid fa-tags w-4 text-center text-caramel"></i> Promo codes</a>
+                <a href="/Admin/Customers" class="flex items-center gap-2 rounded-xl border border-white/10 px-3 py-2.5 text-sm text-cream transition hover:border-caramel hover:text-caramel"><i class="fa-solid fa-user-shield w-4 text-center text-caramel"></i> User roles</a>
+            </div>
+        </section>
     </div>
 
-    <div class="mt-4 rounded-xl border border-white/10 bg-card p-5">
-        <div class="mb-3 text-sm font-semibold">Daily Revenue — Last 7 Days</div>
-        <div class="relative h-72"><canvas id="revenueChart"></canvas></div>
-    </div>
+    <!-- Row 3 -->
+    <section class="@card mt-6" aria-labelledby="orders-h">
+        <div class="flex flex-wrap items-center justify-between gap-3">
+            <h2 id="orders-h" class="@h2">Recent Campus Orders</h2>
+            <div class="flex gap-2" data-no-print>
+                <a href="/Admin/Orders" class="rounded-full border border-white/15 px-4 py-2 text-xs font-semibold text-cream transition hover:border-caramel hover:text-caramel">View all</a>
+                <button type="button" onclick="window.print()"
+                        class="rounded-full bg-caramel px-4 py-2 text-xs font-semibold text-black transition hover:bg-cream">
+                    <i class="fa-solid fa-print me-1"></i> Print / Export Report
+                </button>
+            </div>
+        </div>
+
+        <div class="mt-4 overflow-x-auto">
+            <table class="w-full min-w-[760px] text-left text-sm">
+                <thead class="border-b border-white/10 text-xs uppercase tracking-wider text-neutral-400">
+                    <tr>
+                        <th scope="col" class="py-3 pr-4 font-semibold">Order #</th>
+                        <th scope="col" class="py-3 pr-4 font-semibold">Customer</th>
+                        <th scope="col" class="py-3 pr-4 font-semibold">Pickup slot</th>
+                        <th scope="col" class="py-3 pr-4 text-right font-semibold">Total (PHP)</th>
+                        <th scope="col" class="py-3 pr-4 font-semibold">Payment</th>
+                        <th scope="col" class="py-3 pr-4 font-semibold">Status</th>
+                        <th scope="col" class="py-3 font-semibold">Placed</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-white/10">
+                    @if (Model.RecentOrders.Count == 0)
+                    {
+                        <tr><td colspan="7" class="py-10 text-center text-neutral-400">No orders in this date range.</td></tr>
+                    }
+                    @foreach (var o in Model.RecentOrders)
+                    {
+                        <tr class="align-middle">
+                            <td class="py-3 pr-4"><a href="/Admin/OrderDetails/@o.OrderId" class="font-semibold text-caramel hover:text-cream">#@o.OrderId</a></td>
+                            <td class="py-3 pr-4">
+                                <p class="text-cream">@o.CustomerName</p>
+                                <p class="text-xs text-neutral-400">@o.CampusId</p>
+                            </td>
+                            <td class="whitespace-nowrap py-3 pr-4 text-neutral-300">@o.PickupSlot.ToString("MMM d · h:mm tt")</td>
+                            <td class="whitespace-nowrap py-3 pr-4 text-right font-semibold text-cream">&#8369;@o.TotalAmount.ToString("N2")</td>
+                            <td class="whitespace-nowrap py-3 pr-4">
+                                <span class="text-neutral-300">@o.PaymentMethod</span>
+                                <span class="ml-1 inline-flex rounded-full px-2 py-0.5 text-xs font-semibold @PayCls(o.PaymentStatus)">@o.PaymentStatus.Label()</span>
+                            </td>
+                            <td class="py-3 pr-4"><span class="inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold @StatusCls(o.Status)">@o.Status</span></td>
+                            <td class="whitespace-nowrap py-3 text-xs text-neutral-400">@o.CreatedAt.ToString("MMM d · h:mm tt")</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </section>
 </div>
 
 @section Scripts {
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
     <script>
-        new Chart(document.getElementById('revenueChart'), {
-            type: 'bar',
-            data: {
-                labels: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.ChartLabels)),
-                datasets: [{
-                    label: 'Revenue (₱)',
-                    data: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.ChartValues)),
-                    backgroundColor: '#d4a373',
-                    borderRadius: 6
-                }]
-            },
-            options: {
-                maintainAspectRatio: false,
-                plugins: { legend: { display: false } },
-                scales: {
-                    x: { ticks: { color: '#d4d4d4' }, grid: { display: false } },
-                    y: { beginAtZero: true, ticks: { color: '#d4d4d4' }, grid: { color: 'rgba(255,255,255,0.08)' } }
-                }
+        (function() {
+            if (!window.Chart) return;
+
+            var CARAMEL = '#d4a373', GRID = 'rgba(255,255,255,0.08)';
+            Chart.defaults.color = '#d4d4d4';
+            Chart.defaults.font.family = 'inherit';
+
+            var labels = @Html.Raw(Json.Serialize(Model.DailyLabels));
+            var revenue = @Html.Raw(Json.Serialize(Model.DailyRevenueData));
+            var orders = @Html.Raw(Json.Serialize(Model.DailyOrderCountData));
+
+            var payLabels = @Html.Raw(Json.Serialize(Model.PaymentMethodLabels));
+            var payCounts = @Html.Raw(Json.Serialize(Model.PaymentMethodCounts));
+            var stLabels = @Html.Raw(Json.Serialize(Model.OrderStatusLabels));
+            var stCounts = @Html.Raw(Json.Serialize(Model.OrderStatusCounts));
+
+            function peso(v) {
+                return '\u20B1' + Number(v).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
             }
-        });
+
+            // ---- Trend line chart with Revenue / Orders toggle ----
+            var metric = 'revenue';
+            var trend = new Chart(document.getElementById('trendChart'), {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Revenue (\u20B1)',
+                        data: revenue,
+                        borderColor: CARAMEL,
+                        backgroundColor: 'rgba(212,163,115,0.15)',
+                        fill: true,
+                        tension: 0.35,
+                        borderWidth: 2,
+                        pointRadius: labels.length > 31 ? 0 : 3,
+                        pointHoverRadius: 5
+                    }]
+                },
+                options: {
+                    maintainAspectRatio: false,
+                    interaction: { mode: 'index', intersect: false },
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: function(c) {
+                                    return metric === 'revenue' ? ' ' + peso(c.parsed.y) : ' ' + c.parsed.y + ' order' + (c.parsed.y === 1 ? '' : 's');
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: { grid: { display: false }, ticks: { maxTicksLimit: 10 } },
+                        y: {
+                            beginAtZero: true,
+                            grid: { color: GRID },
+                            ticks: {
+                                precision: 0,
+                                callback: function(v) { return metric === 'revenue' ? '\u20B1' + v : v; }
+                            }
+                        }
+                    }
+                }
+            });
+
+            function setMetric(m) {
+                metric = m;
+                var ds = trend.data.datasets[0];
+                ds.data = m === 'revenue' ? revenue : orders;
+                ds.label = m === 'revenue' ? 'Revenue (\u20B1)' : 'Orders';
+                trend.update();
+                document.querySelectorAll('[data-metric]').forEach(function(b) {
+                    b.setAttribute('aria-pressed', b.dataset.metric === m ? 'true' : 'false');
+                });
+            }
+            document.querySelectorAll('[data-metric]').forEach(function(b) {
+                b.addEventListener('click', function() { setMetric(b.dataset.metric); });
+            });
+
+            // ---- Donut with Payment / Status toggle ----
+            var PAY_COLORS = ['#d4a373', '#38bdf8'];
+            var ST_COLORS = { Placed: '#38bdf8', Preparing: '#fbbf24', Ready: '#34d399', Claimed: '#a8a29e', Cancelled: '#f87171' };
+            var mix = new Chart(document.getElementById('mixChart'), {
+                type: 'doughnut',
+                data: {
+                    labels: payLabels,
+                    datasets: [{ data: payCounts, backgroundColor: PAY_COLORS, borderColor: '#241411', borderWidth: 2 }]
+                },
+                options: {
+                    maintainAspectRatio: false,
+                    cutout: '62%',
+                    plugins: {
+                        legend: { position: 'bottom', labels: { boxWidth: 12, padding: 14 } },
+                        tooltip: {
+                            callbacks: {
+                                label: function(c) {
+                                    var total = c.dataset.data.reduce(function(a, b) { return a + b; }, 0);
+                                    var pct = total ? Math.round(c.parsed * 100 / total) : 0;
+                                    return ' ' + c.label + ': ' + c.parsed + ' (' + pct + '%)';
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+
+            function setMix(kind) {
+                var ds = mix.data.datasets[0];
+                if (kind === 'payment') {
+                    mix.data.labels = payLabels; ds.data = payCounts; ds.backgroundColor = PAY_COLORS;
+                } else {
+                    mix.data.labels = stLabels; ds.data = stCounts;
+                    ds.backgroundColor = stLabels.map(function(l) { return ST_COLORS[l] || '#a8a29e'; });
+                }
+                var total = ds.data.reduce(function(a, b) { return a + b; }, 0);
+                document.getElementById('mixEmpty').classList.toggle('hidden', total > 0);
+                mix.update();
+                document.querySelectorAll('[data-mix]').forEach(function(b) {
+                    b.setAttribute('aria-pressed', b.dataset.mix === kind ? 'true' : 'false');
+                });
+            }
+            document.querySelectorAll('[data-mix]').forEach(function(b) {
+                b.addEventListener('click', function() { setMix(b.dataset.mix); });
+            });
+        })();
     </script>
 }

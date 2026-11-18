@@ -17,7 +17,9 @@ public class AdminController(
     ApplicationDbContext db,
     IAuditService audit,
     IQrTokenService qr,
-    UserManager<ApplicationUser> users) : Controller
+    UserManager<ApplicationUser> users,
+    IPickupSlotService slots,
+    IImageResolver images) : Controller
 {
     private string? ActorId => User.FindFirstValue(ClaimTypes.NameIdentifier);
 
@@ -25,46 +27,201 @@ public class AdminController(
     public IActionResult Index() => View("~/Views/Admin/Index.cshtml");
 
     [HttpGet("Dashboard")]
-    public async Task<IActionResult> Dashboard(CancellationToken ct)
+    public async Task<IActionResult> Dashboard(DateOnly? startDate, DateOnly? endDate, CancellationToken ct)
     {
-        var today = DateTime.UtcNow.Date;
-        var weekStart = today.AddDays(-6);
-        var monthStart = new DateTime(today.Year, today.Month, 1, 0, 0, 0, DateTimeKind.Utc);
-        var since = weekStart < monthStart ? weekStart : monthStart;
+        const int LowStockThreshold = 5;
 
-        var revenueOrders = db.Orders.AsNoTracking().Where(o => o.Status == OrderStatus.Claimed);
+        // ---- Shop-local date handling (fixed-offset zones; Asia/Manila has no DST) ----
+        var nowUtc = DateTime.UtcNow;
+        var nowLocal = slots.ToLocal(nowUtc);
+        var offset = TimeSpan.FromMinutes(Math.Round((nowLocal - nowUtc).TotalMinutes));
+        var todayLocal = DateOnly.FromDateTime(nowLocal);
 
-        var recent = await revenueOrders.Where(o => o.CreatedAtUtc >= since)
-            .Select(o => new { o.CreatedAtUtc, o.Total }).ToListAsync(ct);
+        var end = endDate ?? todayLocal;
+        var start = startDate ?? end.AddDays(-6);
+        if (start > end) (start, end) = (end, start);
+        if (end.DayNumber - start.DayNumber > 365) start = end.AddDays(-365);
 
-        var best = await db.OrderItems.AsNoTracking()
-            .Where(i => i.Order.Status != OrderStatus.Cancelled)
-            .GroupBy(i => new { i.MenuItemId, i.MenuItem.Name })
-            .Select(g => new { g.Key.Name, Units = g.Sum(i => i.Quantity) })
-            .OrderByDescending(x => x.Units)
-            .FirstOrDefaultAsync(ct);
+        DateTime ToUtc(DateOnly d) =>
+            DateTime.SpecifyKind(d.ToDateTime(TimeOnly.MinValue) - offset, DateTimeKind.Utc);
 
-        var customers = await (from ur in db.UserRoles
-                               join r in db.Roles on ur.RoleId equals r.Id
-                               where r.Name == AppRoles.Student || r.Name == AppRoles.Faculty
-                               select ur.UserId).Distinct().CountAsync(ct);
+        var rangeStart = ToUtc(start);
+        var rangeEnd = ToUtc(end.AddDays(1));            // exclusive
+        var todayStart = ToUtc(todayLocal);
+        var tomorrowStart = ToUtc(todayLocal.AddDays(1));
+        var yesterdayStart = ToUtc(todayLocal.AddDays(-1));
 
-        var days = Enumerable.Range(0, 7).Select(i => weekStart.AddDays(i)).ToList();
+        // ---- Orders in range (one projection, bucketed in memory) ----
+        var range = await db.Orders.AsNoTracking()
+            .Where(o => o.CreatedAtUtc >= rangeStart && o.CreatedAtUtc < rangeEnd)
+            .Select(o => new { o.CreatedAtUtc, o.Total, o.Status, o.PaymentMethod })
+            .ToListAsync(ct);
+
+        var billable = range.Where(o => o.Status != OrderStatus.Cancelled).ToList();   // revenue excludes Cancelled
+
+        var days = Enumerable.Range(0, end.DayNumber - start.DayNumber + 1).Select(start.AddDays).ToList();
+        var byDay = billable
+            .GroupBy(o => DateOnly.FromDateTime(o.CreatedAtUtc + offset))
+            .ToDictionary(g => g.Key, g => (Revenue: g.Sum(x => x.Total), Count: g.Count()));
+
+        var statusLabels = Enum.GetNames<OrderStatus>();
+        var statusCounts = Enum.GetValues<OrderStatus>()
+            .Select(s => range.Count(o => o.Status == s)).ToArray();
+
+        // ---- Today vs yesterday (independent of the filter) ----
+        var twoDays = await db.Orders.AsNoTracking()
+            .Where(o => o.CreatedAtUtc >= yesterdayStart && o.CreatedAtUtc < tomorrowStart
+                        && o.Status != OrderStatus.Cancelled)
+            .Select(o => new { o.CreatedAtUtc, o.Total })
+            .ToListAsync(ct);
+
+        var revToday = twoDays.Where(o => o.CreatedAtUtc >= todayStart).Sum(o => o.Total);
+        var ordToday = twoDays.Count(o => o.CreatedAtUtc >= todayStart);
+        var revYesterday = twoDays.Where(o => o.CreatedAtUtc < todayStart).Sum(o => o.Total);
+
+        var pending = await db.Orders.AsNoTracking().CountAsync(o =>
+            o.Status == OrderStatus.Placed || o.Status == OrderStatus.Preparing || o.Status == OrderStatus.Ready, ct);
+
+        // ---- Best-selling drinks (range, non-cancelled) ----
+        var top = await db.OrderItems.AsNoTracking()
+            .Where(i => i.Order.CreatedAtUtc >= rangeStart && i.Order.CreatedAtUtc < rangeEnd
+                        && i.Order.Status != OrderStatus.Cancelled
+                        && i.MenuItem.Category.Group == "Drinks")
+            .GroupBy(i => new { i.MenuItemId, i.MenuItem.Name, i.MenuItem.ImageUrl })
+            .Select(g => new
+            {
+                g.Key.Name,
+                g.Key.ImageUrl,
+                Units = g.Sum(i => i.Quantity),
+                Revenue = g.Sum(i => i.UnitPrice * i.Quantity)
+            })
+            .OrderByDescending(x => x.Units).ThenByDescending(x => x.Revenue)
+            .Take(5)
+            .ToListAsync(ct);
+
+        // ---- Shifts ----
+        var onShift = await db.BaristaShifts.AsNoTracking()
+            .CountAsync(s => s.ClockInAt != null && s.ClockOutAt == null, ct);
+        var scheduledToday = await db.BaristaShifts.AsNoTracking()
+            .CountAsync(s => s.ScheduledStart >= todayStart && s.ScheduledStart < tomorrowStart, ct);
+        var completedToday = await db.BaristaShifts.AsNoTracking()
+            .CountAsync(s => s.ClockOutAt != null && s.ClockOutAt >= todayStart && s.ClockOutAt < tomorrowStart, ct);
+
+        // ---- Attention alerts: stock + rejected QR scans (last 7 days) ----
+        var stockRows = await db.InventoryItems.AsNoTracking()
+            .Where(i => i.Quantity <= LowStockThreshold)
+            .OrderBy(i => i.Quantity).ThenBy(i => i.MenuItem.Name)
+            .Select(i => new { i.MenuItem.Name, i.Quantity })
+            .Take(8)
+            .ToListAsync(ct);
+
+        var scanRows = await db.AuditLogs.AsNoTracking()
+            .Where(a => a.Action == "QrScanRejected" && a.CreatedAtUtc >= nowUtc.AddDays(-7))
+            .OrderByDescending(a => a.CreatedAtUtc)
+            .Select(a => new { a.Details, a.CreatedAtUtc })
+            .Take(5)
+            .ToListAsync(ct);
+
+        static string? Field(string? details, string key) =>
+            details?.Split(';', StringSplitOptions.TrimEntries)
+                .FirstOrDefault(p => p.StartsWith(key + "=", StringComparison.Ordinal))?[(key.Length + 1)..];
+
+        var alerts = new List<AttentionAlertDto>();
+        alerts.AddRange(stockRows.Select(r => new AttentionAlertDto
+        {
+            Kind = r.Quantity == 0 ? "OutOfStock" : "LowStock",
+            Title = r.Name,
+            Detail = r.Quantity == 0 ? "Out of stock. Customers cannot order this item." : $"Only {r.Quantity} left in stock.",
+            ActionUrl = "/Admin/Inventory",
+            ActionLabel = "Restock"
+        }));
+        alerts.AddRange(scanRows.Select(r =>
+        {
+            var orderId = Field(r.Details, "OrderId");
+            return new AttentionAlertDto
+            {
+                Kind = "RejectedScan",
+                Title = "Rejected QR scan",
+                Detail = $"{(string.IsNullOrEmpty(orderId) ? "Unknown order" : $"Order #{orderId}")} · {Field(r.Details, "Reason") ?? "Rejected"}",
+                OccurredAt = slots.ToLocal(r.CreatedAtUtc)
+            };
+        }));
+
+        // ---- Recent orders in range ----
+        var recent = await db.Orders.AsNoTracking()
+            .Where(o => o.CreatedAtUtc >= rangeStart && o.CreatedAtUtc < rangeEnd)
+            .OrderByDescending(o => o.CreatedAtUtc)
+            .Select(o => new
+            {
+                o.Id,
+                o.User.FullName,
+                o.User.CampusId,
+                o.PickupAtUtc,
+                o.Total,
+                o.PaymentMethod,
+                o.PaymentStatus,
+                o.Status,
+                o.CreatedAtUtc
+            })
+            .Take(10)
+            .ToListAsync(ct);
 
         var vm = new AdminDashboardViewModel
         {
-            TotalRevenue = await revenueOrders.SumAsync(o => (decimal?)o.Total, ct) ?? 0,
-            TotalCustomers = customers,
-            TotalOrders = await db.Orders.CountAsync(o => o.Status != OrderStatus.Cancelled, ct),
-            PendingOrders = await db.Orders.CountAsync(o => o.Status == OrderStatus.Placed || o.Status == OrderStatus.Preparing, ct),
-            BestSellerName = best?.Name,
-            BestSellerUnits = best?.Units ?? 0,
-            TodayRevenue = recent.Where(o => o.CreatedAtUtc >= today).Sum(o => o.Total),
-            WeekRevenue = recent.Where(o => o.CreatedAtUtc >= weekStart).Sum(o => o.Total),
-            MonthRevenue = recent.Where(o => o.CreatedAtUtc >= monthStart).Sum(o => o.Total),
-            ChartLabels = days.Select(d => d.ToString("MMM d")).ToList(),
-            ChartValues = days.Select(d => recent.Where(o => o.CreatedAtUtc.Date == d).Sum(o => o.Total)).ToList()
+            StartDate = start,
+            EndDate = end,
+            NowLocal = nowLocal,
+
+            RevenueToday = revToday,
+            RevenueYesterday = revYesterday,
+            RevenueChangePercent = revYesterday > 0
+                ? Math.Round((revToday - revYesterday) / revYesterday * 100m, 1) : null,
+            AverageOrderValue = billable.Count > 0 ? Math.Round(billable.Sum(o => o.Total) / billable.Count, 2) : 0m,
+            OrdersToday = ordToday,
+            PendingPickupCount = pending,
+            RangeRevenue = billable.Sum(o => o.Total),
+            RangeOrders = billable.Count,
+
+            DailyLabels = days.Select(d => d.ToString("MMM d", CultureInfo.InvariantCulture)).ToArray(),
+            DailyRevenueData = days.Select(d => byDay.TryGetValue(d, out var v) ? v.Revenue : 0m).ToArray(),
+            DailyOrderCountData = days.Select(d => byDay.TryGetValue(d, out var v) ? v.Count : 0).ToArray(),
+
+            PaymentMethodLabels = new[] { nameof(PaymentMethod.Cash), nameof(PaymentMethod.GCash) },
+            PaymentMethodCounts = new[]
+            {
+                billable.Count(o => o.PaymentMethod == PaymentMethod.Cash),
+                billable.Count(o => o.PaymentMethod == PaymentMethod.GCash)
+            },
+            OrderStatusLabels = statusLabels,
+            OrderStatusCounts = statusCounts,
+
+            TopSellingDrinks = top.Select(t => new TopSellingDrinkDto
+            {
+                MenuItemName = t.Name,
+                ImageUrl = images.Resolve(t.ImageUrl, t.Name),
+                UnitsSold = t.Units,
+                TotalRevenue = t.Revenue
+            }).ToList(),
+
+            BaristasOnShiftCount = onShift,
+            ScheduledShiftsTodayCount = scheduledToday,
+            CompletedShiftsTodayCount = completedToday,
+
+            AttentionAlerts = alerts,
+            RecentOrders = recent.Select(o => new RecentOrderRowDto
+            {
+                OrderId = o.Id,
+                CustomerName = o.FullName,
+                CampusId = o.CampusId,
+                PickupSlot = slots.ToLocal(o.PickupAtUtc),
+                TotalAmount = o.Total,
+                PaymentMethod = o.PaymentMethod,
+                PaymentStatus = o.PaymentStatus,
+                Status = o.Status,
+                CreatedAt = slots.ToLocal(o.CreatedAtUtc)
+            }).ToList()
         };
+
         return View(vm);
     }
 

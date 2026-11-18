@@ -10,4 +10,6 @@ public class ApplicationUser : IdentityUser
 
     [Required, MaxLength(30)]
     public string CampusId { get; set; } = string.Empty;
+
+    public int LoyaltyPoints { get; set; }
 }

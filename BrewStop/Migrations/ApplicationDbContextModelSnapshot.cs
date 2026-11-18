@@ -140,6 +140,9 @@ namespace BrewStop.Migrations
                     b.Property<DateTimeOffset?>("LockoutEnd")
                         .HasColumnType("datetime(6)");
 
+                    b.Property<int>("LoyaltyPoints")
+                        .HasColumnType("int");
+
                     b.Property<string>("NormalizedEmail")
                         .HasMaxLength(256)
                         .HasColumnType("varchar(256)");
@@ -179,7 +182,10 @@ namespace BrewStop.Migrations
                         .IsUnique()
                         .HasDatabaseName("UserNameIndex");
 
-                    b.ToTable("AspNetUsers", (string)null);
+                    b.ToTable("AspNetUsers", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_AspNetUsers_LoyaltyPoints", "`LoyaltyPoints` >= 0");
+                        });
                 });
 
             modelBuilder.Entity("BrewStop.Models.AuditLog", b =>
@@ -213,6 +219,48 @@ namespace BrewStop.Migrations
                     b.HasIndex("UserId");
 
                     b.ToTable("AuditLogs");
+                });
+
+            modelBuilder.Entity("BrewStop.Models.BaristaShift", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("BaristaUserId")
+                        .IsRequired()
+                        .HasColumnType("varchar(255)");
+
+                    b.Property<DateTime?>("ClockInAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<DateTime?>("ClockOutAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<DateTime>("ScheduledEnd")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<DateTime>("ScheduledStart")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("ShiftStatus")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("varchar(20)");
+
+                    b.Property<decimal?>("TotalHours")
+                        .HasPrecision(6, 2)
+                        .HasColumnType("decimal(6,2)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ClockInAt");
+
+                    b.HasIndex("BaristaUserId", "ScheduledStart");
+
+                    b.ToTable("BaristaShifts");
                 });
 
             modelBuilder.Entity("BrewStop.Models.Category", b =>
@@ -451,6 +499,42 @@ namespace BrewStop.Migrations
                             PriceDelta = 1.00m,
                             SortOrder = 3
                         });
+                });
+
+            modelBuilder.Entity("BrewStop.Models.LoyaltyTransaction", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<int?>("OrderId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("PointsDelta")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("varchar(120)");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("varchar(255)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrderId", "Reason")
+                        .IsUnique();
+
+                    b.HasIndex("UserId", "CreatedAtUtc");
+
+                    b.ToTable("LoyaltyTransactions");
                 });
 
             modelBuilder.Entity("BrewStop.Models.MenuItem", b =>
@@ -873,6 +957,10 @@ namespace BrewStop.Migrations
                     b.Property<int?>("MaxUses")
                         .HasColumnType("int");
 
+                    b.Property<string>("OwnerUserId")
+                        .HasMaxLength(255)
+                        .HasColumnType("varchar(255)");
+
                     b.Property<int>("TimesUsed")
                         .HasColumnType("int");
 
@@ -882,6 +970,8 @@ namespace BrewStop.Migrations
                         .HasColumnType("varchar(100)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("OwnerUserId");
 
                     b.ToTable("Promotions");
                 });
@@ -1018,6 +1108,17 @@ namespace BrewStop.Migrations
                     b.ToTable("AspNetUserTokens", (string)null);
                 });
 
+            modelBuilder.Entity("BrewStop.Models.BaristaShift", b =>
+                {
+                    b.HasOne("BrewStop.Models.ApplicationUser", "BaristaUser")
+                        .WithMany()
+                        .HasForeignKey("BaristaUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("BaristaUser");
+                });
+
             modelBuilder.Entity("BrewStop.Models.FavoriteItem", b =>
                 {
                     b.HasOne("BrewStop.Models.MenuItem", "MenuItem")
@@ -1046,6 +1147,24 @@ namespace BrewStop.Migrations
                         .IsRequired();
 
                     b.Navigation("MenuItem");
+                });
+
+            modelBuilder.Entity("BrewStop.Models.LoyaltyTransaction", b =>
+                {
+                    b.HasOne("BrewStop.Models.Order", "Order")
+                        .WithMany()
+                        .HasForeignKey("OrderId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("BrewStop.Models.ApplicationUser", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Order");
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("BrewStop.Models.MenuItem", b =>

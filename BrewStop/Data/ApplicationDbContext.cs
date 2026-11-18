@@ -21,14 +21,20 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<Promotion> Promotions => Set<Promotion>();
     public DbSet<FavoriteItem> FavoriteItems => Set<FavoriteItem>();
     public DbSet<ProductReview> ProductReviews => Set<ProductReview>();
+    public DbSet<LoyaltyTransaction> LoyaltyTransactions => Set<LoyaltyTransaction>();
+    public DbSet<BaristaShift> BaristaShifts => Set<BaristaShift>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
 
-        modelBuilder.Entity<ApplicationUser>()
-            .HasIndex(u => u.CampusId)
-            .IsUnique();
+        modelBuilder.Entity<ApplicationUser>(e =>
+        {
+            e.HasIndex(u => u.CampusId).IsUnique();
+            e.ToTable(t => t.HasCheckConstraint("CK_AspNetUsers_LoyaltyPoints", "`LoyaltyPoints` >= 0"));
+        });
+
+        modelBuilder.Entity<Promotion>().HasIndex(p => p.OwnerUserId);
 
         modelBuilder.Entity<OrderQrToken>(e =>
         {
@@ -118,6 +124,23 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
             e.HasOne(r => r.MenuItem).WithMany().HasForeignKey(r => r.MenuItemId).OnDelete(DeleteBehavior.Restrict);
             e.HasOne(r => r.Order).WithMany().HasForeignKey(r => r.OrderId).OnDelete(DeleteBehavior.Cascade);
             e.ToTable(t => t.HasCheckConstraint("CK_ProductReviews_Rating", "`Rating` BETWEEN 1 AND 5"));
+        });
+
+        modelBuilder.Entity<LoyaltyTransaction>(e =>
+        {
+            e.HasIndex(l => new { l.UserId, l.CreatedAtUtc });
+            e.HasIndex(l => new { l.OrderId, l.Reason }).IsUnique();   // one earn row per order
+            e.HasOne(l => l.User).WithMany().HasForeignKey(l => l.UserId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(l => l.Order).WithMany().HasForeignKey(l => l.OrderId).OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<BaristaShift>(e =>
+        {
+            e.Property(s => s.TotalHours).HasPrecision(6, 2);
+            e.Property(s => s.ShiftStatus).HasConversion<string>().HasMaxLength(20);
+            e.HasIndex(s => new { s.BaristaUserId, s.ScheduledStart });
+            e.HasIndex(s => s.ClockInAt);
+            e.HasOne(s => s.BaristaUser).WithMany().HasForeignKey(s => s.BaristaUserId).OnDelete(DeleteBehavior.Restrict);
         });
 
         // ---------- Seed data ----------

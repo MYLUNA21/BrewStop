@@ -1,4 +1,5 @@
-﻿using BrewStop.Models;
+﻿using BrewStop.Data;
+using BrewStop.Models;
 using BrewStop.Services;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Google;
@@ -6,7 +7,9 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using System.Net;
+using System.Text.RegularExpressions;
 using System.Security.Claims;
 
 namespace BrewStop.Controllers;
@@ -18,6 +21,9 @@ public class AccountController(
     ICaptchaService captcha,
     IAuditService audit,
     IConfiguration config,
+    ApplicationDbContext db,
+    IWebHostEnvironment env,
+    IOptions<IdentityOptions> identityOptions,
     ILogger<AccountController> log) : Controller
 {
     // Register
@@ -64,6 +70,8 @@ public class AccountController(
         }
 
         await users.AddToRoleAsync(user, m.Role);
+
+
         await audit.LogAsync(user.Id, "RoleAssigned", $"Role={m.Role}; Source=Registration");
 
         await SendConfirmationAsync(user);
@@ -96,6 +104,14 @@ public class AccountController(
         if (!await captcha.VerifyAsync(Request, "login", HttpContext.RequestAborted))
         {
             ModelState.AddModelError(string.Empty, "Please complete the captcha.");
+            return View(m);
+        }
+
+        // Soft-deleted accounts can never sign in
+        var existing = await users.FindByEmailAsync(m.Email);
+        if (existing is { IsDeleted: true })
+        {
+            ModelState.AddModelError("", "Invalid email or password.");
             return View(m);
         }
 
@@ -506,5 +522,360 @@ public class AccountController(
 
         return View("Info", new InfoViewModel("Check your email",
             "If that account needs verification, a new link has been sent."));
+    }
+
+    // ===================== Account Settings Hub =====================
+    private const long MaxAvatarBytes = 2 * 1024 * 1024;
+    private static readonly string[] AvatarExts = [".jpg", ".png", ".webp"];
+    private string AvatarDir => Path.Combine(env.WebRootPath, "uploads", "avatars");
+
+    // Accepts 09XXXXXXXXX, 639XXXXXXXXX or +639XXXXXXXXX and stores +639XXXXXXXXX. Empty is allowed.
+    private static bool TryNormalizePhone(string? raw, out string? phone)
+    {
+        phone = null;
+        var s = new string((raw ?? string.Empty).Where(c => char.IsDigit(c) || c == '+').ToArray());
+        if (s.Length == 0) return true;
+
+        string national;
+        if (s.StartsWith("+63")) national = s[3..];
+        else if (s.StartsWith("63")) national = s[2..];
+        else if (s.StartsWith("09")) national = s[1..];
+        else return false;
+
+        if (!Regex.IsMatch(national, @"^9\d{9}$")) return false;
+        phone = "+63" + national;
+        return true;
+    }
+
+    // Checks the real file signature (magic bytes), not just the file name.
+    private static string? DetectImageExt(byte[] h, int n)
+    {
+        if (n >= 3 && h[0] == 0xFF && h[1] == 0xD8 && h[2] == 0xFF) return ".jpg";
+        if (n >= 8 && h[0] == 0x89 && h[1] == 0x50 && h[2] == 0x4E && h[3] == 0x47
+                   && h[4] == 0x0D && h[5] == 0x0A && h[6] == 0x1A && h[7] == 0x0A) return ".png";
+        if (n >= 12 && h[0] == 'R' && h[1] == 'I' && h[2] == 'F' && h[3] == 'F'
+                    && h[8] == 'W' && h[9] == 'E' && h[10] == 'B' && h[11] == 'P') return ".webp";
+        return null;
+    }
+
+    private void DeleteAvatarFile(string? url)
+    {
+        if (string.IsNullOrEmpty(url) || !url.StartsWith("/uploads/avatars/")) return;
+        var path = Path.Combine(AvatarDir, Path.GetFileName(url));
+        if (System.IO.File.Exists(path)) System.IO.File.Delete(path);
+    }
+
+    private async Task<ApplicationUser?> CurrentUserAsync()
+    {
+        var u = await users.GetUserAsync(User);
+        return u is { IsDeleted: false } ? u : null;
+    }
+
+    private async Task<IActionResult> ForceLogoutAsync()
+    {
+        await signIn.SignOutAsync();
+        return RedirectToAction(nameof(Login));
+    }
+
+    // ---- Personal Information ----
+    [HttpGet, Authorize]
+    public async Task<IActionResult> Manage()
+    {
+        var user = await CurrentUserAsync();
+        if (user is null) return await ForceLogoutAsync();
+
+        return View(new ManageProfileViewModel
+        {
+            Email = user.Email ?? string.Empty,
+            AvatarUrl = user.AvatarUrl,
+            FullName = user.FullName,
+            CampusId = user.CampusId,
+            PhoneNumber = user.PhoneNumber
+        });
+    }
+
+    [HttpPost, Authorize]
+    public async Task<IActionResult> Manage(ManageProfileViewModel m)
+    {
+        var user = await CurrentUserAsync();
+        if (user is null) return await ForceLogoutAsync();
+
+        m.Email = user.Email ?? string.Empty;
+        m.AvatarUrl = user.AvatarUrl;
+
+        var campusId = m.CampusId?.Trim() ?? string.Empty;
+        if (campusId.Length > 0 &&
+            await users.Users.AnyAsync(u => u.Id != user.Id && u.CampusId == campusId))
+            ModelState.AddModelError(nameof(m.CampusId), "Campus ID is already registered.");
+
+        if (!TryNormalizePhone(m.PhoneNumber, out var phone))
+            ModelState.AddModelError(nameof(m.PhoneNumber), "Enter a PH mobile number like 09123456789 or +639123456789.");
+
+        string? newExt = null;
+        if (m.Avatar is { Length: > 0 })
+        {
+            var ext = Path.GetExtension(m.Avatar.FileName).ToLowerInvariant();
+            if (m.Avatar.Length > MaxAvatarBytes)
+                ModelState.AddModelError(nameof(m.Avatar), "Photo must be 2 MB or smaller.");
+            else if (!AvatarExts.Contains(ext))
+                ModelState.AddModelError(nameof(m.Avatar), "Only .jpg, .png or .webp photos are allowed.");
+            else
+            {
+                var head = new byte[12];
+                int read;
+                await using (var s = m.Avatar.OpenReadStream())
+                    read = await s.ReadAsync(head.AsMemory(0, 12));
+
+                newExt = DetectImageExt(head, read);
+                if (newExt is null || newExt != ext)
+                    ModelState.AddModelError(nameof(m.Avatar), "That file is not a valid image.");
+            }
+        }
+
+        if (!ModelState.IsValid) return View(m);
+
+        if (newExt is not null)
+        {
+            Directory.CreateDirectory(AvatarDir);
+            var fileName = $"{Guid.NewGuid():N}{newExt}";
+            await using (var fs = System.IO.File.Create(Path.Combine(AvatarDir, fileName)))
+                await m.Avatar!.CopyToAsync(fs);
+
+            DeleteAvatarFile(user.AvatarUrl);
+            user.AvatarUrl = $"/uploads/avatars/{fileName}";
+        }
+
+        user.FullName = m.FullName.Trim();
+        user.CampusId = campusId;
+        user.PhoneNumber = phone;
+
+        var result = await users.UpdateAsync(user);
+        if (!result.Succeeded)
+        {
+            foreach (var e in result.Errors) ModelState.AddModelError("", e.Description);
+            m.AvatarUrl = user.AvatarUrl;
+            return View(m);
+        }
+
+        await signIn.RefreshSignInAsync(user);
+        await audit.LogAsync(user.Id, "ProfileUpdated", "Profile details updated");
+        TempData["Success"] = "Your profile has been updated.";
+        return RedirectToAction(nameof(Manage));
+    }
+
+    // ---- Change / Set Password ----
+    [HttpGet, Authorize]
+    public async Task<IActionResult> ChangePassword()
+    {
+        var user = await CurrentUserAsync();
+        if (user is null) return await ForceLogoutAsync();
+
+        return View(new ChangePasswordViewModel { HasPassword = await users.HasPasswordAsync(user) });
+    }
+
+    [HttpPost, Authorize]
+    public async Task<IActionResult> ChangePassword(ChangePasswordViewModel m)
+    {
+        var user = await CurrentUserAsync();
+        if (user is null) return await ForceLogoutAsync();
+
+        var has = await users.HasPasswordAsync(user);
+        m.HasPassword = has;
+
+        if (has && string.IsNullOrWhiteSpace(m.CurrentPassword))
+            ModelState.AddModelError(nameof(m.CurrentPassword), "Enter your current password.");
+
+        if (!ModelState.IsValid) return View(m);
+
+        IdentityResult result = has
+            ? await users.ChangePasswordAsync(user, m.CurrentPassword!, m.NewPassword)
+            : await users.AddPasswordAsync(user, m.NewPassword);
+
+        if (!result.Succeeded)
+        {
+            foreach (var e in result.Errors) ModelState.AddModelError("", e.Description);
+            return View(m);
+        }
+
+        // New security stamp signs out other devices; refresh keeps this session alive.
+        await signIn.RefreshSignInAsync(user);
+        await audit.LogAsync(user.Id, has ? "PasswordChanged" : "PasswordSet");
+
+        TempData["Success"] = has ? "Your password has been changed." : "Your password has been set.";
+        return RedirectToAction(nameof(ChangePassword));
+    }
+
+    // ---- Security ----
+    [HttpGet, Authorize]
+    public async Task<IActionResult> Security()
+    {
+        var user = await CurrentUserAsync();
+        if (user is null) return await ForceLogoutAsync();
+
+        var lockout = identityOptions.Value.Lockout;
+        var logins = await users.GetLoginsAsync(user);
+
+        return View(new SecurityViewModel
+        {
+            Email = user.Email ?? string.Empty,
+            EmailConfirmed = await users.IsEmailConfirmedAsync(user),
+            HasPassword = await users.HasPasswordAsync(user),
+            LockoutEnabled = await users.GetLockoutEnabledAsync(user),
+            IsLockedOut = await users.IsLockedOutAsync(user),
+            MaxFailedAttempts = lockout.MaxFailedAccessAttempts,
+            LockoutMinutes = (int)lockout.DefaultLockoutTimeSpan.TotalMinutes,
+            GoogleLinked = logins.Any(l => l.LoginProvider == "Google")
+        });
+    }
+
+    [HttpPost, Authorize]
+    public async Task<IActionResult> SignOutAllDevices()
+    {
+        var user = await CurrentUserAsync();
+        if (user is null) return await ForceLogoutAsync();
+
+        await users.UpdateSecurityStampAsync(user);
+        await audit.LogAsync(user.Id, "SignedOutAllDevices");
+        await signIn.SignOutAsync();
+
+        return RedirectToAction(nameof(Login));
+    }
+
+    // ---- Notifications ----
+    [HttpGet, Authorize]
+    public async Task<IActionResult> Notifications()
+    {
+        var user = await CurrentUserAsync();
+        if (user is null) return await ForceLogoutAsync();
+
+        return View(new NotificationsViewModel
+        {
+            NotifyOrderReady = user.NotifyOrderReady,
+            NotifyPromotions = user.NotifyPromotions
+        });
+    }
+
+    [HttpPost, Authorize]
+    public async Task<IActionResult> Notifications(NotificationsViewModel m)
+    {
+        var user = await CurrentUserAsync();
+        if (user is null) return await ForceLogoutAsync();
+
+        user.NotifyOrderReady = m.NotifyOrderReady;
+        user.NotifyPromotions = m.NotifyPromotions;
+
+        var result = await users.UpdateAsync(user);
+        if (!result.Succeeded)
+        {
+            foreach (var e in result.Errors) ModelState.AddModelError("", e.Description);
+            return View(m);
+        }
+
+        await audit.LogAsync(user.Id, "NotificationsUpdated");
+        TempData["Success"] = "Notification settings saved.";
+        return RedirectToAction(nameof(Notifications));
+    }
+
+    // ---- Activity ----
+    [HttpGet, Authorize]
+    public async Task<IActionResult> Activity()
+    {
+        var user = await CurrentUserAsync();
+        if (user is null) return await ForceLogoutAsync();
+
+        var entries = await db.AuditLogs
+            .AsNoTracking()
+            .Where(a => a.UserId == user.Id)
+            .OrderByDescending(a => a.CreatedAtUtc)
+            .Take(20)
+            .ToListAsync();
+
+        return View(new ActivityViewModel { Entries = entries });
+    }
+
+    // ---- Delete Account (soft delete + PII anonymization) ----
+    [HttpGet, Authorize]
+    public async Task<IActionResult> DeleteAccount()
+    {
+        var user = await CurrentUserAsync();
+        if (user is null) return await ForceLogoutAsync();
+
+        return View(new DeleteAccountViewModel { HasPassword = await users.HasPasswordAsync(user) });
+    }
+
+    [HttpPost, Authorize]
+    public async Task<IActionResult> DeleteAccount(string? confirmPassword, string? confirmText)
+    {
+        var user = await CurrentUserAsync();
+        if (user is null) return await ForceLogoutAsync();
+
+        var has = await users.HasPasswordAsync(user);
+        var vm = new DeleteAccountViewModel { HasPassword = has };
+
+        var hasActiveOrders = await db.Orders.AnyAsync(o => o.UserId == user.Id &&
+            (o.Status == OrderStatus.Placed || o.Status == OrderStatus.Preparing || o.Status == OrderStatus.Ready));
+        if (hasActiveOrders)
+        {
+            ModelState.AddModelError("", "You still have active pickup orders. Wait until they are claimed or cancelled, then try again.");
+            return View(vm);
+        }
+
+        var confirmed = has
+            ? !string.IsNullOrEmpty(confirmPassword) && await users.CheckPasswordAsync(user, confirmPassword)
+            : string.Equals(confirmText?.Trim(), "DELETE", StringComparison.Ordinal);
+        if (!confirmed)
+        {
+            ModelState.AddModelError("", has ? "Incorrect password." : "Type DELETE exactly to confirm.");
+            return View(vm);
+        }
+
+        var oldAvatar = user.AvatarUrl;
+        await using var tx = await db.Database.BeginTransactionAsync();
+        try
+        {
+            var token = Guid.NewGuid().ToString("N")[..8].ToUpperInvariant();
+
+            foreach (var login in await users.GetLoginsAsync(user))
+                await users.RemoveLoginAsync(user, login.LoginProvider, login.ProviderKey);
+
+            user.FullName = "Deleted User";
+            user.CampusId = $"DELETED-{token}";
+            user.UserName = $"deleted-{token}@deleted.invalid";
+            user.Email = user.UserName;
+            user.EmailConfirmed = false;
+            user.PhoneNumber = null;
+            user.PhoneNumberConfirmed = false;
+            user.AvatarUrl = null;
+            user.PasswordHash = null;
+            user.NotifyOrderReady = false;
+            user.NotifyPromotions = false;
+            user.IsDeleted = true;
+            user.DeletedAtUtc = DateTime.UtcNow;
+            user.LockoutEnabled = true;
+            user.LockoutEnd = DateTimeOffset.MaxValue;
+            user.SecurityStamp = Guid.NewGuid().ToString();
+
+            var result = await users.UpdateAsync(user);
+            if (!result.Succeeded)
+                throw new InvalidOperationException(string.Join("; ", result.Errors.Select(e => e.Description)));
+
+            audit.Add(user.Id, "AccountDeleted", "Personal data anonymized");
+            await db.SaveChangesAsync();
+            await tx.CommitAsync();
+        }
+        catch (Exception ex)
+        {
+            await tx.RollbackAsync();
+            log.LogError(ex, "Account deletion failed for {UserId}", user.Id);
+            ModelState.AddModelError("", "We couldn't delete your account. Please try again.");
+            return View(vm);
+        }
+
+        DeleteAvatarFile(oldAvatar);
+        await signIn.SignOutAsync();
+        HttpContext.Session.Clear();
+
+        return View("Info", new InfoViewModel("Account deleted",
+            "Your personal data has been erased. Past orders are kept in anonymized form for one academic year."));
     }
 }

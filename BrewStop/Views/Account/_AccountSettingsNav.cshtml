@@ -1,0 +1,56 @@
+@{
+    var current = (ViewContext.RouteData.Values["action"]?.ToString() ?? string.Empty);
+    var items = new (string Action, string Label, string Icon)[]
+    {
+        ("Manage", "Personal Information", "fa-user"),
+        ("ChangePassword", "Change Password", "fa-key"),
+        ("Security", "Security Settings", "fa-shield-halved"),
+        ("Notifications", "Notification Settings", "fa-bell"),
+        ("Activity", "Account Activity", "fa-clock-rotate-left")
+    };
+    var deleteActive = string.Equals(current, "DeleteAccount", StringComparison.OrdinalIgnoreCase);
+}
+
+<nav aria-label="Account settings" class="rounded-2xl border border-gray-100 bg-[#f9f9f9] p-5">
+    <p class="text-xs font-bold uppercase tracking-wider text-[#00754a]">BrewStop — Account Settings</p>
+    <p class="mt-1 text-sm text-gray-500">Customer Profile — Manage your personal account</p>
+
+    <ul class="mt-5 space-y-1">
+        @foreach (var (action, label, icon) in items)
+        {
+            var active = string.Equals(current, action, StringComparison.OrdinalIgnoreCase);
+            <li>
+                <a asp-controller="Account" asp-action="@action"
+                   aria-current="@(active ? "page" : null)"
+                   class="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition @(active ? "bg-[#e8f3ee] font-semibold text-[#1e3932]" : "text-gray-600 hover:bg-white hover:text-[#1e3932]")">
+                    <i class="fa-solid @icon w-4 text-center"></i>
+                    <span class="flex-1">@label</span>
+                    @if (active)
+                    {
+                        <span class="rounded-full bg-[#00754a] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white">Active</span>
+                    }
+                </a>
+            </li>
+        }
+
+        <li>
+            <form asp-controller="Account" asp-action="Logout" method="post">
+                <button type="submit"
+                        class="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm text-gray-600 transition hover:bg-white hover:text-[#1e3932]">
+                    <i class="fa-solid fa-right-from-bracket w-4 text-center"></i>
+                    <span class="flex-1">Logout</span>
+                </button>
+            </form>
+        </li>
+
+        <li class="mt-2 border-t border-gray-200 pt-3">
+            <a asp-controller="Account" asp-action="DeleteAccount"
+               aria-current="@(deleteActive ? "page" : null)"
+               class="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-[#d62b1f] transition hover:bg-red-50 @(deleteActive ? "bg-red-50" : "")">
+                <i class="fa-solid fa-trash-can w-4 text-center"></i>
+                <span class="flex-1">Delete Account</span>
+                <span class="rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[#d62b1f]">Danger</span>
+            </a>
+        </li>
+    </ul>
+</nav>

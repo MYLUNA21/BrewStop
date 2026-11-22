@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using Microsoft.AspNetCore.Http;
 
 namespace BrewStop.Models;
 
@@ -57,25 +58,30 @@ public class ResetPasswordViewModel
     public string ConfirmPassword { get; set; } = string.Empty;
 }
 
-public class CompleteCampusIdViewModel
-{
-    [Required, MaxLength(30), Display(Name = "Campus ID")]
-    public string CampusId { get; set; } = string.Empty;
+// ===================== Account Settings Hub =====================
 
-    public string? ReturnUrl { get; set; }
-}
-
-public class ProfileInput
+public class ManageProfileViewModel
 {
+    public string Email { get; set; } = string.Empty;      // display only
+    public string? AvatarUrl { get; set; }                 // display only
+
     [Required, StringLength(150), Display(Name = "Full name")]
     public string FullName { get; set; } = string.Empty;
 
     [Required, StringLength(30), Display(Name = "Campus ID")]
     public string CampusId { get; set; } = string.Empty;
+
+    [StringLength(20), Display(Name = "Mobile number")]
+    public string? PhoneNumber { get; set; }
+
+    [Display(Name = "Profile photo")]
+    public IFormFile? Avatar { get; set; }
 }
 
-public class ChangePasswordInput
+public class ChangePasswordViewModel
 {
+    public bool HasPassword { get; set; }
+
     [DataType(DataType.Password), Display(Name = "Current password")]
     public string? CurrentPassword { get; set; }
 
@@ -86,11 +92,33 @@ public class ChangePasswordInput
     public string ConfirmPassword { get; set; } = string.Empty;
 }
 
-public class ManageViewModel
+public class SecurityViewModel
 {
-    public ProfileInput Profile { get; set; } = new();
-    public ChangePasswordInput Password { get; set; } = new();
     public string Email { get; set; } = string.Empty;
+    public bool EmailConfirmed { get; set; }
     public bool HasPassword { get; set; }
-    public bool IsCustomer { get; set; }
+    public bool LockoutEnabled { get; set; }
+    public bool IsLockedOut { get; set; }
+    public int MaxFailedAttempts { get; set; }
+    public int LockoutMinutes { get; set; }
+    public bool GoogleLinked { get; set; }
+}
+
+public class NotificationsViewModel
+{
+    [Display(Name = "Notify me when my order is ready")]
+    public bool NotifyOrderReady { get; set; }
+
+    [Display(Name = "Send me promotions and vouchers")]
+    public bool NotifyPromotions { get; set; }
+}
+
+public class ActivityViewModel
+{
+    public List<AuditLog> Entries { get; set; } = new();
+}
+
+public class DeleteAccountViewModel
+{
+    public bool HasPassword { get; set; }
 }

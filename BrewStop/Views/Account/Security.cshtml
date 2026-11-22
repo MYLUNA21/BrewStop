@@ -1,0 +1,91 @@
+@model SecurityViewModel
+@{
+    Layout = "_Layout";
+    ViewData["Title"] = "Security Settings";
+    const string row = "flex flex-wrap items-center justify-between gap-3 border-b border-gray-100 py-4";
+    const string good = "rounded-full bg-[#e8f3ee] px-3 py-1 text-xs font-semibold text-[#00754a]";
+    const string warn = "rounded-full bg-yellow-100 px-3 py-1 text-xs font-semibold text-yellow-800";
+    const string neutral = "rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold text-gray-600";
+    const string btn = "rounded-full bg-[#00754a] px-7 py-2.5 text-sm font-semibold text-white transition hover:bg-[#1e3932]";
+}
+
+<div class="tw">
+    <div class="mx-auto max-w-6xl px-4 pt-24 pb-16">
+        <h1 class="font-serif text-3xl font-bold text-cream">My Account</h1>
+        <p class="mt-1 text-sm text-neutral-400">@Model.Email</p>
+
+        <div class="mt-8 grid gap-8 lg:grid-cols-3">
+            <aside class="lg:col-span-1">
+                <partial name="_AccountSettingsNav" />
+            </aside>
+
+            <section class="rounded-3xl bg-white p-6 shadow-sm sm:p-10 lg:col-span-2">
+                <h2 class="font-serif text-2xl font-semibold text-[#1e3932]">Security Settings</h2>
+                <p class="mt-1 text-sm text-gray-500">Review how your account is protected.</p>
+
+                @if (TempData["Success"] is string ok)
+                {
+                    <p class="mt-5 rounded-xl border border-[#00754a]/20 bg-[#e8f3ee] px-4 py-3 text-sm text-[#1e3932]" role="status">@ok</p>
+                }
+
+                <div class="mt-4">
+                    <div class="@row">
+                        <div>
+                            <p class="text-sm font-semibold text-[#1e3932]">Email verification</p>
+                            <p class="text-xs text-gray-500">@Model.Email</p>
+                        </div>
+                        @if (Model.EmailConfirmed)
+                        {
+                            <span class="@good"><i class="fa-solid fa-circle-check mr-1"></i>Verified</span>
+                        }
+                        else
+                        {
+                            <span class="@warn"><i class="fa-solid fa-triangle-exclamation mr-1"></i>Not verified</span>
+                        }
+                    </div>
+
+                    <div class="@row">
+                        <div>
+                            <p class="text-sm font-semibold text-[#1e3932]">Lockout policy</p>
+                            <p class="text-xs text-gray-500">
+                                Account locks for @Model.LockoutMinutes minutes after @Model.MaxFailedAttempts failed sign-in attempts.
+                            </p>
+                        </div>
+                        @if (Model.IsLockedOut)
+                        {
+                            <span class="@warn">Currently locked</span>
+                        }
+                        else
+                        {
+                            <span class="@(Model.LockoutEnabled ? good : neutral)">@(Model.LockoutEnabled ? "Protected" : "Disabled")</span>
+                        }
+                    </div>
+
+                    <div class="@row">
+                        <div>
+                            <p class="text-sm font-semibold text-[#1e3932]">Google sign-in</p>
+                            <p class="text-xs text-gray-500">Continue with Google (OAuth 2.0)</p>
+                        </div>
+                        <span class="@(Model.GoogleLinked ? good : neutral)">@(Model.GoogleLinked ? "Linked" : "Not linked")</span>
+                    </div>
+
+                    <div class="@row">
+                        <div>
+                            <p class="text-sm font-semibold text-[#1e3932]">Password</p>
+                            <p class="text-xs text-gray-500">Email and password sign-in</p>
+                        </div>
+                        <span class="@(Model.HasPassword ? good : neutral)">@(Model.HasPassword ? "Set" : "Not set")</span>
+                    </div>
+                </div>
+
+                <div class="mt-8 rounded-2xl bg-[#f9f9f9] p-5">
+                    <h3 class="font-serif text-lg font-semibold text-[#1e3932]">Sign out of all devices</h3>
+                    <p class="mt-1 text-sm text-gray-500">Ends every active session, including this one. You will need to sign in again.</p>
+                    <form asp-action="SignOutAllDevices" method="post" class="mt-4">
+                        <button type="submit" class="@btn">Sign Out of All Devices</button>
+                    </form>
+                </div>
+            </section>
+        </div>
+    </div>
+</div>

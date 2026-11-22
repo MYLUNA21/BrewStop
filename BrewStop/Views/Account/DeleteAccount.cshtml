@@ -1,0 +1,68 @@
+@model DeleteAccountViewModel
+@{
+    Layout = "_Layout";
+    ViewData["Title"] = "Delete Account";
+    const string label = "mb-1 block text-xs font-semibold uppercase tracking-wider text-gray-500";
+    const string field = "w-full border-0 border-b border-gray-300 bg-transparent px-0 py-2.5 text-sm text-[#1e3932] placeholder:text-gray-400 focus:border-[#d62b1f] focus:outline-none focus:ring-0";
+}
+
+<div class="tw">
+    <div class="mx-auto max-w-6xl px-4 pt-24 pb-16">
+        <h1 class="font-serif text-3xl font-bold text-cream">My Account</h1>
+        <p class="mt-1 text-sm text-neutral-400">Account settings</p>
+
+        <div class="mt-8 grid gap-8 lg:grid-cols-3">
+            <aside class="lg:col-span-1">
+                <partial name="_AccountSettingsNav" />
+            </aside>
+
+            <section class="rounded-3xl bg-white p-6 shadow-sm sm:p-10 lg:col-span-2">
+                <h2 class="font-serif text-2xl font-semibold text-[#1e3932]">We'll be sad to see you go</h2>
+
+                <div class="mt-4 rounded-2xl border border-red-200 bg-red-50 p-5 text-sm text-[#1e3932]">
+                    <p class="font-semibold text-[#d62b1f]"><i class="fa-solid fa-triangle-exclamation mr-1"></i>Deleting your account is permanent and cannot be undone.</p>
+                    <ul class="mt-3 list-disc space-y-1 pl-5 text-gray-700">
+                        <li>Your name, Campus ID, mobile number, photo and email are erased and you can no longer sign in.</li>
+                        <li>Your linked Google sign-in is removed.</li>
+                        <li>Past orders and audit records are kept in anonymized form for one academic year, per shop policy.</li>
+                        <li>You cannot delete your account while you have active pickup orders.</li>
+                    </ul>
+                </div>
+
+                <form id="delete-account-form" asp-action="DeleteAccount" method="post" class="mt-6 space-y-6">
+                    <div asp-validation-summary="ModelOnly" class="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-[#d62b1f]"></div>
+
+                    @if (Model.HasPassword)
+                    {
+                        <div>
+                            <label class="@label" for="confirmPassword">Confirm your password</label>
+                            <input id="confirmPassword" name="confirmPassword" type="password" autocomplete="current-password" required class="@field" />
+                        </div>
+                    }
+                    else
+                    {
+                        <div>
+                            <label class="@label" for="confirmText">Type DELETE to confirm</label>
+                            <input id="confirmText" name="confirmText" type="text" autocomplete="off" required class="@field" />
+                        </div>
+                    }
+
+                    <button type="submit"
+                            class="rounded-full bg-[#d62b1f] px-7 py-2.5 text-sm font-semibold text-white transition hover:bg-[#b01f15]">
+                        Request Account Deletion
+                    </button>
+                </form>
+            </section>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        document.getElementById('delete-account-form')?.addEventListener('submit', function (e) {
+            if (!confirm('Delete your BrewStop account permanently? This cannot be undone.')) {
+                e.preventDefault();
+            }
+        });
+    </script>
+}

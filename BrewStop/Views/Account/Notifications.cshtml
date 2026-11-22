@@ -1,0 +1,60 @@
+@model NotificationsViewModel
+@{
+    Layout = "_Layout";
+    ViewData["Title"] = "Notification Settings";
+    const string btn = "rounded-full bg-[#00754a] px-7 py-2.5 text-sm font-semibold text-white transition hover:bg-[#1e3932]";
+    const string toggle = "h-6 w-11 rounded-full bg-gray-300 transition peer-checked:bg-[#00754a] peer-focus-visible:ring-2 peer-focus-visible:ring-[#00754a] peer-focus-visible:ring-offset-2 after:absolute after:left-0.5 after:top-0.5 after:h-5 after:w-5 after:rounded-full after:bg-white after:transition after:content-[''] peer-checked:after:translate-x-5";
+}
+
+<div class="tw">
+    <div class="mx-auto max-w-6xl px-4 pt-24 pb-16">
+        <h1 class="font-serif text-3xl font-bold text-cream">My Account</h1>
+        <p class="mt-1 text-sm text-neutral-400">Account settings</p>
+
+        <div class="mt-8 grid gap-8 lg:grid-cols-3">
+            <aside class="lg:col-span-1">
+                <partial name="_AccountSettingsNav" />
+            </aside>
+
+            <section class="rounded-3xl bg-white p-6 shadow-sm sm:p-10 lg:col-span-2">
+                <h2 class="font-serif text-2xl font-semibold text-[#1e3932]">Notification Settings</h2>
+                <p class="mt-1 text-sm text-gray-500">Choose what BrewStop tells you about.</p>
+
+                @if (TempData["Success"] is string ok)
+                {
+                    <p class="mt-5 rounded-xl border border-[#00754a]/20 bg-[#e8f3ee] px-4 py-3 text-sm text-[#1e3932]" role="status">@ok</p>
+                }
+
+                <form asp-action="Notifications" method="post" class="mt-6">
+                    <div asp-validation-summary="ModelOnly" class="text-sm text-[#d62b1f]"></div>
+
+                    <div class="flex items-center justify-between gap-4 border-b border-gray-100 py-5">
+                        <div>
+                            <p class="text-sm font-semibold text-[#1e3932]">Order ready</p>
+                            <p class="text-xs text-gray-500">Get notified when your pickup order is ready at the counter.</p>
+                        </div>
+                        <label class="relative inline-flex cursor-pointer items-center">
+                            <input asp-for="NotifyOrderReady" type="checkbox" class="peer sr-only" />
+                            <span class="@toggle"></span>
+                            <span class="sr-only">Notify me when my order is ready</span>
+                        </label>
+                    </div>
+
+                    <div class="flex items-center justify-between gap-4 border-b border-gray-100 py-5">
+                        <div>
+                            <p class="text-sm font-semibold text-[#1e3932]">Promotions</p>
+                            <p class="text-xs text-gray-500">Receive promo codes and vouchers from the shop.</p>
+                        </div>
+                        <label class="relative inline-flex cursor-pointer items-center">
+                            <input asp-for="NotifyPromotions" type="checkbox" class="peer sr-only" />
+                            <span class="@toggle"></span>
+                            <span class="sr-only">Send me promotions and vouchers</span>
+                        </label>
+                    </div>
+
+                    <button type="submit" class="@btn mt-6">Save preferences</button>
+                </form>
+            </section>
+        </div>
+    </div>
+</div>

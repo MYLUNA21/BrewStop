@@ -4,96 +4,646 @@
     ViewData["Title"] = "Payment Management";
 }
 
+<style>
+    .tw .pay {
+        --pay-bg: #1a0f0d;
+        --pay-surface: #241411;
+        --pay-surface-2: #2e1b16;
+        --pay-surface-3: #382219;
+        --pay-border: rgba(255, 255, 255, .08);
+        --pay-caramel: #d4a373;
+        --pay-amber: #f5b942;
+        --pay-green: #4ade80;
+        --pay-crimson: #f0566a;
+        --pay-ease: cubic-bezier(.22, .61, .36, 1);
+    }
+
+        .tw .pay .num {
+            font-variant-numeric: tabular-nums;
+            font-feature-settings: "tnum";
+        }
+
+        /* ---------- KPI cards ---------- */
+        .tw .pay .kpi {
+            position: relative;
+            overflow: hidden;
+            border-radius: 14px;
+            border: 1px solid var(--pay-border);
+            background: linear-gradient(180deg, var(--pay-surface-2) 0%, var(--pay-surface) 100%);
+            padding: 1.15rem 1.25rem 1.2rem;
+            transition: transform .22s var(--pay-ease), box-shadow .22s var(--pay-ease), border-color .22s var(--pay-ease);
+        }
+
+            .tw .pay .kpi::before {
+                content: "";
+                position: absolute;
+                inset: 0 0 auto 0;
+                height: 3px;
+                background: var(--kpi-accent, var(--pay-caramel));
+                opacity: .9;
+            }
+
+            .tw .pay .kpi:hover {
+                transform: translateY(-2px);
+                border-color: color-mix(in srgb, var(--kpi-accent, var(--pay-caramel)) 45%, transparent);
+                box-shadow: 0 10px 28px -10px color-mix(in srgb, var(--kpi-accent, var(--pay-caramel)) 55%, transparent), 0 0 0 1px color-mix(in srgb, var(--kpi-accent, var(--pay-caramel)) 20%, transparent);
+            }
+
+        .tw .pay .kpi-label {
+            font-size: .68rem;
+            font-weight: 600;
+            letter-spacing: .09em;
+            text-transform: uppercase;
+            color: #a8998f;
+        }
+
+        .tw .pay .kpi-value {
+            margin-top: .5rem;
+            font-size: 1.5rem;
+            font-weight: 700;
+            line-height: 1.15;
+            letter-spacing: -.01em;
+            color: #fefae0;
+        }
+
+        .tw .pay .kpi-caramel {
+            --kpi-accent: #d4a373;
+        }
+
+            .tw .pay .kpi-caramel .kpi-value {
+                color: #d4a373;
+            }
+
+        .tw .pay .kpi-amber {
+            --kpi-accent: #f5b942;
+        }
+
+            .tw .pay .kpi-amber .kpi-value {
+                color: #fcd34d;
+            }
+
+        .tw .pay .kpi-cash {
+            --kpi-accent: #c9b8a6;
+        }
+
+        .tw .pay .kpi-gcash {
+            --kpi-accent: #38bdf8;
+        }
+
+        .tw .pay .kpi-red {
+            --kpi-accent: #f0566a;
+        }
+
+            .tw .pay .kpi-red .kpi-value {
+                color: #fda4af;
+            }
+
+        /* ---------- Filter bar ---------- */
+        .tw .pay .filters {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: flex-end;
+            gap: .85rem;
+            margin: 1.5rem 0 1.1rem;
+            padding: .9rem 1rem;
+            border-radius: 14px;
+            border: 1px solid var(--pay-border);
+            background: rgba(36, 20, 17, .7);
+        }
+
+            .tw .pay .filters label {
+                display: block;
+                margin-bottom: .35rem;
+                font-size: .66rem;
+                font-weight: 600;
+                letter-spacing: .09em;
+                text-transform: uppercase;
+                color: #a8998f;
+            }
+
+        .tw .pay .field {
+            min-width: 150px;
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, .12);
+            background: #150c0a;
+            color: #fefae0;
+            padding: .55rem .8rem;
+            font-size: .85rem;
+            color-scheme: dark;
+            transition: border-color .18s var(--pay-ease), box-shadow .18s var(--pay-ease), background .18s var(--pay-ease);
+        }
+
+            .tw .pay .field:hover {
+                border-color: rgba(212, 163, 115, .45);
+                background: #1b100d;
+            }
+
+            .tw .pay .field:focus {
+                outline: none;
+                border-color: var(--pay-caramel);
+                box-shadow: 0 0 0 3px rgba(212, 163, 115, .22);
+            }
+
+        .tw .pay .btn-apply {
+            border: 0;
+            cursor: pointer;
+            border-radius: 10px;
+            padding: .6rem 1.35rem;
+            font-size: .85rem;
+            font-weight: 700;
+            color: #1a0f0d;
+            background: linear-gradient(180deg, #e2b886, #d4a373);
+            box-shadow: 0 4px 14px -4px rgba(212, 163, 115, .55);
+            transition: transform .18s var(--pay-ease), box-shadow .18s var(--pay-ease), filter .18s var(--pay-ease);
+        }
+
+            .tw .pay .btn-apply:hover {
+                transform: translateY(-1px);
+                filter: brightness(1.06);
+                box-shadow: 0 8px 20px -6px rgba(212, 163, 115, .7);
+            }
+
+            .tw .pay .btn-apply:active {
+                transform: translateY(0);
+            }
+
+        .tw .pay .btn-reset {
+            display: inline-block;
+            border-radius: 10px;
+            padding: .6rem 1.2rem;
+            font-size: .85rem;
+            font-weight: 600;
+            color: #fefae0;
+            text-decoration: none;
+            border: 1px solid rgba(255, 255, 255, .16);
+            background: var(--pay-surface-2);
+            transition: background .18s var(--pay-ease), border-color .18s var(--pay-ease), transform .18s var(--pay-ease);
+        }
+
+            .tw .pay .btn-reset:hover {
+                background: var(--pay-surface-3);
+                border-color: rgba(212, 163, 115, .5);
+                transform: translateY(-1px);
+                text-decoration: none;
+            }
+
+        /* ---------- Floating-card table ---------- */
+        .tw .pay .tbl-scroll {
+            overflow-x: auto;
+            padding: 2px 2px 8px;
+        }
+
+        .tw .pay .tbl {
+            min-width: 1020px;
+        }
+
+        .tw .pay .grid-row {
+            display: grid;
+            grid-template-columns: 84px minmax(200px, 1.7fr) 128px 112px 104px 118px 124px 128px;
+            align-items: center;
+            column-gap: .75rem;
+            padding: .8rem 1rem;
+        }
+
+        .tw .pay .tbl-head {
+            padding-top: .3rem;
+            padding-bottom: .5rem;
+            font-size: .66rem;
+            font-weight: 700;
+            letter-spacing: .1em;
+            text-transform: uppercase;
+            color: var(--pay-caramel);
+        }
+
+        .tw .pay .row-card {
+            --row-accent: var(--pay-amber);
+            position: relative;
+            margin-bottom: .6rem;
+            border-radius: 10px;
+            border: 1px solid var(--pay-border);
+            border-left: 4px solid var(--row-accent);
+            background: var(--pay-surface);
+            transition: transform .2s var(--pay-ease), background .2s var(--pay-ease), box-shadow .2s var(--pay-ease), border-color .2s var(--pay-ease);
+        }
+
+        .tw .pay .row-paid {
+            --row-accent: #22c55e;
+        }
+
+        .tw .pay .row-unpaid {
+            --row-accent: #f5b942;
+        }
+
+        .tw .pay .row-refunded {
+            --row-accent: #e11d48;
+        }
+
+        .tw .pay .row-card:hover,
+        .tw .pay .row-card:focus-within {
+            transform: translateX(4px);
+            background: var(--pay-surface-3);
+            border-color: rgba(255, 255, 255, .14);
+            border-left-color: var(--row-accent);
+            box-shadow: 0 10px 24px -12px rgba(0, 0, 0, .75), -6px 0 18px -10px var(--row-accent);
+        }
+
+        .tw .pay .cell-muted {
+            font-size: .8rem;
+            color: #b9aa9f;
+        }
+
+        .tw .pay .cell-sub {
+            font-size: .72rem;
+            color: #8f8077;
+            margin-top: 1px;
+        }
+
+        /* Order badge */
+        .tw .pay .order-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 3rem;
+            padding: .3rem .6rem;
+            border-radius: 8px;
+            font-size: .88rem;
+            font-weight: 800;
+            letter-spacing: .01em;
+            color: #1a0f0d;
+            background: var(--pay-caramel);
+            text-decoration: none;
+            transition: transform .18s var(--pay-ease), background .18s var(--pay-ease), box-shadow .18s var(--pay-ease);
+        }
+
+            .tw .pay .order-badge:hover {
+                background: #faedcd;
+                transform: scale(1.06);
+                text-decoration: none;
+                box-shadow: 0 4px 14px -4px rgba(250, 237, 205, .6);
+            }
+
+        /* Customer */
+        .tw .pay .cust {
+            display: flex;
+            align-items: center;
+            gap: .7rem;
+            min-width: 0;
+        }
+
+        .tw .pay .avatar {
+            flex: none;
+            width: 2.25rem;
+            height: 2.25rem;
+            border-radius: 9999px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: .85rem;
+            font-weight: 800;
+            color: #1a0f0d;
+            background: linear-gradient(135deg, var(--av-a, #e2b886), var(--av-b, #b9814f));
+            box-shadow: 0 0 0 2px rgba(255, 255, 255, .06);
+        }
+
+        .tw .pay .av-0 {
+            --av-a: #e2b886;
+            --av-b: #b9814f;
+        }
+
+        .tw .pay .av-1 {
+            --av-a: #fcd34d;
+            --av-b: #d97706;
+        }
+
+        .tw .pay .av-2 {
+            --av-a: #fda4af;
+            --av-b: #e11d48;
+        }
+
+        .tw .pay .av-3 {
+            --av-a: #7dd3fc;
+            --av-b: #0ea5e9;
+        }
+
+        .tw .pay .av-4 {
+            --av-a: #86efac;
+            --av-b: #16a34a;
+        }
+
+        .tw .pay .cust-name {
+            font-weight: 600;
+            color: #fefae0;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .tw .pay .cust-id {
+            font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+            font-size: .72rem;
+            letter-spacing: .03em;
+            color: #8f8077;
+        }
+
+        /* Pills */
+        .tw .pay .pill {
+            display: inline-flex;
+            align-items: center;
+            gap: .4rem;
+            border-radius: 9999px;
+            padding: .22rem .7rem;
+            font-size: .72rem;
+            font-weight: 700;
+            letter-spacing: .02em;
+            white-space: nowrap;
+        }
+
+        .tw .pay .pill-gcash {
+            color: #67e8f9;
+            background: rgba(34, 211, 238, .12);
+            border: 1px solid rgba(34, 211, 238, .3);
+        }
+
+        .tw .pay .pill-cash {
+            color: #e7d8c6;
+            background: rgba(214, 190, 160, .12);
+            border: 1px solid rgba(214, 190, 160, .28);
+        }
+
+        .tw .pay .pill-order {
+            color: #d6cabf;
+            background: rgba(255, 255, 255, .06);
+            border: 1px solid rgba(255, 255, 255, .1);
+        }
+
+        .tw .pay .pill-paid {
+            color: #86efac;
+            background: rgba(34, 197, 94, .14);
+        }
+
+        .tw .pay .pill-unpaid {
+            color: #fcd34d;
+            background: rgba(245, 185, 66, .14);
+        }
+
+        .tw .pay .pill-refunded {
+            color: #fda4af;
+            background: rgba(225, 29, 72, .16);
+        }
+
+        .tw .pay .dot {
+            width: .5rem;
+            height: .5rem;
+            border-radius: 9999px;
+            background: currentColor;
+            position: relative;
+            flex: none;
+        }
+
+        .tw .pay .pill-unpaid .dot::after {
+            content: "";
+            position: absolute;
+            inset: 0;
+            border-radius: inherit;
+            background: currentColor;
+            animation: pay-pulse 1.6s ease-out infinite;
+        }
+
+    @@keyframes pay-pulse {
+        0% {
+            transform: scale(1);
+            opacity: .7;
+        }
+
+        100% {
+            transform: scale(2.8);
+            opacity: 0;
+        }
+    }
+
+    /* Amount */
+    .tw .pay .amount {
+        font-weight: 700;
+        color: #fefae0;
+        text-align: right;
+        padding-right: .5rem;
+    }
+
+    /* Action pills */
+    .tw .pay .actions {
+        display: flex;
+        justify-content: flex-end;
+    }
+
+        .tw .pay .actions form {
+            display: inline;
+            margin: 0;
+        }
+
+    .tw .pay .act {
+        cursor: pointer;
+        border-radius: 9999px;
+        padding: .42rem 1rem;
+        font-size: .75rem;
+        font-weight: 700;
+        letter-spacing: .02em;
+        transition: transform .18s var(--pay-ease), box-shadow .18s var(--pay-ease), background .18s var(--pay-ease), color .18s var(--pay-ease);
+    }
+
+    .tw .pay .act-pay {
+        border: 0;
+        color: #1a0f0d;
+        background: linear-gradient(180deg, #f7c96a, #f5b942);
+        box-shadow: 0 4px 12px -4px rgba(245, 185, 66, .6);
+    }
+
+        .tw .pay .act-pay:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px -6px rgba(245, 185, 66, .8);
+        }
+
+    .tw .pay .act-refund {
+        color: #fda4af;
+        background: transparent;
+        border: 1.5px solid rgba(240, 86, 106, .6);
+    }
+
+        .tw .pay .act-refund:hover {
+            transform: translateY(-2px);
+            color: #fff;
+            background: #e11d48;
+            border-color: #e11d48;
+            box-shadow: 0 10px 20px -6px rgba(225, 29, 72, .7);
+        }
+
+    .tw .pay .act:active {
+        transform: translateY(0);
+    }
+
+    .tw .pay .act:focus-visible, .tw .pay .order-badge:focus-visible, .tw .pay .btn-reset:focus-visible, .tw .pay .btn-apply:focus-visible {
+        outline: 2px solid var(--pay-caramel);
+        outline-offset: 2px;
+    }
+
+    .tw .pay .empty {
+        border-radius: 10px;
+        border: 1px dashed rgba(255, 255, 255, .14);
+        background: var(--pay-surface);
+        padding: 2.5rem 1rem;
+        text-align: center;
+        color: #a8998f;
+    }
+
+        .tw .pay .empty i {
+            display: block;
+            margin-bottom: .6rem;
+            font-size: 1.5rem;
+            color: var(--pay-caramel);
+            opacity: .7;
+        }
+
+    /* Staggered entrance */
+    .tw .pay .row-card {
+        animation: pay-in .38s var(--pay-ease) both;
+        animation-delay: calc(var(--i, 0) * 28ms);
+    }
+
+    @@keyframes pay-in {
+        from {
+            opacity: 0;
+            transform: translateY(8px);
+        }
+
+        to {
+            opacity: 1;
+            transform: none;
+        }
+    }
+
+    @@media (prefers-reduced-motion: reduce) {
+        .tw .pay *, .tw .pay *::before, .tw .pay *::after {
+            animation: none !important;
+            transition: none !important;
+        }
+
+        .tw .pay .row-card:hover, .tw .pay .kpi:hover {
+            transform: none;
+        }
+    }
+</style>
+
 <div class="tw">
-    <h1 class="mb-5 font-serif text-2xl font-bold">Payment <span class="text-caramel">Management</span></h1>
+    <div class="pay">
+        <h1 class="mb-5 font-serif text-2xl font-bold">Payment <span class="text-caramel">Management</span></h1>
 
-    @if (TempData["Success"] is string ok)
-    {
-        <div class="mb-3 rounded-lg border border-green-500/30 bg-green-500/10 p-3 text-green-300">@ok</div>
-    }
-    @if (TempData["Error"] is string err)
-    {
-        <div class="mb-3 rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-red-300">@err</div>
-    }
+        @if (TempData["Success"] is string ok)
+        {
+            <div class="mb-3 rounded-lg border border-green-500/30 bg-green-500/10 p-3 text-green-300">@ok</div>
+        }
+        @if (TempData["Error"] is string err)
+        {
+            <div class="mb-3 rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-red-300">@err</div>
+        }
 
-    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5">
-        <div class="rounded-xl border border-white/10 bg-card p-5">
-            <div class="text-xs uppercase tracking-wider text-neutral-400">Today's Collected</div>
-            <div class="mt-2 text-xl font-bold text-caramel">₱@Model.TodayCollected.ToString("N2")</div>
+        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5">
+            <div class="kpi kpi-caramel">
+                <div class="kpi-label">Today's Collected</div>
+                <div class="kpi-value num">₱@Model.TodayCollected.ToString("N2")</div>
+            </div>
+            <div class="kpi kpi-amber">
+                <div class="kpi-label">Unpaid (Pending Pickup)</div>
+                <div class="kpi-value num">₱@Model.UnpaidPending.ToString("N2")</div>
+            </div>
+            <div class="kpi kpi-cash">
+                <div class="kpi-label">Cash Total</div>
+                <div class="kpi-value num">₱@Model.CashTotal.ToString("N2")</div>
+            </div>
+            <div class="kpi kpi-gcash">
+                <div class="kpi-label">GCash Total</div>
+                <div class="kpi-value num">₱@Model.GCashTotal.ToString("N2")</div>
+            </div>
+            <div class="kpi kpi-red">
+                <div class="kpi-label">Refunded Total</div>
+                <div class="kpi-value num">₱@Model.RefundedTotal.ToString("N2")</div>
+            </div>
         </div>
-        <div class="rounded-xl border border-white/10 bg-card p-5">
-            <div class="text-xs uppercase tracking-wider text-neutral-400">Unpaid (Pending Pickup)</div>
-            <div class="mt-2 text-xl font-bold text-amber-300">₱@Model.UnpaidPending.ToString("N2")</div>
-        </div>
-        <div class="rounded-xl border border-white/10 bg-card p-5">
-            <div class="text-xs uppercase tracking-wider text-neutral-400">Cash Total</div>
-            <div class="mt-2 text-xl font-bold">₱@Model.CashTotal.ToString("N2")</div>
-        </div>
-        <div class="rounded-xl border border-white/10 bg-card p-5">
-            <div class="text-xs uppercase tracking-wider text-neutral-400">GCash Total</div>
-            <div class="mt-2 text-xl font-bold">₱@Model.GCashTotal.ToString("N2")</div>
-        </div>
-        <div class="rounded-xl border border-white/10 bg-card p-5">
-            <div class="text-xs uppercase tracking-wider text-neutral-400">Refunded Total</div>
-            <div class="mt-2 text-xl font-bold text-red-300">₱@Model.RefundedTotal.ToString("N2")</div>
-        </div>
-    </div>
 
-    <form method="get" action="/Admin/Payments" class="mb-4 mt-6 flex flex-wrap items-end gap-3">
-        <div>
-            <label class="mb-1 block text-xs uppercase text-neutral-400">Payment Status</label>
-            <select name="paymentStatus" class="rounded-lg border border-white/20 bg-black/30 px-3 py-2 text-sm text-cream">
-                @foreach (var s in new[] { "All", "Paid", "Unpaid", "Refunded" })
-                {
-                    <option value="@s" selected="@(Model.PaymentStatusFilter == s)">@s</option>
+        <form method="get" action="/Admin/Payments" class="filters">
+            <div>
+                <label for="f-status">Payment Status</label>
+                <select id="f-status" name="paymentStatus" class="field">
+                    @foreach (var s in new[] { "All", "Paid", "Unpaid", "Refunded" })
+                    {
+                        <option value="@s" selected="@(Model.PaymentStatusFilter == s)">@s</option>
+                    }
+                </select>
+            </div>
+            <div>
+                <label for="f-method">Method</label>
+                <select id="f-method" name="method" class="field">
+                    @foreach (var m in new[] { "All", "Cash", "GCash" })
+                    {
+                        <option value="@m" selected="@(Model.MethodFilter == m)">@m</option>
+                    }
+                </select>
+            </div>
+            <div>
+                <label for="f-date">Date</label>
+                <input id="f-date" type="date" name="date" value="@Model.Date" class="field" />
+            </div>
+            <button type="submit" class="btn-apply">Apply</button>
+            <a href="/Admin/Payments" class="btn-reset">Reset</a>
+        </form>
+
+        <div class="tbl-scroll">
+            <div class="tbl" role="table" aria-label="Payments">
+                <div class="grid-row tbl-head" role="row">
+                    <div role="columnheader">Order</div>
+                    <div role="columnheader">Customer</div>
+                    <div role="columnheader">Placed</div>
+                    <div role="columnheader">Order Status</div>
+                    <div role="columnheader">Method</div>
+                    <div role="columnheader" class="text-right" style="padding-right:.5rem">Amount</div>
+                    <div role="columnheader">Payment</div>
+                    <div role="columnheader"></div>
+                </div>
+
+                @{
+                    var rowIndex = 0;
                 }
-            </select>
-        </div>
-        <div>
-            <label class="mb-1 block text-xs uppercase text-neutral-400">Method</label>
-            <select name="method" class="rounded-lg border border-white/20 bg-black/30 px-3 py-2 text-sm text-cream">
-                @foreach (var m in new[] { "All", "Cash", "GCash" })
-                {
-                    <option value="@m" selected="@(Model.MethodFilter == m)">@m</option>
-                }
-            </select>
-        </div>
-        <div>
-            <label class="mb-1 block text-xs uppercase text-neutral-400">Date</label>
-            <input type="date" name="date" value="@Model.Date" class="rounded-lg border border-white/20 bg-black/30 px-3 py-2 text-sm text-cream" />
-        </div>
-        <button type="submit" class="rounded-lg bg-caramel px-4 py-2 text-sm font-semibold text-espresso">Apply</button>
-        <a href="/Admin/Payments" class="rounded-lg border border-white/20 px-4 py-2 text-sm text-cream no-underline">Reset</a>
-    </form>
-
-    <div class="overflow-x-auto rounded-xl border border-white/10 bg-card">
-        <table class="min-w-full text-left text-sm">
-            <thead class="bg-black/30 text-xs uppercase tracking-wider text-caramel">
-                <tr>
-                    <th class="px-4 py-3">Order</th>
-                    <th class="px-4 py-3">Customer</th>
-                    <th class="px-4 py-3">Placed</th>
-                    <th class="px-4 py-3">Order Status</th>
-                    <th class="px-4 py-3">Method</th>
-                    <th class="px-4 py-3">Amount</th>
-                    <th class="px-4 py-3">Payment</th>
-                    <th class="px-4 py-3"></th>
-                </tr>
-            </thead>
-            <tbody class="divide-y divide-white/5">
                 @foreach (var o in Model.Orders)
                 {
-                    <tr>
-                        <td class="px-4 py-3"><a href="/Admin/OrderDetails/@o.Id" class="text-caramel no-underline hover:underline">#@o.Id</a></td>
-                        <td class="px-4 py-3">@o.User.FullName<div class="text-xs text-neutral-400">@o.User.CampusId</div></td>
-                        <td class="px-4 py-3">@o.CreatedAtUtc.ToLocalTime().ToString("MMM d, h:mm tt")</td>
-                        <td class="px-4 py-3">@o.Status</td>
-                        <td class="px-4 py-3">@o.PaymentMethod</td>
-                        <td class="px-4 py-3">₱@o.Total.ToString("N2")</td>
-                        <td class="px-4 py-3">
-                            <span class="rounded-full px-2.5 py-1 text-xs font-semibold @(o.PaymentStatus == PaymentStatus.Paid ? "bg-green-500/15 text-green-300" : o.PaymentStatus == PaymentStatus.Refunded ? "bg-red-500/15 text-red-300" : "bg-amber-500/15 text-amber-300")">@o.PaymentStatus</span>
-                        </td>
-                        <td class="px-4 py-3 text-right">
+                    var fullName = o.User?.FullName ?? string.Empty;
+                    var initial = string.IsNullOrWhiteSpace(fullName) ? "?" : fullName.Trim()[0].ToString().ToUpperInvariant();
+                    var campusId = o.User?.CampusId ?? string.Empty;
+                    var avIdx = Math.Abs((campusId + fullName).Aggregate(0, (h, c) => unchecked(h * 31 + c))) % 5;
+                    var rowCls = o.PaymentStatus == PaymentStatus.Paid ? "row-paid"
+                               : o.PaymentStatus == PaymentStatus.Refunded ? "row-refunded" : "row-unpaid";
+                    var payCls = o.PaymentStatus == PaymentStatus.Paid ? "pill-paid"
+                               : o.PaymentStatus == PaymentStatus.Refunded ? "pill-refunded" : "pill-unpaid";
+                    var methodCls = o.PaymentMethod == PaymentMethod.GCash ? "pill-gcash" : "pill-cash";
+
+                    <div class="grid-row row-card @rowCls" role="row" style="--i:@(Math.Min(rowIndex++, 20))">
+                        <div role="cell">
+                            <a href="/Admin/OrderDetails/@o.Id" class="order-badge num">#@o.Id</a>
+                        </div>
+                        <div role="cell" class="cust">
+                            <span class="avatar av-@avIdx" aria-hidden="true">@initial</span>
+                            <div class="min-w-0">
+                                <div class="cust-name">@o.User.FullName</div>
+                                <div class="cust-id">@o.User.CampusId</div>
+                            </div>
+                        </div>
+                        <div role="cell">
+                            <div class="cell-muted num">@o.CreatedAtUtc.ToLocalTime().ToString("MMM d, h:mm tt")</div>
+                        </div>
+                        <div role="cell"><span class="pill pill-order">@o.Status</span></div>
+                        <div role="cell"><span class="pill @methodCls">@o.PaymentMethod</span></div>
+                        <div role="cell" class="amount num">₱@o.Total.ToString("N2")</div>
+                        <div role="cell">
+                            <span class="pill @payCls"><span class="dot"></span>@o.PaymentStatus</span>
+                        </div>
+                        <div role="cell" class="actions">
                             @if (o.PaymentStatus == PaymentStatus.Unpaid && o.Status != OrderStatus.Cancelled)
                             {
                                 <form method="post" action="/Admin/UpdatePaymentStatus" class="inline">
@@ -103,7 +653,7 @@
                                     <input type="hidden" name="fp" value="@(Model.PaymentStatusFilter == "All" ? "" : Model.PaymentStatusFilter)" />
                                     <input type="hidden" name="fm" value="@(Model.MethodFilter == "All" ? "" : Model.MethodFilter)" />
                                     <input type="hidden" name="fd" value="@Model.Date" />
-                                    <button type="submit" class="rounded-lg bg-caramel px-3 py-1.5 text-xs font-semibold text-espresso">Mark Paid</button>
+                                    <button type="submit" class="act act-pay">Mark Paid</button>
                                 </form>
                             }
                             else if (o.PaymentStatus == PaymentStatus.Paid)
@@ -116,17 +666,17 @@
                                     <input type="hidden" name="fp" value="@(Model.PaymentStatusFilter == "All" ? "" : Model.PaymentStatusFilter)" />
                                     <input type="hidden" name="fm" value="@(Model.MethodFilter == "All" ? "" : Model.MethodFilter)" />
                                     <input type="hidden" name="fd" value="@Model.Date" />
-                                    <button type="submit" class="rounded-lg border border-red-500/40 px-3 py-1.5 text-xs font-semibold text-red-300 hover:bg-red-500/10">Refund</button>
+                                    <button type="submit" class="act act-refund">Refund</button>
                                 </form>
                             }
-                        </td>
-                    </tr>
+                        </div>
+                    </div>
                 }
                 @if (Model.Orders.Count == 0)
                 {
-                    <tr><td colspan="8" class="px-4 py-8 text-center text-neutral-400">No transactions found.</td></tr>
+                    <div class="empty"><i class="fa-solid fa-receipt"></i>No transactions found.</div>
                 }
-            </tbody>
-        </table>
+            </div>
+        </div>
     </div>
 </div>

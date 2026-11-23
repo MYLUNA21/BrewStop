@@ -10,53 +10,53 @@
     }
     (string Icon, string Tone, string Label) Look(BrewStop.Models.BaristaAlertDto a) => a.Kind switch
     {
-        "NewOrder" => ("fa-bag-shopping", "bg-[#00754a]/25 text-emerald-200", "New order"),
+        "NewOrder" => ("fa-bag-shopping", "bg-[#FFD9A0]/15 text-[#FFD9A0]", "New order"),
         "Cancelled" => ("fa-ban", "bg-red-500/15 text-red-300", "Cancelled"),
         "Note" => ("fa-triangle-exclamation", "bg-amber-400/15 text-amber-300", "Special note"),
         _ => (a.Urgent ? "fa-circle-exclamation" : "fa-box-open", a.Urgent ? "bg-red-500/15 text-red-300" : "bg-yellow-500/15 text-yellow-300", "Low stock")
     };
-    const string tab = "kds-tab flex shrink-0 items-center gap-2 rounded-full border border-solid border-white/15 bg-white/5 px-4 py-2 text-sm font-semibold text-cream";
+    const string tab = "kds-tab flex shrink-0 items-center gap-2 rounded-full border border-solid border-[#644234] bg-[#422C22] px-4 py-2 text-sm font-semibold text-[#FFD9A0] hover:bg-[#5C3B2E]";
 }
 
-<div class="tw">
+<div class="tw kds-page">
     <div class="mx-auto max-w-4xl px-4 pt-6 pb-8">
-        <h1 class="font-serif text-3xl font-bold text-cream">Notifications</h1>
-        <p class="mt-1 text-sm text-neutral-400">
+        <h1 class="font-serif text-3xl font-bold text-[#FFD9A0]">Notifications</h1>
+        <p class="mt-1 text-sm text-[#FFD9A0]/70">
             New orders, cancellations, low-stock warnings and special instructions.
             <span id="kds-live" class="ml-2 inline-flex items-center gap-2"><span class="kds-dot"></span><span id="kds-live-text">Connecting…</span></span>
         </p>
 
-        <div class="mt-4 flex gap-2 overflow-x-auto" role="group" aria-label="Filter notifications">
-            <button type="button" data-kind-filter="all" aria-pressed="true" class="@tab">All <span data-kcount="all" class="rounded-full bg-black/30 px-2 py-0.5 text-xs">@Model.Count</span></button>
+        <div class="kds-scroll mt-4 flex gap-2 overflow-x-auto pb-1" role="group" aria-label="Filter notifications">
+            <button type="button" data-kind-filter="all" aria-pressed="true" class="@tab">All <span data-kcount="all" class="rounded-full bg-[#201A17] px-2 py-0.5 text-xs text-[#FFD9A0]">@Model.Count</span></button>
             <button type="button" data-kind-filter="NewOrder" aria-pressed="false" class="@tab">New orders</button>
             <button type="button" data-kind-filter="Cancelled" aria-pressed="false" class="@tab">Cancellations</button>
             <button type="button" data-kind-filter="LowStock" aria-pressed="false" class="@tab">Low stock</button>
             <button type="button" data-kind-filter="Note" aria-pressed="false" class="@tab">Special notes</button>
         </div>
 
-        <div id="alerts-feed" class="kds-scroll mt-4 max-h-[calc(100vh-17rem)] min-h-[280px] overflow-y-auto rounded-2xl border border-solid border-white/10 bg-card">
-            <p data-alerts-empty hidden="@(Model.Count > 0 ? "hidden" : null)" class="px-4 py-14 text-center text-sm text-neutral-500">You're all caught up. No notifications.</p>
+        <div id="alerts-feed" class="kds-scroll mt-4 max-h-[calc(100vh-17rem)] min-h-[280px] overflow-y-auto rounded-2xl border border-solid border-[#644234] bg-[#36241C]">
+            <p data-alerts-empty hidden="@(Model.Count > 0 ? "hidden" : null)" class="px-4 py-14 text-center text-sm text-[#815F51]">You're all caught up. No notifications.</p>
             <ul>
                 @foreach (var a in Model)
                 {
                     var look = Look(a);
-                    <li data-kind="@a.Kind" class="border-t border-solid border-white/10 first:border-t-0">
+                    <li data-kind="@a.Kind" class="border-t border-solid border-[#644234] transition-colors first:border-t-0 hover:bg-[#5C3B2E]">
                         <div class="flex items-start gap-3 px-4 py-3.5">
                             <span class="mt-0.5 grid size-10 shrink-0 place-items-center rounded-full @look.Tone"><i class="fa-solid @look.Icon"></i></span>
                             <div class="min-w-0 flex-1">
                                 <div class="flex flex-wrap items-center gap-2">
-                                    <p class="text-sm font-bold text-cream">@a.Title</p>
-                                    <span class="rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-neutral-300">@look.Label</span>
+                                    <p class="text-sm font-bold text-[#FFD9A0]">@a.Title</p>
+                                    <span class="rounded-full bg-[#201A17] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-[#FFD9A0]">@look.Label</span>
                                 </div>
-                                <p class="mt-0.5 break-words text-sm @(a.Kind == "Note" ? "font-semibold text-amber-200" : "text-neutral-300")">@a.Detail</p>
+                                <p class="mt-0.5 break-words text-sm @(a.Kind == "Note" ? "font-semibold text-amber-200" : "text-[#FFD9A0]/80")">@a.Detail</p>
                                 @if (a.OrderId is > 0 && a.Kind is "NewOrder")
                                 {
-                                    <a href="/Barista/Queue" class="mt-1 inline-block text-xs font-semibold text-caramel no-underline hover:text-cream">Open Order Queue &rarr;</a>
+                                    <a href="/Barista/Queue" class="mt-1 inline-block text-xs font-semibold text-[#FFD9A0] no-underline hover:underline">Open Order Queue &rarr;</a>
                                 }
                             </div>
                             @if (a.AtUtc is not null)
                             {
-                                <time datetime="@DateTime.SpecifyKind(a.AtUtc.Value, DateTimeKind.Utc).ToString("o")" class="shrink-0 text-xs text-neutral-500"
+                                <time datetime="@DateTime.SpecifyKind(a.AtUtc.Value, DateTimeKind.Utc).ToString("o")" class="shrink-0 text-xs text-[#815F51]"
                                       title="@Slots.ToLocal(a.AtUtc.Value).ToString("MMM d, h:mm tt")">@Ago(a.AtUtc.Value)</time>
                             }
                         </div>
@@ -69,41 +69,8 @@
 
 @section Scripts {
     <style>
-        .kds-scroll {
-            scrollbar-width: thin;
-            scrollbar-color: #00754a transparent;
-        }
-
-            .kds-scroll::-webkit-scrollbar {
-                width: 8px;
-            }
-
-            .kds-scroll::-webkit-scrollbar-thumb {
-                background: #1e3932;
-                border-radius: 9999px;
-            }
-
-        .kds-tab[aria-pressed="true"] {
-            background: #00754a;
-            border-color: #00754a;
-            color: #fff;
-        }
-
         [data-kind][hidden], [data-alerts-empty][hidden] {
             display: none !important;
-        }
-
-        .kds-dot {
-            display: inline-block;
-            width: .6rem;
-            height: .6rem;
-            border-radius: 9999px;
-            background: #737373;
-        }
-
-        .kds-live-on .kds-dot {
-            background: #34d399;
-            box-shadow: 0 0 0 3px rgba(52, 211, 153, .25);
         }
     </style>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.7/signalr.min.js"></script>

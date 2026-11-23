@@ -3,101 +3,565 @@
     Layout = "_AdminLayout";
     ViewData["Title"] = "Discounts & Promotions";
     var now = DateTime.UtcNow;
-    var inputCls = "w-full rounded-lg border border-white/20 bg-black/30 px-3 py-2 text-sm text-cream placeholder-neutral-500";
+    var inputCls = "promo-field w-full";
+    var rowIndex = 0;
 }
 
+<style>
+    .tw .promo {
+        --pr-surface: #241411;
+        --pr-surface-2: #2e1b16;
+        --pr-surface-3: #382219;
+        --pr-border: rgba(255, 255, 255, .08);
+        --pr-caramel: #d4a373;
+        --pr-ease: cubic-bezier(.22, .61, .36, 1);
+    }
+
+        .tw .promo .num {
+            font-variant-numeric: tabular-nums;
+            font-feature-settings: "tnum";
+        }
+
+        /* ---------- Create card ---------- */
+        .tw .promo .create-card {
+            position: relative;
+            margin-bottom: 1.75rem;
+            padding: 1.4rem 1.5rem 1.5rem;
+            border-radius: 16px;
+            border: 1px solid rgba(212, 163, 115, .22);
+            background: radial-gradient(120% 140% at 0% 0%, rgba(212, 163, 115, .09) 0%, transparent 55%), linear-gradient(180deg, rgba(46, 27, 22, .92) 0%, rgba(36, 20, 17, .92) 100%);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            box-shadow: 0 0 0 1px rgba(212, 163, 115, .06), 0 14px 40px -18px rgba(0, 0, 0, .8), 0 0 36px -14px rgba(212, 163, 115, .35);
+            transition: box-shadow .25s var(--pr-ease), border-color .25s var(--pr-ease);
+        }
+
+            .tw .promo .create-card:focus-within {
+                border-color: rgba(212, 163, 115, .45);
+                box-shadow: 0 0 0 1px rgba(212, 163, 115, .12), 0 18px 46px -18px rgba(0, 0, 0, .85), 0 0 46px -12px rgba(212, 163, 115, .5);
+            }
+
+        .tw .promo .card-title {
+            display: flex;
+            align-items: center;
+            gap: .6rem;
+            margin-bottom: 1.1rem;
+            font-size: .72rem;
+            font-weight: 700;
+            letter-spacing: .12em;
+            text-transform: uppercase;
+            color: var(--pr-caramel);
+        }
+
+            .tw .promo .card-title::after {
+                content: "";
+                flex: 1;
+                height: 1px;
+                background: linear-gradient(90deg, rgba(212, 163, 115, .35), transparent);
+            }
+
+        .tw .promo .create-card label {
+            display: block;
+            margin-bottom: .35rem;
+            font-size: .66rem;
+            font-weight: 600;
+            letter-spacing: .09em;
+            text-transform: uppercase;
+            color: #a8998f;
+        }
+
+        .tw .promo .promo-field {
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, .12);
+            background: #150c0a;
+            color: #fefae0;
+            padding: .6rem .85rem;
+            font-size: .875rem;
+            color-scheme: dark;
+            transition: border-color .18s var(--pr-ease), box-shadow .18s var(--pr-ease), background .18s var(--pr-ease);
+        }
+
+            .tw .promo .promo-field::placeholder {
+                color: #6f625a;
+            }
+
+            .tw .promo .promo-field:hover {
+                border-color: rgba(212, 163, 115, .45);
+                background: #1b100d;
+            }
+
+            .tw .promo .promo-field:focus {
+                outline: none;
+                border-color: var(--pr-caramel);
+                background: #1b100d;
+                box-shadow: 0 0 0 3px rgba(212, 163, 115, .24);
+            }
+
+        .tw .promo .btn-create {
+            margin-top: 1.25rem;
+            border: 0;
+            cursor: pointer;
+            border-radius: 10px;
+            padding: .7rem 1.6rem;
+            font-size: .875rem;
+            font-weight: 700;
+            color: #1a0f0d;
+            background: linear-gradient(180deg, #e2b886, #d4a373);
+            box-shadow: 0 4px 14px -4px rgba(212, 163, 115, .55);
+            transition: transform .2s var(--pr-ease), box-shadow .2s var(--pr-ease), filter .2s var(--pr-ease);
+        }
+
+            .tw .promo .btn-create:hover {
+                transform: translateY(-2px);
+                filter: brightness(1.06);
+                box-shadow: 0 12px 24px -8px rgba(212, 163, 115, .75);
+            }
+
+            .tw .promo .btn-create:active {
+                transform: translateY(0);
+            }
+
+            .tw .promo .btn-create:focus-visible,
+            .tw .promo .code-badge:focus-visible,
+            .tw .promo .status-btn:focus-visible {
+                outline: 2px solid var(--pr-caramel);
+                outline-offset: 2px;
+            }
+
+        /* ---------- Floating table ---------- */
+        .tw .promo .tbl-scroll {
+            overflow-x: auto;
+            padding: 2px 2px 8px;
+        }
+
+        .tw .promo .tbl {
+            min-width: 880px;
+        }
+
+        .tw .promo .grid-row {
+            display: grid;
+            grid-template-columns: 168px minmax(200px, 1.7fr) 112px 178px 104px 136px;
+            align-items: center;
+            column-gap: .85rem;
+            padding: .8rem 1rem;
+        }
+
+        .tw .promo .tbl-head {
+            padding-top: .3rem;
+            padding-bottom: .5rem;
+            font-size: .66rem;
+            font-weight: 700;
+            letter-spacing: .1em;
+            text-transform: uppercase;
+            color: var(--pr-caramel);
+        }
+
+        .tw .promo .row-card {
+            --row-accent: #22c55e;
+            margin-bottom: .6rem;
+            border-radius: 10px;
+            border: 1px solid var(--pr-border);
+            border-left: 4px solid var(--row-accent);
+            background: var(--pr-surface);
+            animation: promo-in .38s var(--pr-ease) both;
+            animation-delay: calc(var(--i, 0) * 28ms);
+            transition: transform .2s var(--pr-ease), background .2s var(--pr-ease), box-shadow .2s var(--pr-ease), border-color .2s var(--pr-ease);
+        }
+
+        .tw .promo .row-active {
+            --row-accent: #22c55e;
+        }
+
+        .tw .promo .row-inactive {
+            --row-accent: #64748b;
+        }
+
+        .tw .promo .row-expired {
+            --row-accent: #e11d48;
+        }
+
+        .tw .promo .row-card:hover,
+        .tw .promo .row-card:focus-within {
+            transform: translateX(4px);
+            background: var(--pr-surface-3);
+            border-color: rgba(255, 255, 255, .14);
+            border-left-color: var(--row-accent);
+            box-shadow: 0 10px 24px -12px rgba(0, 0, 0, .75), -6px 0 18px -10px var(--row-accent);
+        }
+
+        .tw .promo .row-inactive .cell-title {
+            color: #b9aa9f;
+        }
+
+        /* Code badge (copy on click) */
+        .tw .promo .code-badge {
+            position: relative;
+            display: inline-flex;
+            align-items: center;
+            gap: .5rem;
+            max-width: 100%;
+            cursor: pointer;
+            padding: .38rem .7rem;
+            border-radius: 8px;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+            font-size: .82rem;
+            font-weight: 700;
+            letter-spacing: .06em;
+            color: #1a0f0d;
+            background: var(--pr-caramel);
+            border: 0;
+            transition: transform .18s var(--pr-ease), background .18s var(--pr-ease), box-shadow .18s var(--pr-ease);
+        }
+
+            .tw .promo .code-badge .code-text {
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+            }
+
+            .tw .promo .code-badge .code-ico {
+                font-size: .7rem;
+                opacity: .55;
+                transition: opacity .18s var(--pr-ease);
+            }
+
+            .tw .promo .code-badge:hover {
+                background: #faedcd;
+                transform: scale(1.04);
+                box-shadow: 0 4px 14px -4px rgba(250, 237, 205, .6);
+            }
+
+                .tw .promo .code-badge:hover .code-ico {
+                    opacity: 1;
+                }
+
+            .tw .promo .code-badge:active {
+                transform: scale(.97);
+            }
+
+            .tw .promo .code-badge.copied {
+                background: #86efac;
+                box-shadow: 0 4px 14px -4px rgba(134, 239, 172, .6);
+            }
+
+        .tw .promo .row-inactive .code-badge:not(.copied) {
+            background: #a89888;
+        }
+
+        .tw .promo .code-badge::after {
+            content: "Copied!";
+            position: absolute;
+            left: 50%;
+            top: -1.7rem;
+            transform: translate(-50%, 4px);
+            padding: .15rem .5rem;
+            border-radius: 6px;
+            font-family: inherit;
+            font-size: .65rem;
+            font-weight: 700;
+            letter-spacing: .04em;
+            color: #052e16;
+            background: #86efac;
+            white-space: nowrap;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity .18s var(--pr-ease), transform .18s var(--pr-ease);
+        }
+
+        .tw .promo .code-badge.copied::after {
+            opacity: 1;
+            transform: translate(-50%, 0);
+        }
+
+        .tw .promo .cell-title {
+            font-weight: 700;
+            color: #fefae0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .tw .promo .discount {
+            font-weight: 800;
+            font-size: .95rem;
+            color: var(--pr-caramel);
+        }
+
+        .tw .promo .expiry {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: .4rem;
+            font-size: .82rem;
+            color: #d6cabf;
+        }
+
+        .tw .promo .tag-expired {
+            border-radius: 9999px;
+            padding: .15rem .55rem;
+            font-size: .68rem;
+            font-weight: 700;
+            color: #fda4af;
+            background: rgba(225, 29, 72, .16);
+        }
+
+        .tw .promo .usage {
+            font-size: .85rem;
+            color: #d6cabf;
+        }
+
+            .tw .promo .usage b {
+                color: #fefae0;
+                font-weight: 700;
+            }
+
+        /* Status toggle */
+        .tw .promo .status-form {
+            display: inline;
+            margin: 0;
+        }
+
+        .tw .promo .status-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: .45rem;
+            cursor: pointer;
+            border-radius: 9999px;
+            padding: .38rem .95rem;
+            font-size: .74rem;
+            font-weight: 700;
+            letter-spacing: .02em;
+            border: 1px solid transparent;
+            transition: transform .18s var(--pr-ease), background .18s var(--pr-ease), box-shadow .18s var(--pr-ease), border-color .18s var(--pr-ease);
+        }
+
+            .tw .promo .status-btn:hover {
+                transform: translateY(-2px);
+            }
+
+            .tw .promo .status-btn:active {
+                transform: translateY(0);
+            }
+
+        .tw .promo .status-on {
+            color: #86efac;
+            background: rgba(34, 197, 94, .14);
+            border-color: rgba(34, 197, 94, .28);
+        }
+
+            .tw .promo .status-on:hover {
+                background: rgba(34, 197, 94, .24);
+                box-shadow: 0 8px 18px -8px rgba(34, 197, 94, .7);
+            }
+
+        .tw .promo .status-off {
+            color: #cbd5e1;
+            background: rgba(100, 116, 139, .18);
+            border-color: rgba(100, 116, 139, .3);
+        }
+
+            .tw .promo .status-off:hover {
+                background: rgba(100, 116, 139, .3);
+                box-shadow: 0 8px 18px -8px rgba(100, 116, 139, .7);
+            }
+
+        .tw .promo .dot {
+            position: relative;
+            flex: none;
+            width: .5rem;
+            height: .5rem;
+            border-radius: 9999px;
+            background: currentColor;
+        }
+
+        .tw .promo .status-on .dot::after {
+            content: "";
+            position: absolute;
+            inset: 0;
+            border-radius: inherit;
+            background: currentColor;
+            animation: promo-pulse 1.6s ease-out infinite;
+        }
+
+    @@keyframes promo-pulse {
+        0% {
+            transform: scale(1);
+            opacity: .7;
+        }
+
+        100% {
+            transform: scale(2.8);
+            opacity: 0;
+        }
+    }
+
+    @@keyframes promo-in {
+        from {
+            opacity: 0;
+            transform: translateY(8px);
+        }
+
+        to {
+            opacity: 1;
+            transform: none;
+        }
+    }
+
+    .tw .promo .empty {
+        border-radius: 10px;
+        border: 1px dashed rgba(255, 255, 255, .14);
+        background: var(--pr-surface);
+        padding: 2.5rem 1rem;
+        text-align: center;
+        color: #a8998f;
+    }
+
+        .tw .promo .empty i {
+            display: block;
+            margin-bottom: .6rem;
+            font-size: 1.5rem;
+            color: var(--pr-caramel);
+            opacity: .7;
+        }
+
+    @@media (prefers-reduced-motion: reduce) {
+        .tw .promo *, .tw .promo *::before, .tw .promo *::after {
+            animation: none !important;
+            transition: none !important;
+        }
+
+        .tw .promo .row-card:hover, .tw .promo .btn-create:hover, .tw .promo .status-btn:hover {
+            transform: none;
+        }
+    }
+</style>
+
 <div class="tw">
-    <h1 class="mb-5 font-serif text-2xl font-bold">Discounts <span class="text-caramel">& Promotions</span></h1>
+    <div class="promo">
+        <h1 class="mb-5 font-serif text-2xl font-bold">Discounts <span class="text-caramel">& Promotions</span></h1>
 
-    @if (TempData["Success"] is string ok)
-    {
-        <div class="mb-3 rounded-lg border border-green-500/30 bg-green-500/10 p-3 text-green-300">@ok</div>
-    }
-    @if (TempData["Error"] is string err)
-    {
-        <div class="mb-3 rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-red-300">@err</div>
-    }
+        @if (TempData["Success"] is string ok)
+        {
+            <div class="mb-3 rounded-lg border border-green-500/30 bg-green-500/10 p-3 text-green-300">@ok</div>
+        }
+        @if (TempData["Error"] is string err)
+        {
+            <div class="mb-3 rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-red-300">@err</div>
+        }
 
-    <form method="post" action="/Admin/CreatePromotion" class="mb-6 rounded-xl border border-white/10 bg-card p-5">
-        @Html.AntiForgeryToken()
-        <div asp-validation-summary="All" class="mb-3 text-sm text-red-300"></div>
-        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
-            <div>
-                <label asp-for="Input.Code" class="mb-1 block text-xs uppercase text-neutral-400">Code</label>
-                <input asp-for="Input.Code" maxlength="30" placeholder="MIDTERM10" class="@inputCls uppercase" />
+        <form method="post" action="/Admin/CreatePromotion" class="create-card">
+            @Html.AntiForgeryToken()
+            <div class="card-title"><i class="fa-solid fa-ticket"></i> New Promotion</div>
+            <div asp-validation-summary="All" class="mb-3 text-sm text-red-300"></div>
+            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                <div>
+                    <label asp-for="Input.Code">Code</label>
+                    <input asp-for="Input.Code" maxlength="30" placeholder="MIDTERM10" class="@inputCls uppercase" />
+                </div>
+                <div>
+                    <label asp-for="Input.Title">Title</label>
+                    <input asp-for="Input.Title" maxlength="100" placeholder="Midterm Exam Week Promo" class="@inputCls" />
+                </div>
+                <div>
+                    <label asp-for="Input.DiscountType">Discount Type</label>
+                    <select asp-for="Input.DiscountType" class="@inputCls">
+                        <option value="Percentage">Percentage (%)</option>
+                        <option value="FixedAmount">Fixed Amount (₱)</option>
+                    </select>
+                </div>
+                <div>
+                    <label asp-for="Input.DiscountValue">Discount Value</label>
+                    <input asp-for="Input.DiscountValue" type="number" step="0.01" min="0.01" class="@inputCls" />
+                </div>
+                <div>
+                    <label asp-for="Input.ExpiryDate">Expiry Date</label>
+                    <input asp-for="Input.ExpiryDate" type="date" class="@inputCls" />
+                </div>
+                <div>
+                    <label asp-for="Input.MaxUses">Max Uses (optional)</label>
+                    <input asp-for="Input.MaxUses" type="number" min="1" placeholder="Unlimited" class="@inputCls" />
+                </div>
             </div>
-            <div>
-                <label asp-for="Input.Title" class="mb-1 block text-xs uppercase text-neutral-400">Title</label>
-                <input asp-for="Input.Title" maxlength="100" placeholder="Midterm Exam Week Promo" class="@inputCls" />
-            </div>
-            <div>
-                <label asp-for="Input.DiscountType" class="mb-1 block text-xs uppercase text-neutral-400">Discount Type</label>
-                <select asp-for="Input.DiscountType" class="@inputCls">
-                    <option value="Percentage">Percentage (%)</option>
-                    <option value="FixedAmount">Fixed Amount (₱)</option>
-                </select>
-            </div>
-            <div>
-                <label asp-for="Input.DiscountValue" class="mb-1 block text-xs uppercase text-neutral-400">Discount Value</label>
-                <input asp-for="Input.DiscountValue" type="number" step="0.01" min="0.01" class="@inputCls" />
-            </div>
-            <div>
-                <label asp-for="Input.ExpiryDate" class="mb-1 block text-xs uppercase text-neutral-400">Expiry Date</label>
-                <input asp-for="Input.ExpiryDate" type="date" class="@inputCls" />
-            </div>
-            <div>
-                <label asp-for="Input.MaxUses" class="mb-1 block text-xs uppercase text-neutral-400">Max Uses (optional)</label>
-                <input asp-for="Input.MaxUses" type="number" min="1" placeholder="Unlimited" class="@inputCls" />
-            </div>
-        </div>
-        <button type="submit" class="mt-4 rounded-lg bg-caramel px-5 py-2 text-sm font-semibold text-espresso">Create Promotion</button>
-    </form>
+            <button type="submit" class="btn-create">Create Promotion</button>
+        </form>
 
-    <div class="overflow-x-auto rounded-xl border border-white/10 bg-card">
-        <table class="min-w-full text-left text-sm">
-            <thead class="bg-black/30 text-xs uppercase tracking-wider text-caramel">
-                <tr>
-                    <th class="px-4 py-3">Code</th>
-                    <th class="px-4 py-3">Title</th>
-                    <th class="px-4 py-3">Discount</th>
-                    <th class="px-4 py-3">Expiry</th>
-                    <th class="px-4 py-3">Usage</th>
-                    <th class="px-4 py-3">Active</th>
-                </tr>
-            </thead>
-            <tbody class="divide-y divide-white/5">
+        <div class="tbl-scroll">
+            <div class="tbl" role="table" aria-label="Promotions">
+                <div class="grid-row tbl-head" role="row">
+                    <div role="columnheader">Code</div>
+                    <div role="columnheader">Title</div>
+                    <div role="columnheader">Discount</div>
+                    <div role="columnheader">Expiry</div>
+                    <div role="columnheader">Usage</div>
+                    <div role="columnheader">Active</div>
+                </div>
+
                 @foreach (var p in Model.Promotions)
                 {
                     var expired = p.ExpiryDate < now;
-                    <tr>
-                        <td class="px-4 py-3 font-mono font-semibold">@p.Code</td>
-                        <td class="px-4 py-3">@p.Title</td>
-                        <td class="px-4 py-3">@(p.DiscountType == DiscountType.Percentage ? $"{p.DiscountValue:0.##}%" : $"₱{p.DiscountValue:N2}")</td>
-                        <td class="px-4 py-3">
-                            @p.ExpiryDate.ToString("MMM d, yyyy")
+                    var rowCls = expired ? "row-expired" : p.IsActive ? "row-active" : "row-inactive";
+
+                    <div class="grid-row row-card @rowCls" role="row" style="--i:@(Math.Min(rowIndex++, 20))">
+                        <div role="cell">
+                            <button type="button" class="code-badge" data-code="@p.Code" title="Click to copy" aria-label="Copy code @p.Code">
+                                <span class="code-text">@p.Code</span>
+                                <i class="fa-regular fa-copy code-ico" aria-hidden="true"></i>
+                            </button>
+                        </div>
+                        <div role="cell" class="cell-title" title="@p.Title">@p.Title</div>
+                        <div role="cell" class="discount num">@(p.DiscountType == DiscountType.Percentage ? $"{p.DiscountValue:0.##}%" : $"₱{p.DiscountValue:N2}")</div>
+                        <div role="cell" class="expiry num">
+                            <span>@p.ExpiryDate.ToString("MMM d, yyyy")</span>
                             @if (expired)
                             {
-                                <span class="ml-1 rounded-full bg-red-500/15 px-2 py-0.5 text-xs font-semibold text-red-300">Expired</span>
+                                <span class="tag-expired">Expired</span>
                             }
-                        </td>
-                        <td class="px-4 py-3">@p.TimesUsed / @(p.MaxUses?.ToString() ?? "∞")</td>
-                        <td class="px-4 py-3">
-                            <form method="post" action="/Admin/TogglePromotion" class="inline">
+                        </div>
+                        <div role="cell" class="usage num"><b>@p.TimesUsed</b> / @(p.MaxUses?.ToString() ?? "∞")</div>
+                        <div role="cell">
+                            <form method="post" action="/Admin/TogglePromotion" class="status-form">
                                 @Html.AntiForgeryToken()
                                 <input type="hidden" name="id" value="@p.Id" />
-                                <button type="submit"
-                                        class="rounded-full px-3 py-1 text-xs font-semibold @(p.IsActive ? "bg-green-500/15 text-green-300 hover:bg-green-500/25" : "bg-neutral-500/20 text-neutral-300 hover:bg-neutral-500/30")">
-                                    @(p.IsActive ? "Active" : "Inactive")
+                                <button type="submit" class="status-btn @(p.IsActive ? "status-on" : "status-off")">
+                                    <span class="dot"></span>@(p.IsActive ? "Active" : "Inactive")
                                 </button>
                             </form>
-                        </td>
-                    </tr>
+                        </div>
+                    </div>
                 }
                 @if (Model.Promotions.Count == 0)
                 {
-                    <tr><td colspan="6" class="px-4 py-8 text-center text-neutral-400">No promotions yet.</td></tr>
+                    <div class="empty"><i class="fa-solid fa-ticket"></i>No promotions yet.</div>
                 }
-            </tbody>
-        </table>
+            </div>
+        </div>
     </div>
 </div>
+
+<script>
+    (function() {
+        function flash(btn) {
+            btn.classList.add('copied');
+            clearTimeout(btn._t);
+            btn._t = setTimeout(function() { btn.classList.remove('copied'); }, 1400);
+        }
+        function fallbackCopy(text) {
+            var ta = document.createElement('textarea');
+            ta.value = text; ta.setAttribute('readonly', '');
+            ta.style.position = 'fixed'; ta.style.opacity = '0';
+            document.body.appendChild(ta); ta.select();
+            try { document.execCommand('copy'); } catch (e) { }
+            document.body.removeChild(ta);
+        }
+        document.querySelectorAll('.promo .code-badge').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                var code = btn.getAttribute('data-code') || '';
+                if (navigator.clipboard && window.isSecureContext) {
+                    navigator.clipboard.writeText(code).then(function() { flash(btn); }, function() { fallbackCopy(code); flash(btn); });
+                } else {
+                    fallbackCopy(code); flash(btn);
+                }
+            });
+        });
+    })();
+</script>

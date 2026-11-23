@@ -1,106 +1,110 @@
 ﻿<style>
+    /* ---------- 3-column Status board ---------- */
     .kds-board {
         display: grid;
         gap: 1rem;
         grid-template-columns: minmax(0, 1fr);
+        min-width: 0;
     }
 
-    @@media (min-width: 1024px) {
+    .kds-col {
+        min-width: 0;
+    }
+
+    .kds-col-body {
+        max-height: 65vh;
+        overflow-x: hidden;
+        overflow-y: auto;
+    }
+
+    @@media (min-width: 1180px) {
         .kds-board {
             grid-template-columns: repeat(var(--kds-cols, 3), minmax(0, 1fr));
             height: calc(100vh - 19rem);
             min-height: 440px;
         }
+
+        .kds-col-body {
+            max-height: none;
+        }
     }
 
+    /* ---------- Queue / Preparation card grid (auto-fits, never clips) ---------- */
     .kds-list {
         display: grid;
         gap: 1rem;
-        grid-template-columns: minmax(0, 1fr);
+        grid-template-columns: repeat(auto-fill, minmax(min(100%, 17.5rem), 1fr));
         align-content: start;
         max-height: calc(100vh - 14rem);
         min-height: 320px;
+        min-width: 0;
+        overflow-x: hidden;
         overflow-y: auto;
-        padding-right: .5rem;
+        padding: .35rem .6rem .35rem .35rem;
     }
 
-    @@media (min-width: 768px) {
-        .kds-list {
-            grid-template-columns: repeat(2, minmax(0, 1fr));
+        .kds-list > [data-empty-all] {
+            grid-column: 1 / -1;
         }
-    }
-
-    @@media (min-width: 1280px) {
-        .kds-list {
-            grid-template-columns: repeat(3, minmax(0, 1fr));
-        }
-    }
-
-    .kds-list > [data-empty-all] {
-        grid-column: 1 / -1;
-    }
 
     [data-col][hidden], [data-card][hidden], [data-empty][hidden], [data-empty-all][hidden], #kds-scan-hint[hidden] {
         display: none !important;
     }
 
-    .kds-scroll {
-        scrollbar-width: thin;
-        scrollbar-color: #00754a transparent;
+    /* ---------- Order card ---------- */
+    .kds-card {
+        container-type: inline-size;
+        container-name: kdscard;
+        min-width: 0;
+        overflow-wrap: anywhere;
     }
 
-        .kds-scroll::-webkit-scrollbar {
-            width: 8px;
+    .kds-head {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: .75rem;
+    }
+
+    @@container kdscard (max-width: 19rem) {
+        .kds-head {
+            grid-template-columns: minmax(0, 1fr);
         }
 
-        .kds-scroll::-webkit-scrollbar-track {
-            background: transparent;
+        .kds-pickup {
+            text-align: left !important;
         }
-
-        .kds-scroll::-webkit-scrollbar-thumb {
-            background: #1e3932;
-            border-radius: 9999px;
-        }
-
-            .kds-scroll::-webkit-scrollbar-thumb:hover {
-                background: #00754a;
-            }
-
-    .kds-tab[aria-pressed="true"] {
-        background: #00754a;
-        border-color: #00754a;
-        color: #fff;
     }
 
     .kds-top-Placed {
-        border-top: 4px solid #d4a373 !important;
+        border-top: 4px solid #FFD9A0 !important;
     }
 
     .kds-top-Preparing {
-        border-top: 4px solid #00754a !important;
+        border-top: 4px solid #815F51 !important;
     }
 
     .kds-top-Ready {
-        border-top: 4px solid #fefae0 !important;
+        border-top: 4px solid #00754a !important;
     }
 
     .kds-b-Placed {
-        background: #d4a373;
-        color: #1a0f0d;
+        background: #FFD9A0;
+        color: #201A17;
     }
 
     .kds-b-Preparing {
-        background: #00754a;
-        color: #fff;
+        background: #5C3B2E;
+        color: #FFD9A0;
+        box-shadow: inset 0 0 0 1px #FFD9A0;
     }
 
     .kds-b-Ready {
-        background: #fefae0;
-        color: #1e3932;
+        background: #00754a;
+        color: #ffffff;
     }
 
     .kds-wait {
-        color: #d4d4d4;
+        color: rgba(255, 217, 160, .85);
     }
 
         .kds-wait[data-level="warn"] {
@@ -112,21 +116,8 @@
         }
 
     .kds-card-focus {
-        outline: 3px solid #d4a373;
+        outline: 3px solid #FFD9A0;
         outline-offset: 2px;
-    }
-
-    .kds-dot {
-        display: inline-block;
-        width: .6rem;
-        height: .6rem;
-        border-radius: 9999px;
-        background: #737373;
-    }
-
-    .kds-live-on .kds-dot {
-        background: #34d399;
-        box-shadow: 0 0 0 3px rgba(52, 211, 153, .25);
     }
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.7/signalr.min.js"></script>

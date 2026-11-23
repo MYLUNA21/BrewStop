@@ -7,27 +7,27 @@
     var open = Model.Open;
 }
 
-<div class="tw">
+<div class="tw kds-page">
     <div class="mx-auto max-w-5xl px-4 pt-6 pb-10">
-        <h1 class="font-serif text-3xl font-bold text-cream">Shift Management</h1>
-        <p class="mt-1 text-sm text-neutral-400">Clock in and out, see your assigned schedule, and review your working hours.</p>
+        <h1 class="font-serif text-3xl font-bold text-[#FFD9A0]">Shift Management</h1>
+        <p class="mt-1 text-sm text-[#FFD9A0]/70">Clock in and out, see your assigned schedule, and review your working hours.</p>
 
         @if (TempData["Success"] is string ok)
         {
-            <p class="mt-4 rounded-xl bg-green-500/10 p-3 text-sm text-green-300">@ok</p>
+            <p class="mt-4 rounded-xl border border-solid border-emerald-400/30 bg-emerald-500/10 p-3 text-sm text-emerald-300">@ok</p>
         }
         @if (TempData["Error"] is string err)
         {
-            <p class="mt-4 rounded-xl bg-red-500/10 p-3 text-sm text-red-300">@err</p>
+            <p class="mt-4 rounded-xl border border-solid border-red-400/30 bg-red-500/10 p-3 text-sm text-red-300">@err</p>
         }
 
         <div class="mt-5 grid gap-5 lg:grid-cols-3">
-            <section class="rounded-2xl border border-solid border-white/10 bg-card p-6 lg:col-span-2">
+            <section class="min-w-0 rounded-2xl border border-solid border-[#644234] bg-[#422C22] p-6 lg:col-span-2">
                 @if (open is not null)
                 {
                     <p class="text-xs font-bold uppercase tracking-wider text-emerald-300"><i class="fa-solid fa-circle mr-1 text-[8px]"></i>On shift</p>
-                    <p class="mt-2 font-serif text-5xl font-extrabold text-cream" id="shift-elapsed" data-clockin="@DateTime.SpecifyKind(open.ClockInAt!.Value, DateTimeKind.Utc).ToString("o")">00:00:00</p>
-                    <p class="mt-2 text-sm text-neutral-400">
+                    <p class="mt-2 font-serif text-5xl font-extrabold text-[#FFD9A0]" id="shift-elapsed" data-clockin="@DateTime.SpecifyKind(open.ClockInAt!.Value, DateTimeKind.Utc).ToString("o")">00:00:00</p>
+                    <p class="mt-2 text-sm text-[#FFD9A0]/70">
                         Clocked in @L(open.ClockInAt!.Value, "ddd, MMM d · h:mm tt")
                         @if (!Unscheduled(open))
                         {
@@ -47,11 +47,11 @@
                 }
                 else
                 {
-                    <p class="text-xs font-bold uppercase tracking-wider text-neutral-400">Off shift</p>
-                    <p class="mt-2 font-serif text-3xl font-bold text-cream">You are not clocked in</p>
-                    <p class="mt-2 text-sm text-neutral-400">Clocking in matches your assigned shift (up to 2 hours early). If none is assigned, an unscheduled shift is recorded.</p>
+                    <p class="text-xs font-bold uppercase tracking-wider text-[#815F51]">Off shift</p>
+                    <p class="mt-2 font-serif text-3xl font-bold text-[#FFD9A0]">You are not clocked in</p>
+                    <p class="mt-2 text-sm text-[#FFD9A0]/70">Clocking in matches your assigned shift (up to 2 hours early). If none is assigned, an unscheduled shift is recorded.</p>
                     <form asp-action="ClockIn" method="post" class="mt-5">
-                        <button type="submit" class="h-12 w-full rounded-xl bg-[#00754a] text-base font-extrabold text-white transition hover:bg-[#1e3932] sm:w-64">
+                        <button type="submit" class="h-12 w-full rounded-xl bg-[#FFD9A0] text-base font-extrabold text-[#201A17] transition hover:brightness-110 sm:w-64">
                             <i class="fa-solid fa-right-to-bracket mr-2"></i>Clock In
                         </button>
                     </form>
@@ -59,49 +59,49 @@
             </section>
 
             <section class="grid grid-cols-2 gap-3 lg:grid-cols-1">
-                <div class="rounded-2xl border border-solid border-white/10 bg-card p-5">
-                    <p class="text-xs font-bold uppercase tracking-wider text-neutral-400">Hours today</p>
-                    <p class="mt-1 font-serif text-3xl font-extrabold text-caramel">@Model.HoursToday.ToString("0.00") h</p>
+                <div class="rounded-2xl border border-solid border-[#644234] bg-[#422C22] p-5">
+                    <p class="text-xs font-bold uppercase tracking-wider text-[#815F51]">Hours today</p>
+                    <p class="mt-1 font-serif text-3xl font-extrabold text-[#FFD9A0]">@Model.HoursToday.ToString("0.00") h</p>
                 </div>
-                <div class="rounded-2xl border border-solid border-white/10 bg-card p-5">
-                    <p class="text-xs font-bold uppercase tracking-wider text-neutral-400">Hours this week</p>
-                    <p class="mt-1 font-serif text-3xl font-extrabold text-caramel">@Model.HoursThisWeek.ToString("0.00") h</p>
+                <div class="rounded-2xl border border-solid border-[#644234] bg-[#422C22] p-5">
+                    <p class="text-xs font-bold uppercase tracking-wider text-[#815F51]">Hours this week</p>
+                    <p class="mt-1 font-serif text-3xl font-extrabold text-[#FFD9A0]">@Model.HoursThisWeek.ToString("0.00") h</p>
                 </div>
             </section>
         </div>
 
-        <section class="mt-6 rounded-2xl border border-solid border-white/10 bg-card p-5">
-            <h2 class="font-serif text-lg font-bold text-cream">Assigned schedule</h2>
+        <section class="mt-6 rounded-2xl border border-solid border-[#644234] bg-[#36241C] p-5">
+            <h2 class="font-serif text-lg font-bold text-[#FFD9A0]">Assigned schedule</h2>
             @if (Model.Upcoming.Count == 0)
             {
-                <p class="mt-3 text-sm text-neutral-500">No upcoming shifts assigned. Contact the shop admin for your schedule.</p>
+                <p class="mt-3 text-sm text-[#815F51]">No upcoming shifts assigned. Contact the shop admin for your schedule.</p>
             }
             else
             {
                 <ul class="mt-3">
                     @foreach (var s in Model.Upcoming)
                     {
-                        <li class="flex flex-wrap items-center justify-between gap-2 border-t border-solid border-white/10 py-3 first:border-t-0">
-                            <span class="text-sm font-semibold text-cream">@L(s.ScheduledStart, "dddd, MMM d")</span>
-                            <span class="text-sm text-neutral-300">@L(s.ScheduledStart, "h:mm tt") – @L(s.ScheduledEnd, "h:mm tt")</span>
-                            <span class="rounded-full bg-white/10 px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wide text-neutral-300">@s.ShiftStatus</span>
+                        <li class="flex flex-wrap items-center justify-between gap-2 border-t border-solid border-[#644234] py-3 first:border-t-0">
+                            <span class="text-sm font-semibold text-[#FFD9A0]">@L(s.ScheduledStart, "dddd, MMM d")</span>
+                            <span class="text-sm text-[#FFD9A0]/80">@L(s.ScheduledStart, "h:mm tt") – @L(s.ScheduledEnd, "h:mm tt")</span>
+                            <span class="rounded-full bg-[#4D3328] px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wide text-[#FFD9A0]">@s.ShiftStatus</span>
                         </li>
                     }
                 </ul>
             }
         </section>
 
-        <section class="mt-6 rounded-2xl border border-solid border-white/10 bg-card p-5">
-            <h2 class="font-serif text-lg font-bold text-cream">Attendance history</h2>
+        <section class="mt-6 rounded-2xl border border-solid border-[#644234] bg-[#36241C] p-5">
+            <h2 class="font-serif text-lg font-bold text-[#FFD9A0]">Attendance history</h2>
             @if (Model.History.Count == 0)
             {
-                <p class="mt-3 text-sm text-neutral-500">No completed shifts yet.</p>
+                <p class="mt-3 text-sm text-[#815F51]">No completed shifts yet.</p>
             }
             else
             {
-                <div class="kds-scroll mt-3 max-h-[420px] overflow-auto [scrollbar-width:thin]">
+                <div class="kds-scroll mt-3 max-h-[420px] overflow-auto">
                     <table class="w-full min-w-[560px] text-left text-sm">
-                        <thead class="sticky top-0 bg-card text-xs uppercase tracking-wider text-neutral-500">
+                        <thead class="sticky top-0 bg-[#36241C] text-xs uppercase tracking-wider text-[#815F51]">
                             <tr>
                                 <th class="py-2 pr-3 font-bold">Date</th>
                                 <th class="py-2 pr-3 font-bold">Clock in</th>
@@ -113,12 +113,12 @@
                         <tbody>
                             @foreach (var s in Model.History)
                             {
-                                <tr class="border-t border-solid border-white/10 text-neutral-300">
-                                    <td class="py-2.5 pr-3 font-semibold text-cream">@L(s.ClockInAt!.Value, "ddd, MMM d")</td>
+                                <tr class="border-t border-solid border-[#644234] text-[#FFD9A0]/80 transition-colors hover:bg-[#422C22]">
+                                    <td class="py-2.5 pr-3 font-semibold text-[#FFD9A0]">@L(s.ClockInAt!.Value, "ddd, MMM d")</td>
                                     <td class="py-2.5 pr-3">@L(s.ClockInAt!.Value, "h:mm tt")</td>
                                     <td class="py-2.5 pr-3">@L(s.ClockOutAt!.Value, "h:mm tt")</td>
                                     <td class="py-2.5 pr-3">@(Unscheduled(s) ? "Unscheduled" : L(s.ScheduledStart, "h:mm tt") + " – " + L(s.ScheduledEnd, "h:mm tt"))</td>
-                                    <td class="py-2.5 text-right font-bold text-caramel">@((s.TotalHours ?? 0m).ToString("0.00"))</td>
+                                    <td class="py-2.5 text-right font-bold text-[#FFD9A0]">@((s.TotalHours ?? 0m).ToString("0.00"))</td>
                                 </tr>
                             }
                         </tbody>

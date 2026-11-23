@@ -4,18 +4,540 @@
     ViewData["Title"] = "Manage Menu";
     var stock = (Dictionary<int, int>)ViewBag.Stock;
     var n = 0;
+    var cAvail = Model.Count(x => stock.GetValueOrDefault(x.Id, 0) > 5);
+    var cLow = Model.Count(x => { var q = stock.GetValueOrDefault(x.Id, 0); return q > 0 && q <= 5; });
+    var cSold = Model.Count(x => stock.GetValueOrDefault(x.Id, 0) == 0);
 }
 
+<style>
+    /* ============ BrewStop Menu Management — dark coffee + caramel/amber ============ */
+    .mm-root {
+        --mm-card: #241411;
+        --mm-card-hi: #301c17;
+        --mm-caramel: #d4a373;
+        --mm-amber: #f0a93b;
+        --mm-green: #22c55e;
+        --mm-crimson: #dc2646;
+        --mm-cream: #fefae0;
+        --mm-muted: #a8998f;
+        --mm-line: rgba(255, 255, 255, .08);
+        --mm-glow: 0 10px 26px -8px rgba(240, 169, 59, .55);
+    }
+
+    /* ---------- Header buttons ---------- */
+    .mm-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: .4rem;
+        border-radius: 10px;
+        padding: .55rem 1rem;
+        font-size: .875rem;
+        line-height: 1.25rem;
+        text-decoration: none;
+        cursor: pointer;
+        transition: transform .18s ease, box-shadow .18s ease, background .18s ease, border-color .18s ease, color .18s ease;
+    }
+
+        .mm-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--mm-glow);
+        }
+
+        .mm-btn:active {
+            transform: translateY(0);
+            box-shadow: none;
+        }
+
+        .mm-btn:focus-visible {
+            outline: 2px solid var(--mm-amber);
+            outline-offset: 2px;
+        }
+
+    .mm-btn-primary {
+        background: linear-gradient(135deg, #e0b283, #d4a373 55%, #c68f5a);
+        color: #1a0f0d;
+        font-weight: 700;
+        border: 1px solid transparent;
+    }
+
+        .mm-btn-primary:hover {
+            background: linear-gradient(135deg, #ecc196, #dcab7b 55%, #d19862);
+            color: #1a0f0d;
+        }
+
+    .mm-btn-ghost {
+        background: rgba(255, 255, 255, .02);
+        border: 1px solid rgba(255, 255, 255, .2);
+        color: var(--mm-cream);
+    }
+
+        .mm-btn-ghost:hover {
+            border-color: var(--mm-caramel);
+            color: var(--mm-caramel);
+            background: rgba(212, 163, 115, .08);
+        }
+
+    /* ---------- Segmented filter ---------- */
+    .mm-bar {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: .75rem;
+        margin-bottom: 1rem;
+    }
+
+    .mm-seg-wrap {
+        max-width: 100%;
+        overflow-x: auto;
+        padding: 2px;
+    }
+
+    .mm-seg {
+        position: relative;
+        display: inline-flex;
+        gap: 0;
+        padding: 4px;
+        border-radius: 12px;
+        background: rgba(0, 0, 0, .35);
+        border: 1px solid var(--mm-line);
+    }
+
+    .mm-ind {
+        position: absolute;
+        top: 4px;
+        left: 0;
+        height: calc(100% - 8px);
+        width: 0;
+        border-radius: 9px;
+        background: linear-gradient(135deg, rgba(212, 163, 115, .32), rgba(240, 169, 59, .2));
+        border: 1px solid rgba(240, 169, 59, .45);
+        box-shadow: 0 6px 18px -8px rgba(240, 169, 59, .7);
+        transform: translateX(0);
+        transition: transform .3s cubic-bezier(0.4, 0, 0.2, 1), width .3s cubic-bezier(0.4, 0, 0.2, 1);
+        pointer-events: none;
+        z-index: 0;
+    }
+
+    .mm-tab {
+        position: relative;
+        z-index: 1;
+        display: inline-flex;
+        align-items: center;
+        gap: .5rem;
+        white-space: nowrap;
+        padding: .45rem .9rem;
+        border: 0;
+        border-radius: 9px;
+        background: transparent;
+        font-size: .8rem;
+        font-weight: 600;
+        color: #cfc3ba;
+        cursor: pointer;
+        transition: color .2s ease;
+    }
+
+        .mm-tab:hover {
+            color: var(--mm-cream);
+        }
+
+        .mm-tab:focus-visible {
+            outline: 2px solid var(--mm-amber);
+            outline-offset: -2px;
+        }
+
+        .mm-tab[aria-selected="true"] {
+            color: var(--mm-cream);
+        }
+
+    .mm-dot {
+        width: .5rem;
+        height: .5rem;
+        border-radius: 50%;
+        background: var(--mm-caramel);
+        flex: none;
+    }
+
+        .mm-dot.is-available {
+            background: var(--mm-green);
+            box-shadow: 0 0 0 3px rgba(34, 197, 94, .18);
+        }
+
+        .mm-dot.is-low {
+            background: var(--mm-amber);
+        }
+
+        .mm-dot.is-soldout {
+            background: var(--mm-crimson);
+        }
+
+    .mm-tabcount {
+        min-width: 1.35rem;
+        padding: 0 .4rem;
+        border-radius: 999px;
+        text-align: center;
+        font-size: .68rem;
+        line-height: 1.25rem;
+        font-variant-numeric: tabular-nums;
+        background: rgba(255, 255, 255, .08);
+        color: #e6dbd2;
+    }
+
+    .mm-tab[aria-selected="true"] .mm-tabcount {
+        background: rgba(240, 169, 59, .25);
+        color: #ffd9a0;
+    }
+
+    .mm-live {
+        display: inline-flex;
+        align-items: center;
+        gap: .45rem;
+        font-size: .78rem;
+        color: var(--mm-muted);
+        padding: .35rem .75rem;
+        border-radius: 999px;
+        border: 1px solid var(--mm-line);
+        background: rgba(0, 0, 0, .25);
+    }
+
+        .mm-live b {
+            color: var(--mm-cream);
+            font-variant-numeric: tabular-nums;
+        }
+
+        .mm-live.bump {
+            animation: mm-bump .35s ease;
+        }
+
+    /* ---------- Floating row cards ---------- */
+    .mm-scroll {
+        overflow-x: auto;
+        padding: 2px 6px 8px 2px;
+        margin: 0 -6px 0 -2px;
+    }
+
+    .mm-table {
+        min-width: 780px;
+    }
+
+    .mm-cols {
+        grid-template-columns: 40px minmax(180px, 2.2fr) minmax(110px, 1fr) 110px minmax(140px, 1.1fr) 92px;
+    }
+
+    .mm-head, .mm-row {
+        display: grid;
+        align-items: center;
+        column-gap: .8rem;
+        padding: 0 1rem;
+    }
+
+    .mm-head {
+        padding-top: .35rem;
+        padding-bottom: .35rem;
+        font-size: .7rem;
+        font-weight: 600;
+        letter-spacing: .09em;
+        text-transform: uppercase;
+        color: var(--mm-caramel);
+    }
+
+    .mm-row {
+        position: relative;
+        margin-top: 8px;
+        padding-top: .65rem;
+        padding-bottom: .65rem;
+        border-radius: 10px;
+        border-left: 4px solid var(--mm-green);
+        background: var(--mm-card);
+        font-size: .875rem;
+        color: var(--mm-cream);
+        box-shadow: 0 1px 0 rgba(255, 255, 255, .03) inset, 0 2px 8px -2px rgba(0, 0, 0, .45);
+        transition: transform .18s ease, background-color .18s ease, box-shadow .18s ease;
+        animation: mm-in .38s ease both;
+        animation-delay: calc(min(var(--i, 0), 14) * 35ms);
+    }
+
+        .mm-row[data-status="low"] {
+            border-left-color: var(--mm-amber);
+        }
+
+        .mm-row[data-status="soldout"] {
+            border-left-color: var(--mm-crimson);
+        }
+
+        .mm-row:hover {
+            transform: translateX(4px);
+            background: var(--mm-card-hi);
+            box-shadow: 0 10px 24px -10px rgba(0, 0, 0, .7), 0 0 0 1px rgba(240, 169, 59, .18);
+        }
+
+        .mm-row[hidden] {
+            display: none;
+        }
+
+    .mm-idx {
+        color: var(--mm-muted);
+        font-variant-numeric: tabular-nums;
+        font-size: .8rem;
+    }
+
+    .mm-name {
+        font-weight: 700;
+        letter-spacing: .005em;
+        overflow-wrap: anywhere;
+    }
+
+    .mm-item {
+        display: flex;
+        align-items: center;
+        gap: .8rem;
+        min-width: 0;
+    }
+
+    .mm-thumb {
+        position: relative;
+        flex: none;
+        width: 2.6rem;
+        height: 2.6rem;
+        border-radius: 50%;
+        overflow: hidden;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: radial-gradient(circle at 30% 25%, #4a2c22, #2a1712);
+        color: var(--mm-caramel);
+        box-shadow: 0 0 0 2px rgba(255, 255, 255, .08), 0 4px 10px -3px rgba(0, 0, 0, .6);
+        transition: box-shadow .2s ease, transform .2s ease;
+    }
+
+    .mm-row:hover .mm-thumb {
+        box-shadow: 0 0 0 2px rgba(240, 169, 59, .55), 0 6px 14px -4px rgba(240, 169, 59, .45);
+        transform: scale(1.04);
+    }
+
+    .mm-thumb i {
+        font-size: 1rem;
+        opacity: .85;
+    }
+
+    .mm-thumb img {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        border-radius: 50%;
+    }
+
+    .mm-thumb.is-broken img {
+        display: none;
+    }
+
+    .mm-cat {
+        justify-self: start;
+        display: inline-block;
+        max-width: 100%;
+        padding: .2rem .6rem;
+        border-radius: 999px;
+        font-size: .72rem;
+        font-weight: 600;
+        letter-spacing: .03em;
+        color: var(--mm-caramel);
+        background: rgba(212, 163, 115, .12);
+        border: 1px solid rgba(212, 163, 115, .28);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .mm-price {
+        text-align: right;
+        font-weight: 700;
+        color: var(--mm-caramel);
+        font-variant-numeric: tabular-nums;
+        font-feature-settings: "tnum";
+        white-space: nowrap;
+    }
+
+    .mm-badge {
+        justify-self: start;
+        display: inline-flex;
+        align-items: center;
+        gap: .45rem;
+        padding: .22rem .65rem;
+        border-radius: 999px;
+        font-size: .74rem;
+        font-weight: 600;
+        white-space: nowrap;
+        font-variant-numeric: tabular-nums;
+    }
+
+        .mm-badge::before {
+            content: "";
+            width: .5rem;
+            height: .5rem;
+            border-radius: 50%;
+            background: currentColor;
+            flex: none;
+        }
+
+        .mm-badge.is-available {
+            color: #86efac;
+            background: rgba(34, 197, 94, .12);
+            border: 1px solid rgba(34, 197, 94, .3);
+        }
+
+        .mm-badge.is-low {
+            color: #fbbf24;
+            background: rgba(240, 169, 59, .13);
+            border: 1px solid rgba(240, 169, 59, .35);
+        }
+
+        .mm-badge.is-soldout {
+            color: #fda4af;
+            background: rgba(220, 38, 70, .14);
+            border: 1px solid rgba(220, 38, 70, .38);
+        }
+
+            .mm-badge.is-low::before, .mm-badge.is-soldout::before {
+                animation: mm-pulse 1.6s ease-out infinite;
+            }
+
+        .mm-badge.is-low::before {
+            --pc: 240, 169, 59;
+        }
+
+        .mm-badge.is-soldout::before {
+            --pc: 220, 38, 70;
+        }
+
+    .mm-actions {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: .5rem;
+    }
+
+        .mm-actions form {
+            margin: 0;
+        }
+
+    .mm-ico {
+        display: inline-flex;
+        width: 2rem;
+        height: 2rem;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        border: 0;
+        cursor: pointer;
+        text-decoration: none;
+        font-size: .75rem;
+        transition: transform .18s ease, box-shadow .18s ease, background-color .18s ease, color .18s ease;
+    }
+
+        .mm-ico:hover {
+            transform: scale(1.14);
+        }
+
+        .mm-ico:active {
+            transform: scale(.96);
+        }
+
+        .mm-ico:focus-visible {
+            outline: 2px solid var(--mm-amber);
+            outline-offset: 2px;
+        }
+
+    .mm-edit {
+        background: rgba(240, 169, 59, .18);
+        color: var(--mm-amber);
+    }
+
+        .mm-edit:hover {
+            background: var(--mm-amber);
+            color: #1a0f0d;
+            box-shadow: 0 0 0 4px rgba(240, 169, 59, .2), 0 6px 18px -4px rgba(240, 169, 59, .75);
+        }
+
+    .mm-del {
+        background: rgba(220, 38, 70, .18);
+        color: #fb7185;
+    }
+
+        .mm-del:hover {
+            background: var(--mm-crimson);
+            color: #fff;
+            box-shadow: 0 0 0 4px rgba(220, 38, 70, .2), 0 6px 18px -4px rgba(220, 38, 70, .75);
+        }
+
+    .mm-empty {
+        margin-top: 8px;
+        padding: 1.6rem 1rem;
+        text-align: center;
+        border-radius: 10px;
+        border: 1px dashed rgba(255, 255, 255, .15);
+        color: var(--mm-muted);
+        font-size: .875rem;
+    }
+
+        .mm-empty[hidden] {
+            display: none;
+        }
+
+    @@keyframes mm-in {
+        from {
+            opacity: 0;
+            transform: translateY(8px);
+        }
+
+        to {
+            opacity: 1;
+            transform: none;
+        }
+    }
+
+    @@keyframes mm-pulse {
+        0% {
+            box-shadow: 0 0 0 0 rgba(var(--pc, 240, 169, 59), .65);
+        }
+
+        70% {
+            box-shadow: 0 0 0 7px rgba(var(--pc, 240, 169, 59), 0);
+        }
+
+        100% {
+            box-shadow: 0 0 0 0 rgba(var(--pc, 240, 169, 59), 0);
+        }
+    }
+
+    @@keyframes mm-bump {
+        50% {
+            transform: scale(1.06);
+        }
+    }
+
+    @@media (prefers-reduced-motion: reduce) {
+        .mm-row, .mm-btn, .mm-ico, .mm-ind, .mm-live, .mm-badge::before, .mm-thumb {
+            animation: none !important;
+            transition: none !important;
+        }
+
+            .mm-row:hover, .mm-btn:hover, .mm-ico:hover {
+                transform: none !important;
+            }
+    }
+</style>
+
 <div class="tw">
-    <div class="mx-auto max-w-6xl p-6 text-cream">
-        <div class="mb-5 flex items-center justify-between">
+    <div class="mx-auto max-w-6xl p-6 text-cream mm-root">
+        <div class="mb-5 flex flex-wrap items-center justify-between gap-3">
             <h1 class="font-serif text-2xl font-bold">Menu <span class="text-caramel">Management</span></h1>
-            <div class="flex gap-2">
-                <a asp-controller="Inventory" asp-action="Index"
-                   class="rounded-lg border border-white/20 px-4 py-2 text-sm text-cream hover:border-caramel hover:text-caramel">
+            <div class="flex flex-wrap gap-2">
+                <a asp-controller="Inventory" asp-action="Index" class="mm-btn mm-btn-ghost">
                     <i class="fa-solid fa-boxes-stacked mr-1"></i> Inventory
                 </a>
-                <a asp-action="Create" class="rounded-lg bg-caramel px-4 py-2 text-sm font-semibold text-espresso hover:opacity-90">
+                <a asp-action="Create" class="mm-btn mm-btn-primary">
                     <i class="fa-solid fa-plus mr-1"></i> Add New Item
                 </a>
             </div>
@@ -30,68 +552,163 @@
             <div class="mb-3 rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-red-300">@err</div>
         }
 
-        <div class="overflow-x-auto rounded-xl border border-white/10 bg-card">
-            <table class="min-w-full text-left text-sm">
-                <thead class="bg-black/30 text-xs uppercase tracking-wider text-caramel">
-                    <tr>
-                        <th class="px-4 py-3">#</th>
-                        <th class="px-4 py-3">Item</th>
-                        <th class="px-4 py-3">Category</th>
-                        <th class="px-4 py-3">Price</th>
-                        <th class="px-4 py-3">Status</th>
-                        <th class="px-4 py-3 text-right">Action</th>
-                    </tr>
-                </thead>
-                <tbody>
+        <div class="mm-bar">
+            <div class="mm-seg-wrap">
+                <div class="mm-seg" id="mm-seg" role="tablist" aria-label="Filter menu items by stock">
+                    <span class="mm-ind" id="mm-ind" aria-hidden="true"></span>
+                    <button type="button" role="tab" class="mm-tab" data-filter="all" aria-selected="true">
+                        <span class="mm-dot"></span>All <span class="mm-tabcount">@Model.Count</span>
+                    </button>
+                    <button type="button" role="tab" class="mm-tab" data-filter="available" aria-selected="false" tabindex="-1">
+                        <span class="mm-dot is-available"></span>Available <span class="mm-tabcount">@cAvail</span>
+                    </button>
+                    <button type="button" role="tab" class="mm-tab" data-filter="low" aria-selected="false" tabindex="-1">
+                        <span class="mm-dot is-low"></span>Low <span class="mm-tabcount">@cLow</span>
+                    </button>
+                    <button type="button" role="tab" class="mm-tab" data-filter="soldout" aria-selected="false" tabindex="-1">
+                        <span class="mm-dot is-soldout"></span>Sold out <span class="mm-tabcount">@cSold</span>
+                    </button>
+                </div>
+            </div>
+            <div class="mm-live" id="mm-live" aria-live="polite">
+                Showing <b id="mm-shown">@Model.Count</b> of <b>@Model.Count</b> entries
+            </div>
+        </div>
+
+        <div class="mm-scroll">
+            <div class="mm-table" role="table" aria-label="Menu items">
+                <div class="mm-head mm-cols" role="row">
+                    <div role="columnheader">#</div>
+                    <div role="columnheader">Item</div>
+                    <div role="columnheader">Category</div>
+                    <div role="columnheader" style="text-align:right">Price</div>
+                    <div role="columnheader">Status</div>
+                    <div role="columnheader" style="text-align:right">Action</div>
+                </div>
+
+                <div id="mm-list">
                     @foreach (var m in Model)
                     {
                         var qty = stock.GetValueOrDefault(m.Id, 0);
-                        <tr class="border-t border-white/10 hover:bg-white/5">
-                            <td class="px-4 py-3 text-neutral-400">@(++n)</td>
-                            <td class="px-4 py-3">
-                                <div class="flex items-center gap-3">
-                                    <img src="@Images.Resolve(m.ImageUrl, m.Name)" alt="" class="h-10 w-10 rounded-full object-cover ring-1 ring-white/10" />
-                                    <span class="font-medium">@m.Name</span>
-                                </div>
-                            </td>
-                            <td class="px-4 py-3 text-neutral-300">@m.Category.Name</td>
-                            <td class="px-4 py-3 text-caramel">₱@m.Price.ToString("N2")</td>
-                            <td class="px-4 py-3">
+                        var st = qty == 0 ? "soldout" : qty <= 5 ? "low" : "available";
+                        <div class="mm-row mm-cols" role="row" data-status="@st" style="--i:@n">
+                            <div role="cell" class="mm-idx">@(++n)</div>
+                            <div role="cell" class="mm-item">
+                                <span class="mm-thumb"><i class="fa-solid fa-mug-hot" aria-hidden="true"></i><img src="@Images.Resolve(m.ImageUrl, m.Name)" alt="" loading="lazy" /></span>
+                                <span class="mm-name">@m.Name</span>
+                            </div>
+                            <div role="cell"><span class="mm-cat" title="@m.Category.Name">@m.Category.Name</span></div>
+                            <div role="cell" class="mm-price">₱@m.Price.ToString("N2")</div>
+                            <div role="cell">
                                 @if (qty == 0)
                                 {
-                                    <span class="inline-flex items-center gap-2"><span class="h-2 w-2 rounded-full bg-red-500"></span>Sold out</span>
+                                    <span class="mm-badge is-soldout">Sold out</span>
                                 }
                                 else if (qty <= 5)
                                 {
-                                    <span class="inline-flex items-center gap-2"><span class="h-2 w-2 rounded-full bg-amber-400"></span>Low (@qty)</span>
+                                    <span class="mm-badge is-low">Low (@qty)</span>
                                 }
                                 else
                                 {
-                                    <span class="inline-flex items-center gap-2"><span class="h-2 w-2 rounded-full bg-green-500"></span>Available (@qty)</span>
+                                    <span class="mm-badge is-available">Available (@qty)</span>
                                 }
-                            </td>
-                            <td class="px-4 py-3">
-                                <div class="flex items-center justify-end gap-2">
-                                    <a asp-action="Edit" asp-route-id="@m.Id" title="Edit"
-                                       class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-caramel/20 text-caramel hover:bg-caramel hover:text-espresso">
-                                        <i class="fa-solid fa-pen text-xs"></i>
+                            </div>
+                            <div role="cell">
+                                <div class="mm-actions">
+                                    <a asp-action="Edit" asp-route-id="@m.Id" title="Edit" aria-label="Edit @m.Name" class="mm-ico mm-edit">
+                                        <i class="fa-solid fa-pen"></i>
                                     </a>
                                     <form asp-action="Delete" asp-route-id="@m.Id" method="post"
                                           onsubmit="return confirm('Delete @m.Name?');">
-                                        <button title="Delete"
-                                                class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-red-500/20 text-red-400 hover:bg-red-500 hover:text-white">
-                                            <i class="fa-solid fa-xmark text-xs"></i>
+                                        <button title="Delete" aria-label="Delete @m.Name" class="mm-ico mm-del">
+                                            <i class="fa-solid fa-xmark"></i>
                                         </button>
                                     </form>
                                 </div>
-                            </td>
-                        </tr>
+                            </div>
+                        </div>
                     }
-                </tbody>
-            </table>
-            <div class="border-t border-white/10 px-4 py-3 text-xs text-neutral-400">
-                Showing <b class="text-cream">@Model.Count</b> entries
+                </div>
+
+                <div class="mm-empty" id="mm-empty" hidden>No items match this filter.</div>
             </div>
         </div>
     </div>
 </div>
+
+<script>
+    (function() {
+        var seg = document.getElementById('mm-seg');
+        var ind = document.getElementById('mm-ind');
+        var list = document.getElementById('mm-list');
+        var empty = document.getElementById('mm-empty');
+        var shown = document.getElementById('mm-shown');
+        var live = document.getElementById('mm-live');
+        if (!seg || !ind || !list) return;
+
+        var tabs = Array.prototype.slice.call(seg.querySelectorAll('.mm-tab'));
+        var rows = Array.prototype.slice.call(list.querySelectorAll('.mm-row'));
+        var current = 'all';
+
+        function moveIndicator(tab, instant) {
+            if (instant) ind.style.transition = 'none';
+            ind.style.width = tab.offsetWidth + 'px';
+            ind.style.transform = 'translateX(' + tab.offsetLeft + 'px)';
+            if (instant) { void ind.offsetWidth; ind.style.transition = ''; }
+        }
+
+        function apply(filter) {
+            current = filter;
+            var visible = 0;
+            rows.forEach(function(r) {
+                var match = filter === 'all' || r.getAttribute('data-status') === filter;
+                r.hidden = !match;
+                if (match) {
+                    r.style.setProperty('--i', visible++);
+                    r.style.animation = 'none'; void r.offsetWidth; r.style.animation = '';
+                }
+            });
+            if (shown) shown.textContent = visible;
+            if (empty) empty.hidden = visible !== 0;
+            if (live) { live.classList.remove('bump'); void live.offsetWidth; live.classList.add('bump'); }
+        }
+
+        function select(tab, focus) {
+            tabs.forEach(function(t) {
+                var on = t === tab;
+                t.setAttribute('aria-selected', on ? 'true' : 'false');
+                t.tabIndex = on ? 0 : -1;
+            });
+            moveIndicator(tab, false);
+            if (focus) tab.focus();
+            apply(tab.getAttribute('data-filter'));
+        }
+
+        tabs.forEach(function(t, i) {
+            t.addEventListener('click', function() { select(t, false); });
+            t.addEventListener('keydown', function(ev) {
+                var k = ev.key, next = null;
+                if (k === 'ArrowRight') next = tabs[(i + 1) % tabs.length];
+                else if (k === 'ArrowLeft') next = tabs[(i - 1 + tabs.length) % tabs.length];
+                else if (k === 'Home') next = tabs[0];
+                else if (k === 'End') next = tabs[tabs.length - 1];
+                if (next) { ev.preventDefault(); select(next, true); }
+            });
+        });
+
+        // Thumbnail fallback (icon shows through when image fails)
+        list.querySelectorAll('.mm-thumb img').forEach(function(img) {
+            var broken = function() { img.parentNode.classList.add('is-broken'); };
+            img.addEventListener('error', broken);
+            if (img.complete && img.naturalWidth === 0) broken();
+        });
+
+        function init() { moveIndicator(seg.querySelector('[aria-selected="true"]'), true); }
+        window.addEventListener('resize', function() {
+            moveIndicator(seg.querySelector('[aria-selected="true"]'), true);
+        });
+        window.addEventListener('load', init);
+        if (document.fonts && document.fonts.ready) document.fonts.ready.then(init);
+        init();
+    })();
+</script>

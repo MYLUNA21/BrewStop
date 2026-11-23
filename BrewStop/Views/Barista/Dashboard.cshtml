@@ -10,31 +10,31 @@
     }
     var tiles = new (string Label, int Value, string Icon, string Href, string Tone)[]
     {
-        ("Waiting in queue", Model.Placed, "fa-list-ol", "/Barista/Queue", "text-caramel"),
+        ("Waiting in queue", Model.Placed, "fa-list-ol", "/Barista/Queue", "text-[#FFD9A0]"),
         ("Preparing", Model.Preparing, "fa-mug-hot", "/Barista/Preparation", "text-emerald-300"),
-        ("Ready for pickup", Model.Ready, "fa-bag-shopping", "/Barista/Status", "text-cream"),
-        ("Orders today", Model.OrdersToday, "fa-receipt", "/Barista/Status", "text-cream"),
+        ("Ready for pickup", Model.Ready, "fa-bag-shopping", "/Barista/Status", "text-[#FFD9A0]"),
+        ("Orders today", Model.OrdersToday, "fa-receipt", "/Barista/Status", "text-[#FFD9A0]"),
         ("Picked up today", Model.ClaimedToday, "fa-circle-check", "/Barista/Status", "text-emerald-300"),
         ("Cancelled today", Model.CancelledToday, "fa-ban", "/Barista/Notifications", "text-red-300"),
     };
 }
 
-<div class="tw">
+<div class="tw kds-page">
     <div class="mx-auto max-w-6xl px-4 pt-6 pb-8">
         <div class="flex flex-wrap items-end justify-between gap-3">
             <div>
-                <h1 class="font-serif text-3xl font-bold text-cream">Dashboard</h1>
-                <p class="mt-1 text-sm text-neutral-400">@Model.LocalNow.ToString("dddd, MMMM d, yyyy") · daily order statistics</p>
+                <h1 class="font-serif text-3xl font-bold text-[#FFD9A0]">Dashboard</h1>
+                <p class="mt-1 text-sm text-[#FFD9A0]/70">@Model.LocalNow.ToString("dddd, MMMM d, yyyy") · daily order statistics</p>
             </div>
             @if (Model.OpenShift is not null)
             {
-                <a href="/Barista/Shifts" class="rounded-full border border-solid border-emerald-400/40 bg-emerald-400/10 px-4 py-2 text-sm font-semibold text-emerald-200 no-underline">
+                <a href="/Barista/Shifts" class="rounded-full border border-solid border-emerald-400/50 bg-emerald-400/10 px-4 py-2 text-sm font-semibold text-emerald-200 no-underline">
                     <i class="fa-solid fa-clock mr-1.5"></i>Clocked in since @Slots.ToLocal(Model.OpenShift.ClockInAt!.Value).ToString("h:mm tt")
                 </a>
             }
             else
             {
-                <a href="/Barista/Shifts" class="rounded-full border border-solid border-white/15 px-4 py-2 text-sm font-semibold text-neutral-300 no-underline hover:border-caramel hover:text-caramel">
+                <a href="/Barista/Shifts" class="rounded-full border border-solid border-[#644234] bg-[#422C22] px-4 py-2 text-sm font-semibold text-[#FFD9A0] no-underline transition hover:border-[#FFD9A0] hover:bg-[#5C3B2E]">
                     <i class="fa-regular fa-clock mr-1.5"></i>Not clocked in
                 </a>
             }
@@ -51,22 +51,22 @@
         <div class="mt-5 grid grid-cols-2 gap-3 lg:grid-cols-3">
             @foreach (var t in tiles)
             {
-                <a href="@t.Href" class="rounded-2xl border border-solid border-white/10 bg-card p-4 no-underline transition hover:border-caramel/60">
-                    <div class="flex items-center justify-between">
-                        <p class="text-xs font-bold uppercase tracking-wider text-neutral-400">@t.Label</p>
+                <a href="@t.Href" class="rounded-2xl border border-solid border-[#644234] bg-[#422C22] p-4 no-underline transition hover:border-[#FFD9A0] hover:bg-[#5C3B2E]">
+                    <div class="flex items-center justify-between gap-2">
+                        <p class="text-xs font-bold uppercase tracking-wider text-[#815F51]">@t.Label</p>
                         <i class="fa-solid @t.Icon @t.Tone"></i>
                     </div>
-                    <p class="mt-2 font-serif text-4xl font-extrabold text-cream">@t.Value</p>
+                    <p class="mt-2 font-serif text-4xl font-extrabold text-[#FFD9A0]">@t.Value</p>
                 </a>
             }
         </div>
 
         <div class="mt-6 grid gap-5 lg:grid-cols-3">
-            <section class="rounded-2xl border border-solid border-white/10 bg-card p-5 lg:col-span-1">
-                <h2 class="font-serif text-lg font-bold text-cream">Most ordered today</h2>
+            <section class="min-w-0 rounded-2xl border border-solid border-[#644234] bg-[#36241C] p-5 lg:col-span-1">
+                <h2 class="font-serif text-lg font-bold text-[#FFD9A0]">Most ordered today</h2>
                 @if (Model.TopItems.Count == 0)
                 {
-                    <p class="mt-3 text-sm text-neutral-500">No orders yet today.</p>
+                    <p class="mt-3 text-sm text-[#815F51]">No orders yet today.</p>
                 }
                 else
                 {
@@ -77,11 +77,11 @@
                             var pct = (int)Math.Round(100.0 * i.Quantity / max);
                             <li>
                                 <div class="flex items-center justify-between gap-3 text-sm">
-                                    <span class="truncate text-cream">@i.Name</span>
-                                    <span class="shrink-0 font-bold text-caramel">@(i.Quantity)x</span>
+                                    <span class="truncate text-[#FFD9A0]">@i.Name</span>
+                                    <span class="shrink-0 font-bold text-[#FFD9A0]">@(i.Quantity)x</span>
                                 </div>
-                                <div class="mt-1 h-2 overflow-hidden rounded-full bg-white/10">
-                                    <div class="h-full rounded-full bg-[#00754a]" style="width:@(pct)%"></div>
+                                <div class="mt-1 h-2 overflow-hidden rounded-full bg-[#4D3328]">
+                                    <div class="h-full rounded-full bg-[#FFD9A0]" style="width:@(pct)%"></div>
                                 </div>
                             </li>
                         }
@@ -89,24 +89,24 @@
                 }
             </section>
 
-            <section class="rounded-2xl border border-solid border-white/10 bg-card p-5 lg:col-span-2">
-                <h2 class="font-serif text-lg font-bold text-cream">Recent activity</h2>
+            <section class="min-w-0 rounded-2xl border border-solid border-[#644234] bg-[#36241C] p-5 lg:col-span-2">
+                <h2 class="font-serif text-lg font-bold text-[#FFD9A0]">Recent activity</h2>
                 @if (Model.Recent.Count == 0)
                 {
-                    <p class="mt-3 text-sm text-neutral-500">No recent order activity.</p>
+                    <p class="mt-3 text-sm text-[#815F51]">No recent order activity.</p>
                 }
                 else
                 {
-                    <ul class="mt-3 max-h-[420px] overflow-y-auto pr-1 [scrollbar-width:thin]">
+                    <ul class="kds-scroll mt-3 max-h-[420px] overflow-y-auto pr-1">
                         @foreach (var a in Model.Recent)
                         {
-                            <li class="flex items-start gap-3 border-t border-solid border-white/10 py-3 first:border-t-0">
-                                <span class="mt-0.5 grid size-9 shrink-0 place-items-center rounded-full bg-[#1e3932] text-emerald-200"><i class="fa-solid @a.Icon text-sm"></i></span>
+                            <li class="flex items-start gap-3 border-t border-solid border-[#644234] py-3 first:border-t-0">
+                                <span class="mt-0.5 grid size-9 shrink-0 place-items-center rounded-full bg-[#4D3328] text-[#FFD9A0]"><i class="fa-solid @a.Icon text-sm"></i></span>
                                 <div class="min-w-0 flex-1">
-                                    <p class="text-sm font-semibold text-cream">@a.Title</p>
-                                    <p class="text-xs text-neutral-400">@a.Text</p>
+                                    <p class="text-sm font-semibold text-[#FFD9A0]">@a.Title</p>
+                                    <p class="break-words text-xs text-[#FFD9A0]/70">@a.Text</p>
                                 </div>
-                                <time datetime="@DateTime.SpecifyKind(a.AtUtc, DateTimeKind.Utc).ToString("o")" class="shrink-0 text-xs text-neutral-500">@Ago(a.AtUtc)</time>
+                                <time datetime="@DateTime.SpecifyKind(a.AtUtc, DateTimeKind.Utc).ToString("o")" class="shrink-0 text-xs text-[#815F51]">@Ago(a.AtUtc)</time>
                             </li>
                         }
                     </ul>

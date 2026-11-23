@@ -2,18 +2,764 @@
 @{
     Layout = "_AdminLayout";
     ViewData["Title"] = "Customer Management";
+
+    // ---- View-only helpers (no controller / model changes) ----------------------------------
+    // Tab bucket: Admin > Barista > Student. Faculty and role-less accounts are customers,
+    // so they are grouped under the "Student" tab.
+    bool InRole(AdminCustomerRow row, string role) =>
+        row.Roles.Any(x => string.Equals(x, role, StringComparison.OrdinalIgnoreCase));
+
+    string Bucket(AdminCustomerRow row) =>
+        InRole(row, "Admin") ? "admin" : InRole(row, "Barista") ? "barista" : "student";
+
+    // Left-border accent: Inactive(locked)=crimson, Admin=amber, Barista=cyan, Active=green.
+    string Accent(AdminCustomerRow row) =>
+        row.IsLocked ? "locked" : InRole(row, "Admin") ? "admin" : InRole(row, "Barista") ? "barista" : "active";
+
+    string RolePillClass(string role) =>
+        string.Equals(role, "Admin", StringComparison.OrdinalIgnoreCase) ? "cm-role-admin"
+        : string.Equals(role, "Barista", StringComparison.OrdinalIgnoreCase) ? "cm-role-barista"
+        : "cm-role-customer";
+
+    var totalCount = Model.Rows.Count;
+    var studentCount = Model.Rows.Count(r => Bucket(r) == "student");
+    var baristaCount = Model.Rows.Count(r => Bucket(r) == "barista");
+    var adminCount = Model.Rows.Count(r => Bucket(r) == "admin");
+    var rowIndex = 0;
 }
 
-<div class="tw">
-    <div class="mb-5 flex flex-wrap items-center justify-between gap-3">
+<style>
+    /* ============================================================
+           BrewStop · Admin · Customer Management
+           Scoped to .cm-root so nothing leaks into other admin pages.
+           ============================================================ */
+    .cm-root {
+        --cm-bg: #201A17; /* Midnight Soil */
+        --cm-side: #36241C; /* Dark Coffee */
+        --cm-card: #422C22; /* Coffee Brown */
+        --cm-inner: #4D3328; /* Chocolate */
+        --cm-hover: #5C3B2E; /* Cacao Husk */
+        --cm-line: #644234; /* Mauve Bark */
+        --cm-muted: #815F51; /* Coffee Bean */
+        --cm-text: #FFD9A0; /* Palsand Nougat */
+        --cm-amber: #F5A524;
+        --cm-green: #4ADE80;
+        --cm-cyan: #22D3EE;
+        --cm-crimson: #E5484D;
+        --cm-ease: cubic-bezier(0.4, 0, 0.2, 1);
+        --cm-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+    }
+
+        /* ---------- Header + search ---------- */
+        .cm-root .cm-top {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            gap: 14px;
+            margin-bottom: 18px;
+        }
+
+        .cm-root .cm-form {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            align-items: center;
+            margin: 0;
+        }
+
+        .cm-root .cm-search {
+            position: relative;
+            flex: 1 1 280px;
+            width: 340px;
+            max-width: 100%;
+        }
+
+        .cm-root .cm-search-icon {
+            position: absolute;
+            left: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 13px;
+            color: var(--cm-muted);
+            pointer-events: none;
+            transition: color .2s var(--cm-ease);
+        }
+
+        .cm-root .cm-search:focus-within .cm-search-icon {
+            color: var(--cm-amber);
+        }
+
+        .cm-root .cm-input {
+            width: 100%;
+            box-sizing: border-box;
+            padding: 10px 14px 10px 38px;
+            font-size: 14px;
+            line-height: 1.3;
+            color: var(--cm-text);
+            background: var(--cm-side);
+            border: 1px solid var(--cm-line);
+            border-radius: 10px;
+            outline: none;
+            transition: border-color .2s var(--cm-ease), box-shadow .25s var(--cm-ease), background .2s var(--cm-ease);
+        }
+
+            .cm-root .cm-input::placeholder {
+                color: var(--cm-muted);
+                opacity: 1;
+            }
+
+            .cm-root .cm-input:hover {
+                border-color: #7a5444;
+            }
+
+            .cm-root .cm-input:focus {
+                border-color: var(--cm-amber);
+                background: var(--cm-bg);
+                box-shadow: 0 0 0 3px rgba(245, 165, 36, .22), 0 0 22px rgba(245, 165, 36, .20);
+            }
+
+        .cm-root .cm-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            padding: 10px 18px;
+            font-size: 14px;
+            font-weight: 700;
+            line-height: 1.3;
+            color: var(--cm-bg);
+            border: 0;
+            border-radius: 10px;
+            text-decoration: none;
+            background: linear-gradient(135deg, #FFD9A0 0%, #F5B04A 100%);
+            box-shadow: 0 2px 0 rgba(0, 0, 0, .25);
+            transition: transform .2s var(--cm-ease), box-shadow .2s var(--cm-ease), filter .2s var(--cm-ease);
+        }
+
+            .cm-root .cm-btn:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 8px 18px rgba(245, 165, 36, .30);
+                filter: brightness(1.05);
+            }
+
+            .cm-root .cm-btn:active {
+                transform: translateY(0);
+                box-shadow: 0 1px 0 rgba(0, 0, 0, .25);
+            }
+
+        .cm-root .cm-clear {
+            display: inline-flex;
+            align-items: center;
+            padding: 9px 16px;
+            font-size: 14px;
+            color: var(--cm-text);
+            text-decoration: none;
+            border-radius: 10px;
+            border: 1px solid var(--cm-line);
+            background: transparent;
+            transition: transform .2s var(--cm-ease), background .2s var(--cm-ease), border-color .2s var(--cm-ease);
+        }
+
+            .cm-root .cm-clear:hover {
+                transform: translateY(-2px);
+                background: var(--cm-side);
+                border-color: var(--cm-amber);
+            }
+
+            .cm-root .cm-btn:focus-visible,
+            .cm-root .cm-clear:focus-visible,
+            .cm-root .cm-view:focus-visible,
+            .cm-root .cm-tab:focus-visible {
+                outline: 2px solid var(--cm-amber);
+                outline-offset: 3px;
+            }
+
+        /* ---------- Segmented filter tabs ---------- */
+        .cm-root .cm-filterbar {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .cm-root .cm-tabs-scroll {
+            max-width: 100%;
+            overflow-x: auto;
+            scrollbar-width: none;
+        }
+
+            .cm-root .cm-tabs-scroll::-webkit-scrollbar {
+                display: none;
+            }
+
+        .cm-root .cm-tabs {
+            position: relative;
+            display: inline-flex;
+            gap: 2px;
+            padding: 4px;
+            background: var(--cm-side);
+            border: 1px solid var(--cm-line);
+            border-radius: 999px;
+        }
+
+        .cm-root .cm-pill {
+            position: absolute;
+            top: 4px;
+            bottom: 4px;
+            left: 0;
+            width: 0;
+            border-radius: 999px;
+            z-index: 0;
+            pointer-events: none;
+            background: linear-gradient(135deg, #FFD9A0 0%, #F5B04A 100%);
+            box-shadow: 0 4px 14px rgba(245, 165, 36, .28);
+            transform: translateX(0);
+        }
+
+            .cm-root .cm-pill.cm-animate {
+                transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            }
+
+        .cm-root .cm-tab {
+            position: relative;
+            z-index: 1;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 14px;
+            font-size: 13px;
+            font-weight: 600;
+            white-space: nowrap;
+            cursor: pointer;
+            color: rgba(255, 217, 160, .78);
+            background: transparent;
+            border: 0;
+            border-radius: 999px;
+            transition: color .25s var(--cm-ease);
+        }
+
+            .cm-root .cm-tab:hover {
+                color: var(--cm-text);
+            }
+
+            .cm-root .cm-tab[aria-selected="true"] {
+                color: var(--cm-bg);
+            }
+
+        .cm-root .cm-tab-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--d);
+            box-shadow: 0 0 0 2px rgba(32, 26, 23, .30);
+        }
+
+        .cm-root .cm-tab-count {
+            min-width: 22px;
+            padding: 1px 7px;
+            font-size: 11px;
+            font-weight: 700;
+            text-align: center;
+            font-variant-numeric: tabular-nums;
+            border-radius: 999px;
+            color: var(--cm-text);
+            background: rgba(0, 0, 0, .28);
+            transition: background .25s var(--cm-ease), color .25s var(--cm-ease);
+        }
+
+        .cm-root .cm-tab[aria-selected="true"] .cm-tab-count {
+            color: var(--cm-bg);
+            background: rgba(32, 26, 23, .16);
+        }
+
+        .cm-root .cm-meta {
+            margin: 0;
+            font-size: 12px;
+            color: var(--cm-muted);
+            font-variant-numeric: tabular-nums;
+        }
+
+            .cm-root .cm-meta strong {
+                color: var(--cm-text);
+                font-weight: 700;
+            }
+
+        /* ---------- Floating row cards (narrow / stacked layout = default) ---------- */
+        .cm-root .cm-list {
+            container-type: inline-size;
+            container-name: cm;
+        }
+
+        .cm-root .cm-rows {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .cm-root .cm-head {
+            display: none;
+        }
+
+        .cm-root .cm-row {
+            --rc: var(--cm-green);
+            display: grid;
+            align-items: center;
+            gap: 10px 12px;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            grid-template-areas:
+                "who who action"
+                "campus role status"
+                "email email email"
+                "orders spent spent";
+            padding: 14px 18px 14px 16px;
+            box-sizing: border-box;
+            background: var(--cm-card);
+            color: var(--cm-text);
+            border: 1px solid var(--cm-line);
+            border-left: 4px solid var(--rc);
+            border-radius: 10px;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, .22);
+            transition: background .2s var(--cm-ease), transform .2s var(--cm-ease), box-shadow .2s var(--cm-ease), border-color .2s var(--cm-ease);
+        }
+
+            .cm-root .cm-row[hidden] {
+                display: none;
+            }
+
+            .cm-root .cm-row.cm-enter {
+                animation: cm-in .38s var(--cm-ease) both;
+                animation-delay: calc(var(--i, 0) * 28ms);
+            }
+
+            .cm-root .cm-row:hover,
+            .cm-root .cm-row:focus-within {
+                background: var(--cm-hover);
+                transform: translateX(4px);
+                box-shadow: 0 10px 24px rgba(0, 0, 0, .38);
+            }
+
+        .cm-root .cm-acc-active {
+            --rc: var(--cm-green);
+        }
+
+        .cm-root .cm-acc-admin {
+            --rc: var(--cm-amber);
+        }
+
+        .cm-root .cm-acc-barista {
+            --rc: var(--cm-cyan);
+        }
+
+        .cm-root .cm-acc-locked {
+            --rc: var(--cm-crimson);
+        }
+
+        .cm-root .cm-who {
+            grid-area: who;
+        }
+
+        .cm-root .cm-campus {
+            grid-area: campus;
+        }
+
+        .cm-root .cm-email {
+            grid-area: email;
+        }
+
+        .cm-root .cm-role {
+            grid-area: role;
+        }
+
+        .cm-root .cm-status {
+            grid-area: status;
+        }
+
+        .cm-root .cm-orders {
+            grid-area: orders;
+        }
+
+        .cm-root .cm-spent {
+            grid-area: spent;
+        }
+
+        .cm-root .cm-action {
+            grid-area: action;
+            justify-self: end;
+        }
+
+        .cm-root .cm-cell {
+            min-width: 0;
+            font-size: 13px;
+        }
+
+        /* Identity */
+        .cm-root .cm-who {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .cm-root .cm-avatar {
+            flex: 0 0 auto;
+            display: inline-grid;
+            place-items: center;
+            width: 38px;
+            height: 38px;
+            font-size: 15px;
+            font-weight: 800;
+            line-height: 1;
+            border-radius: 50%;
+            color: var(--cm-text);
+            background: var(--cm-inner);
+            background: color-mix(in srgb, var(--rc) 24%, var(--cm-inner));
+            border: 2px solid var(--rc);
+        }
+
+        .cm-root .cm-who-text {
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .cm-root .cm-name {
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--cm-text);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .cm-root .cm-freq {
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--cm-amber);
+            white-space: nowrap;
+        }
+
+            .cm-root .cm-freq i {
+                font-size: 10px;
+                margin-right: 3px;
+            }
+
+        /* Campus ID badge */
+        .cm-root .cm-campus-badge {
+            display: inline-block;
+            max-width: 100%;
+            box-sizing: border-box;
+            padding: 3px 9px;
+            font-family: var(--cm-mono);
+            font-size: 12px;
+            font-weight: 600;
+            letter-spacing: .05em;
+            color: var(--cm-text);
+            background: var(--cm-inner);
+            border: 1px solid var(--cm-line);
+            border-radius: 6px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            vertical-align: middle;
+        }
+
+        /* Email */
+        .cm-root .cm-email {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: rgba(255, 217, 160, .68);
+        }
+
+        .cm-root .cm-email-text {
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .cm-root .cm-verified {
+            flex: 0 0 auto;
+            font-size: 12px;
+        }
+
+        .cm-root .cm-verified-yes {
+            color: #86EFAC;
+        }
+
+        .cm-root .cm-verified-no {
+            color: #FCD34D;
+        }
+
+        /* Role + status pills */
+        .cm-root .cm-role {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+        }
+
+        .cm-root .cm-pillrole {
+            display: inline-block;
+            padding: 3px 10px;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: .03em;
+            border-radius: 999px;
+            border: 1px solid transparent;
+            white-space: nowrap;
+        }
+
+        .cm-root .cm-role-admin {
+            color: #FFC857;
+            background: rgba(245, 165, 36, .15);
+            border-color: rgba(245, 165, 36, .40);
+        }
+
+        .cm-root .cm-role-barista {
+            color: #67E8F9;
+            background: rgba(34, 211, 238, .13);
+            border-color: rgba(34, 211, 238, .38);
+        }
+
+        .cm-root .cm-role-customer {
+            color: var(--cm-text);
+            background: var(--cm-inner);
+            border-color: var(--cm-line);
+        }
+
+        .cm-root .cm-role-none {
+            color: var(--cm-muted);
+        }
+
+        .cm-root .cm-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 4px 11px;
+            font-size: 12px;
+            font-weight: 700;
+            border-radius: 999px;
+            border: 1px solid transparent;
+            white-space: nowrap;
+        }
+
+        .cm-root .cm-badge-active {
+            color: #86EFAC;
+            background: rgba(74, 222, 128, .13);
+            border-color: rgba(74, 222, 128, .35);
+        }
+
+        .cm-root .cm-badge-locked {
+            color: #FCA5A5;
+            background: rgba(229, 72, 77, .16);
+            border-color: rgba(229, 72, 77, .42);
+        }
+
+        .cm-root .cm-dot {
+            position: relative;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: currentColor;
+        }
+
+        .cm-root .cm-badge-active .cm-dot::after {
+            content: "";
+            position: absolute;
+            inset: 0;
+            border-radius: 50%;
+            background: currentColor;
+            animation: cm-pulse 1.8s ease-out infinite;
+        }
+
+        /* Numbers */
+        .cm-root .cm-num {
+            font-variant-numeric: tabular-nums;
+            font-feature-settings: "tnum";
+            font-weight: 600;
+        }
+
+            .cm-root .cm-num::before {
+                content: attr(data-label);
+                display: block;
+                margin-bottom: 2px;
+                font-size: 10px;
+                font-weight: 700;
+                letter-spacing: .08em;
+                text-transform: uppercase;
+                color: var(--cm-muted);
+            }
+
+        .cm-root .cm-spent {
+            color: var(--cm-text);
+            font-weight: 700;
+        }
+
+        /* View pill button with sliding arrow */
+        .cm-root .cm-view {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 86px;
+            box-sizing: border-box;
+            padding: 6px 14px;
+            font-size: 12px;
+            font-weight: 700;
+            text-decoration: none;
+            white-space: nowrap;
+            color: var(--cm-text);
+            background: transparent;
+            border: 1px solid var(--cm-line);
+            border-radius: 999px;
+            transition: background .2s var(--cm-ease), color .2s var(--cm-ease), border-color .2s var(--cm-ease), box-shadow .2s var(--cm-ease);
+        }
+
+            .cm-root .cm-view i {
+                width: 0;
+                opacity: 0;
+                overflow: hidden;
+                font-size: 11px;
+                transform: translateX(-8px);
+                transition: width .25s var(--cm-ease), margin .25s var(--cm-ease), opacity .25s var(--cm-ease), transform .25s var(--cm-ease);
+            }
+
+        .cm-root .cm-row:hover .cm-view,
+        .cm-root .cm-row:focus-within .cm-view {
+            border-color: var(--cm-amber);
+            background: rgba(245, 165, 36, .14);
+        }
+
+            .cm-root .cm-row:hover .cm-view i,
+            .cm-root .cm-row:focus-within .cm-view i,
+            .cm-root .cm-view:hover i,
+            .cm-root .cm-view:focus-visible i {
+                width: 12px;
+                margin-left: 7px;
+                opacity: 1;
+                transform: translateX(0);
+            }
+
+        .cm-root .cm-view:hover {
+            background: var(--cm-text);
+            color: var(--cm-bg);
+            border-color: var(--cm-text);
+            box-shadow: 0 6px 16px rgba(245, 165, 36, .28);
+        }
+
+        /* Empty state */
+        .cm-root .cm-empty {
+            padding: 36px 16px;
+            text-align: center;
+            font-size: 14px;
+            color: rgba(255, 217, 160, .70);
+            background: var(--cm-card);
+            border: 1px dashed var(--cm-line);
+            border-radius: 10px;
+        }
+
+            .cm-root .cm-empty[hidden] {
+                display: none;
+            }
+
+            .cm-root .cm-empty i {
+                display: block;
+                margin-bottom: 10px;
+                font-size: 22px;
+                color: var(--cm-muted);
+            }
+
+    /* ---------- Wide layout: single-line floating rows ---------- */
+    @@container cm (min-width: 960px) {
+        .cm-root .cm-head,
+        .cm-root .cm-row {
+            grid-template-areas: none;
+            grid-template-columns: minmax(190px, 1.5fr) 118px minmax(0, 1.6fr) 104px 92px 64px 112px 96px;
+            gap: 0 12px;
+        }
+
+        .cm-root .cm-head {
+            display: grid;
+            align-items: center;
+            padding: 0 18px 0 20px;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: .09em;
+            text-transform: uppercase;
+            color: var(--cm-muted);
+            margin-bottom: 8px;
+        }
+
+        .cm-root .cm-row > .cm-cell {
+            grid-area: auto;
+        }
+
+        .cm-root .cm-num::before {
+            display: none;
+        }
+
+        .cm-root .cm-num,
+        .cm-root .cm-head .cm-h-num {
+            text-align: right;
+        }
+
+        .cm-root .cm-action {
+            justify-self: end;
+        }
+    }
+
+    /* ---------- Motion ---------- */
+    @@keyframes cm-in {
+        from {
+            opacity: 0;
+            transform: translateY(8px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    @@keyframes cm-pulse {
+        0% {
+            transform: scale(1);
+            opacity: .65;
+        }
+
+        100% {
+            transform: scale(2.8);
+            opacity: 0;
+        }
+    }
+
+    @@media (prefers-reduced-motion: reduce) {
+        .cm-root *, .cm-root *::before, .cm-root *::after {
+            animation: none !important;
+            transition-duration: .01ms !important;
+        }
+
+        .cm-root .cm-row:hover, .cm-root .cm-row:focus-within {
+            transform: none;
+        }
+    }
+</style>
+
+<div class="tw cm-root">
+    <div class="cm-top">
         <h1 class="font-serif text-2xl font-bold">Customer <span class="text-caramel">Management</span></h1>
-        <form method="get" action="/Admin/Customers" class="flex gap-2">
-            <input type="text" name="q" value="@Model.Query" placeholder="Name, email, campus ID, role"
-                   class="w-64 rounded-lg border border-white/20 bg-black/30 px-3 py-2 text-sm text-cream placeholder-neutral-500" />
-            <button type="submit" class="rounded-lg bg-caramel px-4 py-2 text-sm font-semibold text-espresso">Search</button>
+        <form method="get" action="/Admin/Customers" class="cm-form">
+            <div class="cm-search">
+                <i class="fa-solid fa-magnifying-glass cm-search-icon" aria-hidden="true"></i>
+                <input type="text" name="q" value="@Model.Query" placeholder="Name, email, campus ID, role"
+                       class="cm-input" autocomplete="off" aria-label="Search customers" />
+            </div>
+            <button type="submit" class="cm-btn">Search</button>
             @if (!string.IsNullOrWhiteSpace(Model.Query))
             {
-                <a href="/Admin/Customers" class="rounded-lg border border-white/20 px-4 py-2 text-sm text-cream no-underline">Clear</a>
+                <a href="/Admin/Customers" class="cm-clear">Clear</a>
             }
         </form>
     </div>
@@ -27,51 +773,231 @@
         <div class="mb-3 rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-red-300">@err</div>
     }
 
-    <div class="overflow-x-auto rounded-xl border border-white/10 bg-card">
-        <table class="min-w-full text-left text-sm">
-            <thead class="bg-black/30 text-xs uppercase tracking-wider text-caramel">
-                <tr>
-                    <th class="px-4 py-3">Name</th>
-                    <th class="px-4 py-3">Campus ID</th>
-                    <th class="px-4 py-3">Email</th>
-                    <th class="px-4 py-3">Role(s)</th>
-                    <th class="px-4 py-3">Email Confirmed</th>
-                    <th class="px-4 py-3">Account</th>
-                    <th class="px-4 py-3">Orders</th>
-                    <th class="px-4 py-3">Total Spent</th>
-                    <th class="px-4 py-3"></th>
-                </tr>
-            </thead>
-            <tbody class="divide-y divide-white/5">
-                @foreach (var r in Model.Rows)
-                {
-                    <tr>
-                        <td class="px-4 py-3">
-                            @r.FullName
+    <div class="cm-filterbar">
+        <div class="cm-tabs-scroll">
+            <div class="cm-tabs" id="cmTabs" role="tablist" aria-label="Filter accounts by role">
+                <span class="cm-pill" id="cmPill" aria-hidden="true"></span>
+                <button type="button" class="cm-tab" role="tab" data-filter="all" aria-selected="true" tabindex="0" style="--d:#FFD9A0">
+                    <span class="cm-tab-dot"></span>All <span class="cm-tab-count" data-count="all">@totalCount</span>
+                </button>
+                <button type="button" class="cm-tab" role="tab" data-filter="student" aria-selected="false" tabindex="-1" style="--d:#4ADE80">
+                    <span class="cm-tab-dot"></span>Student <span class="cm-tab-count" data-count="student">@studentCount</span>
+                </button>
+                <button type="button" class="cm-tab" role="tab" data-filter="barista" aria-selected="false" tabindex="-1" style="--d:#22D3EE">
+                    <span class="cm-tab-dot"></span>Barista <span class="cm-tab-count" data-count="barista">@baristaCount</span>
+                </button>
+                <button type="button" class="cm-tab" role="tab" data-filter="admin" aria-selected="false" tabindex="-1" style="--d:#F5A524">
+                    <span class="cm-tab-dot"></span>Admin <span class="cm-tab-count" data-count="admin">@adminCount</span>
+                </button>
+            </div>
+        </div>
+        <p class="cm-meta" id="cmMeta" aria-live="polite">Showing <strong>@totalCount</strong> of @totalCount accounts</p>
+    </div>
+
+    <div class="cm-list" role="table" aria-label="Customer accounts">
+        <div class="cm-head" role="row">
+            <div role="columnheader">Customer</div>
+            <div role="columnheader">Campus ID</div>
+            <div role="columnheader">Email</div>
+            <div role="columnheader">Role</div>
+            <div role="columnheader">Account</div>
+            <div role="columnheader" class="cm-h-num">Orders</div>
+            <div role="columnheader" class="cm-h-num">&#8369; Total Spent</div>
+            <div role="columnheader"><span class="sr-only">Actions</span></div>
+        </div>
+
+        <div class="cm-rows" role="rowgroup" id="cmRows">
+            @foreach (var r in Model.Rows)
+            {
+                var initial = string.IsNullOrWhiteSpace(r.FullName) ? "?" : r.FullName.Trim().Substring(0, 1).ToUpperInvariant();
+                <div class="cm-row cm-enter cm-acc-@(Accent(r))" role="row"
+                     data-role="@Bucket(r)" data-state="@(r.IsLocked ? "locked" : "active")"
+                     style="--i:@(Math.Min(rowIndex, 12))">
+
+                    <div class="cm-cell cm-who" role="cell">
+                        <span class="cm-avatar" aria-hidden="true">@initial</span>
+                        <div class="cm-who-text">
+                            <span class="cm-name" title="@r.FullName">@r.FullName</span>
                             @if (r.IsFrequent)
                             {
-                                <span class="ml-1 rounded-full bg-caramel/15 px-2 py-0.5 text-xs font-semibold text-caramel">Frequent Customer</span>
+                                <span class="cm-freq"><i class="fa-solid fa-star" aria-hidden="true"></i>Frequent Customer</span>
                             }
-                        </td>
-                        <td class="px-4 py-3">@r.CampusId</td>
-                        <td class="px-4 py-3">@r.Email</td>
-                        <td class="px-4 py-3">@(r.Roles.Count == 0 ? "—" : string.Join(", ", r.Roles))</td>
-                        <td class="px-4 py-3">
-                            <span class="@(r.EmailConfirmed ? "text-green-300" : "text-amber-300")">@(r.EmailConfirmed ? "Yes" : "No")</span>
-                        </td>
-                        <td class="px-4 py-3">
-                            <span class="rounded-full px-2.5 py-1 text-xs font-semibold @(r.IsLocked ? "bg-red-500/15 text-red-300" : "bg-green-500/15 text-green-300")">@(r.IsLocked ? "Locked" : "Active")</span>
-                        </td>
-                        <td class="px-4 py-3">@r.TotalOrders</td>
-                        <td class="px-4 py-3">₱@r.TotalSpent.ToString("N2")</td>
-                        <td class="px-4 py-3 text-right"><a href="/Admin/CustomerDetails/@r.Id" class="text-caramel no-underline hover:underline">View</a></td>
-                    </tr>
-                }
-                @if (Model.Rows.Count == 0)
-                {
-                    <tr><td colspan="9" class="px-4 py-8 text-center text-neutral-400">No users found.</td></tr>
-                }
-            </tbody>
-        </table>
+                        </div>
+                    </div>
+
+                    <div class="cm-cell cm-campus" role="cell">
+                        @if (string.IsNullOrWhiteSpace(r.CampusId))
+                        {
+                            <span class="cm-role-none">&mdash;</span>
+                        }
+                        else
+                        {
+                            <span class="cm-campus-badge" title="Campus ID">@r.CampusId</span>
+                        }
+                    </div>
+
+                    <div class="cm-cell cm-email" role="cell">
+                        @if (string.IsNullOrWhiteSpace(r.Email))
+                        {
+                            <span class="cm-role-none">&mdash;</span>
+                        }
+                        else
+                        {
+                            <span class="cm-email-text" title="@r.Email">@r.Email</span>
+                            if (r.EmailConfirmed)
+                            {
+                                <i class="fa-solid fa-circle-check cm-verified cm-verified-yes" title="Email confirmed" aria-hidden="true"></i>
+                                <span class="sr-only">Email confirmed</span>
+                            }
+                            else
+                            {
+                                <i class="fa-solid fa-triangle-exclamation cm-verified cm-verified-no" title="Email not confirmed" aria-hidden="true"></i>
+                                <span class="sr-only">Email not confirmed</span>
+                            }
+                        }
+                    </div>
+
+                    <div class="cm-cell cm-role" role="cell">
+                        @if (r.Roles.Count == 0)
+                        {
+                            <span class="cm-role-none">&mdash;</span>
+                        }
+                        else
+                        {
+                            foreach (var role in r.Roles)
+                            {
+                                <span class="cm-pillrole @RolePillClass(role)">@role</span>
+                            }
+                        }
+                    </div>
+
+                    <div class="cm-cell cm-status" role="cell">
+                        <span class="cm-badge @(r.IsLocked ? "cm-badge-locked" : "cm-badge-active")">
+                            <span class="cm-dot" aria-hidden="true"></span>@(r.IsLocked ? "Locked" : "Active")
+                        </span>
+                    </div>
+
+                    <div class="cm-cell cm-num cm-orders" role="cell" data-label="Orders">@r.TotalOrders</div>
+
+                    <div class="cm-cell cm-num cm-spent" role="cell" data-label="&#8369; Total Spent">&#8369;@r.TotalSpent.ToString("N2")</div>
+
+                    <div class="cm-cell cm-action" role="cell">
+                        <a href="/Admin/CustomerDetails/@r.Id" class="cm-view" aria-label="View @r.FullName">View<i class="fa-solid fa-arrow-right" aria-hidden="true"></i></a>
+                    </div>
+                </div>
+                rowIndex++;
+            }
+        </div>
+
+        <div class="cm-empty" id="cmEmpty" role="status" @(Model.Rows.Count == 0 ? "" : "hidden")>
+            <i class="fa-solid fa-user-slash" aria-hidden="true"></i>
+            <span id="cmEmptyText">No users found.</span>
+        </div>
     </div>
 </div>
+
+@section Scripts {
+    <script>
+        (function() {
+            var tabsEl = document.getElementById('cmTabs');
+            var pill = document.getElementById('cmPill');
+            var meta = document.getElementById('cmMeta');
+            var empty = document.getElementById('cmEmpty');
+            var emptyText = document.getElementById('cmEmptyText');
+            if (!tabsEl || !pill) return;
+
+            var tabs = Array.prototype.slice.call(tabsEl.querySelectorAll('.cm-tab'));
+            var rows = Array.prototype.slice.call(document.querySelectorAll('#cmRows .cm-row'));
+            var current = 'all';
+
+            var labels = { all: 'All', student: 'Student', barista: 'Barista', admin: 'Admin' };
+
+            // Live counts straight from the rendered rows
+            function updateCounts() {
+                var c = { all: rows.length, student: 0, barista: 0, admin: 0 };
+                rows.forEach(function(r) { var k = r.getAttribute('data-role'); if (c[k] !== undefined) c[k]++; });
+                Object.keys(c).forEach(function(k) {
+                    var el = tabsEl.querySelector('[data-count="' + k + '"]');
+                    if (el) el.textContent = c[k];
+                });
+                return c;
+            }
+
+            // Sliding active pill
+            function movePill(btn, animate) {
+                if (!btn) return;
+                if (animate) pill.classList.add('cm-animate');
+                pill.style.width = btn.offsetWidth + 'px';
+                pill.style.transform = 'translateX(' + btn.offsetLeft + 'px)';
+            }
+
+            function applyFilter(filter) {
+                current = filter;
+                var shown = 0;
+                rows.forEach(function(r) {
+                    var match = filter === 'all' || r.getAttribute('data-role') === filter;
+                    r.hidden = !match;
+                    if (match) {
+                        r.style.setProperty('--i', Math.min(shown, 12));
+                        r.classList.remove('cm-enter');
+                        void r.offsetWidth; // restart staggered entrance
+                        r.classList.add('cm-enter');
+                        shown++;
+                    }
+                });
+
+                if (meta) meta.innerHTML = 'Showing <strong>' + shown + '</strong> of ' + rows.length + ' accounts';
+
+                if (empty) {
+                    var none = shown === 0;
+                    empty.hidden = !none;
+                    if (none && emptyText) {
+                        emptyText.textContent = rows.length === 0
+                            ? 'No users found.'
+                            : 'No ' + labels[filter].toLowerCase() + ' accounts in these results.';
+                    }
+                }
+            }
+
+            function select(btn, focus) {
+                tabs.forEach(function(t) {
+                    var on = t === btn;
+                    t.setAttribute('aria-selected', on ? 'true' : 'false');
+                    t.setAttribute('tabindex', on ? '0' : '-1');
+                });
+                movePill(btn, true);
+                applyFilter(btn.getAttribute('data-filter'));
+                if (focus) btn.focus();
+            }
+
+            tabs.forEach(function(t, i) {
+                t.addEventListener('click', function() { select(t, false); });
+                t.addEventListener('keydown', function(e) {
+                    var next = null;
+                    if (e.key === 'ArrowRight') next = tabs[(i + 1) % tabs.length];
+                    else if (e.key === 'ArrowLeft') next = tabs[(i - 1 + tabs.length) % tabs.length];
+                    else if (e.key === 'Home') next = tabs[0];
+                    else if (e.key === 'End') next = tabs[tabs.length - 1];
+                    if (next) { e.preventDefault(); select(next, true); }
+                });
+            });
+
+            function activeTab() {
+                return tabs.filter(function(t) { return t.getAttribute('aria-selected') === 'true'; })[0] || tabs[0];
+            }
+
+            updateCounts();
+            movePill(activeTab(), false);          // initial placement without animation
+            window.requestAnimationFrame(function() { pill.classList.add('cm-animate'); });
+
+            // Keep the pill aligned if layout / fonts / viewport change
+            window.addEventListener('resize', function() { pill.classList.remove('cm-animate'); movePill(activeTab(), false); });
+            if (document.fonts && document.fonts.ready) {
+                document.fonts.ready.then(function() { pill.classList.remove('cm-animate'); movePill(activeTab(), false); });
+            }
+            if (window.ResizeObserver) {
+                new ResizeObserver(function() { movePill(activeTab(), false); }).observe(tabsEl);
+            }
+        })();
+    </script>
+}

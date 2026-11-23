@@ -11,65 +11,66 @@
         (OrderStatus.Preparing, "Preparing", "fa-mug-hot", preparing),
         (OrderStatus.Ready, "Ready for Pickup", "fa-bag-shopping", ready)
     };
-    const string tab = "kds-tab flex shrink-0 items-center gap-2 rounded-full border border-solid border-white/15 bg-white/5 px-4 py-2 text-sm font-semibold text-cream";
+    const string tab = "kds-tab flex shrink-0 items-center gap-2 rounded-full border border-solid border-[#644234] bg-[#422C22] px-4 py-2 text-sm font-semibold text-[#FFD9A0] hover:bg-[#5C3B2E]";
+    const string cnt = "rounded-full bg-[#201A17] px-2 py-0.5 text-xs text-[#FFD9A0]";
 }
 
-<div class="tw">
-    <div class="mx-auto max-w-[1600px] px-4 pt-6 pb-6">
+<div class="tw kds-page">
+    <div class="mx-auto w-full max-w-[1600px] px-4 pt-6 pb-6">
         <div class="flex flex-wrap items-end justify-between gap-4">
             <div>
-                <h1 class="font-serif text-3xl font-bold text-cream">Order Status</h1>
-                <p class="mt-1 text-sm text-neutral-400">
+                <h1 class="font-serif text-3xl font-bold text-[#FFD9A0]">Order Status</h1>
+                <p class="mt-1 text-sm text-[#FFD9A0]/70">
                     <span id="kds-live" class="inline-flex items-center gap-2"><span class="kds-dot"></span><span id="kds-live-text">Connecting…</span></span>
                 </p>
             </div>
 
             <form asp-action="Scan" method="post" data-kds-form class="flex w-full flex-wrap items-center gap-2 sm:w-auto">
                 <input id="kds-scan-input" name="token" autocomplete="off" maxlength="512" placeholder="Scan or paste pickup QR token"
-                       class="min-w-0 flex-1 rounded-xl border border-solid border-white/15 bg-card px-4 py-2.5 text-sm text-cream placeholder:text-neutral-500 focus:border-[#00754a] focus:outline-none focus:ring-2 focus:ring-[#00754a]/40 sm:w-80 sm:flex-none" />
-                <button type="submit" class="rounded-full bg-[#00754a] px-5 py-2.5 text-sm font-bold text-white transition hover:bg-[#1e3932]">
+                       class="min-w-0 flex-1 rounded-xl border border-solid border-[#644234] bg-[#422C22] px-4 py-2.5 text-sm text-[#FFD9A0] placeholder:text-[#815F51] focus:border-[#FFD9A0] focus:outline-none focus:ring-2 focus:ring-[#FFD9A0]/30 sm:w-80 sm:flex-none" />
+                <button type="submit" class="rounded-full bg-[#FFD9A0] px-5 py-2.5 text-sm font-bold text-[#201A17] transition hover:brightness-110">
                     <i class="fa-solid fa-qrcode mr-1.5"></i>Verify pickup
                 </button>
             </form>
         </div>
 
-        <p id="kds-scan-hint" class="mt-2 rounded-xl border border-solid border-amber-300/40 bg-amber-400/10 px-4 py-2 text-sm font-semibold text-amber-200" hidden></p>
+        <p id="kds-scan-hint" class="mt-2 rounded-xl border border-solid border-[#FFD9A0] bg-[#FFD9A0]/10 px-4 py-2 text-sm font-semibold text-[#FFD9A0]" hidden></p>
 
         <div id="kds-flash" class="mt-3" aria-live="polite">
             @if (TempData["Success"] is string ok)
             {
-                <p class="rounded-xl bg-green-500/10 p-3 text-sm text-green-300">@ok</p>
+                <p class="rounded-xl border border-solid border-emerald-400/30 bg-emerald-500/10 p-3 text-sm text-emerald-300">@ok</p>
             }
             @if (TempData["Error"] is string err)
             {
-                <p class="rounded-xl bg-red-500/10 p-3 text-sm text-red-300">@err</p>
+                <p class="rounded-xl border border-solid border-red-400/30 bg-red-500/10 p-3 text-sm text-red-300">@err</p>
             }
         </div>
 
-        <div class="mt-4 flex flex-col gap-3 rounded-2xl border border-solid border-white/10 bg-[#1e3932]/40 p-3 lg:flex-row lg:items-center lg:justify-between">
-            <div class="flex gap-2 overflow-x-auto" role="group" aria-label="Filter orders by status">
-                <button type="button" data-filter="all" aria-pressed="true" class="@tab">All <span data-count="all" class="rounded-full bg-black/30 px-2 py-0.5 text-xs">@Model.Count</span></button>
-                <button type="button" data-filter="Placed" aria-pressed="false" class="@tab">Placed / New <span data-count="Placed" class="rounded-full bg-black/30 px-2 py-0.5 text-xs">@placed.Count</span></button>
-                <button type="button" data-filter="Preparing" aria-pressed="false" class="@tab">Preparing <span data-count="Preparing" class="rounded-full bg-black/30 px-2 py-0.5 text-xs">@preparing.Count</span></button>
-                <button type="button" data-filter="Ready" aria-pressed="false" class="@tab">Ready for Pickup <span data-count="Ready" class="rounded-full bg-black/30 px-2 py-0.5 text-xs">@ready.Count</span></button>
+        <div class="mt-4 flex flex-col gap-3 rounded-2xl border border-solid border-[#644234] bg-[#36241C] p-3 lg:flex-row lg:items-center lg:justify-between">
+            <div class="kds-scroll flex gap-2 overflow-x-auto pb-1" role="group" aria-label="Filter orders by status">
+                <button type="button" data-filter="all" aria-pressed="true" class="@tab">All <span data-count="all" class="@cnt">@Model.Count</span></button>
+                <button type="button" data-filter="Placed" aria-pressed="false" class="@tab">Placed / New <span data-count="Placed" class="@cnt">@placed.Count</span></button>
+                <button type="button" data-filter="Preparing" aria-pressed="false" class="@tab">Preparing <span data-count="Preparing" class="@cnt">@preparing.Count</span></button>
+                <button type="button" data-filter="Ready" aria-pressed="false" class="@tab">Ready for Pickup <span data-count="Ready" class="@cnt">@ready.Count</span></button>
             </div>
             <div class="relative w-full lg:w-80">
-                <i class="fa-solid fa-magnifying-glass pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-sm text-neutral-500" aria-hidden="true"></i>
+                <i class="fa-solid fa-magnifying-glass pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-sm text-[#815F51]" aria-hidden="true"></i>
                 <input id="kds-search" type="search" autocomplete="off" placeholder="Search order # or customer name" aria-label="Search orders"
-                       class="w-full rounded-xl border border-solid border-white/15 bg-espresso py-2.5 pl-10 pr-3 text-sm text-cream placeholder:text-neutral-500 focus:border-[#00754a] focus:outline-none focus:ring-2 focus:ring-[#00754a]/40" />
+                       class="w-full rounded-xl border border-solid border-[#644234] bg-[#201A17] py-2.5 pl-10 pr-3 text-sm text-[#FFD9A0] placeholder:text-[#815F51] focus:border-[#FFD9A0] focus:outline-none focus:ring-2 focus:ring-[#FFD9A0]/30" />
             </div>
         </div>
 
         <div id="kds-board" class="kds-board mt-4" data-url="/Barista/Status">
             @foreach (var col in columns)
             {
-                <section data-col="@col.Status" class="flex min-h-0 flex-col overflow-hidden rounded-2xl border border-solid border-white/10 bg-black/20">
-                    <header class="flex items-center justify-between border-b border-solid border-white/10 bg-[#1e3932]/70 px-4 py-3">
-                        <h2 class="font-serif text-lg font-bold text-cream"><i class="fa-solid @col.Icon mr-2 text-caramel" aria-hidden="true"></i>@col.Title</h2>
-                        <span data-col-count class="rounded-full bg-black/30 px-3 py-0.5 text-sm font-bold text-cream">@col.Orders.Count</span>
+                <section data-col="@col.Status" class="kds-col flex min-h-0 flex-col overflow-hidden rounded-2xl border border-solid border-[#644234] bg-[#36241C]">
+                    <header class="flex items-center justify-between gap-2 border-b border-solid border-[#644234] bg-[#36241C] px-4 py-3">
+                        <h2 class="min-w-0 truncate font-serif text-lg font-bold text-[#FFD9A0]"><i class="fa-solid @col.Icon mr-2" aria-hidden="true"></i>@col.Title</h2>
+                        <span data-col-count class="shrink-0 rounded-full bg-[#201A17] px-3 py-0.5 text-sm font-bold text-[#FFD9A0]">@col.Orders.Count</span>
                     </header>
-                    <div data-col-body class="kds-scroll max-h-[65vh] min-h-0 flex-1 space-y-3 overflow-y-auto p-3 lg:max-h-none">
-                        <p data-empty hidden="@(col.Orders.Count > 0 ? "hidden" : null)" class="rounded-xl border border-dashed border-white/15 px-4 py-8 text-center text-sm text-neutral-500">No orders here</p>
+                    <div data-col-body class="kds-col-body kds-scroll min-h-0 flex-1 space-y-3 p-3">
+                        <p data-empty hidden="@(col.Orders.Count > 0 ? "hidden" : null)" class="rounded-xl border border-dashed border-[#644234] px-4 py-8 text-center text-sm text-[#815F51]">No orders here</p>
                         @foreach (var o in col.Orders)
                         {
                             <partial name="_OrderCard" model="o" />

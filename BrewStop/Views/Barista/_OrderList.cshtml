@@ -1,22 +1,22 @@
 ﻿@model List<BrewStop.Models.Order>
-<div class="tw">
-    <div class="mx-auto max-w-[1600px] px-4 pt-6 pb-6">
+<div class="tw kds-page">
+    <div class="mx-auto w-full max-w-[1600px] px-4 pt-6 pb-6">
         <div class="flex flex-wrap items-end justify-between gap-4">
             <div>
-                <h1 class="font-serif text-3xl font-bold text-cream">@ViewData["Heading"]</h1>
-                <p class="mt-1 text-sm text-neutral-400">@ViewData["Sub"]</p>
-                <p class="mt-1 text-sm text-neutral-400">
+                <h1 class="font-serif text-3xl font-bold text-[#FFD9A0]">@ViewData["Heading"]</h1>
+                <p class="mt-1 text-sm text-[#FFD9A0]/70">@ViewData["Sub"]</p>
+                <p class="mt-1 text-sm text-[#FFD9A0]/70">
                     <span id="kds-live" class="inline-flex items-center gap-2"><span class="kds-dot"></span><span id="kds-live-text">Connecting…</span></span>
                 </p>
             </div>
             <div class="flex w-full flex-wrap items-center gap-3 sm:w-auto">
-                <span class="rounded-full border border-solid border-white/15 bg-[#1e3932]/60 px-4 py-2 text-sm font-bold text-cream">
+                <span class="rounded-full border border-solid border-[#644234] bg-[#36241C] px-4 py-2 text-sm font-bold text-[#FFD9A0]">
                     <span data-count="all">@Model.Count</span> @ViewData["CountLabel"]
                 </span>
                 <div class="relative min-w-0 flex-1 sm:w-72 sm:flex-none">
-                    <i class="fa-solid fa-magnifying-glass pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-sm text-neutral-500" aria-hidden="true"></i>
+                    <i class="fa-solid fa-magnifying-glass pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-sm text-[#815F51]" aria-hidden="true"></i>
                     <input id="kds-search" type="search" autocomplete="off" placeholder="Search order # or customer" aria-label="Search orders"
-                           class="w-full rounded-xl border border-solid border-white/15 bg-espresso py-2.5 pl-10 pr-3 text-sm text-cream placeholder:text-neutral-500 focus:border-[#00754a] focus:outline-none focus:ring-2 focus:ring-[#00754a]/40" />
+                           class="w-full rounded-xl border border-solid border-[#644234] bg-[#36241C] py-2.5 pl-10 pr-3 text-sm text-[#FFD9A0] placeholder:text-[#815F51] focus:border-[#FFD9A0] focus:outline-none focus:ring-2 focus:ring-[#FFD9A0]/30" />
                 </div>
             </div>
         </div>
@@ -24,17 +24,17 @@
         <div id="kds-flash" class="mt-3" aria-live="polite">
             @if (TempData["Success"] is string ok)
             {
-                <p class="rounded-xl bg-green-500/10 p-3 text-sm text-green-300">@ok</p>
+                <p class="rounded-xl border border-solid border-emerald-400/30 bg-emerald-500/10 p-3 text-sm text-emerald-300">@ok</p>
             }
             @if (TempData["Error"] is string err)
             {
-                <p class="rounded-xl bg-red-500/10 p-3 text-sm text-red-300">@err</p>
+                <p class="rounded-xl border border-solid border-red-400/30 bg-red-500/10 p-3 text-sm text-red-300">@err</p>
             }
         </div>
 
         <div id="kds-board" class="kds-list kds-scroll mt-4" data-url="@ViewData["Url"]">
             <p data-empty-all hidden="@(Model.Count > 0 ? "hidden" : null)" data-none="@ViewData["EmptyText"]" data-nomatch="No orders match your search."
-               class="rounded-2xl border border-dashed border-white/15 px-4 py-14 text-center text-sm text-neutral-500">@ViewData["EmptyText"]</p>
+               class="rounded-2xl border border-dashed border-[#644234] bg-[#36241C] px-4 py-14 text-center text-sm text-[#815F51]">@ViewData["EmptyText"]</p>
             @foreach (var o in Model)
             {
                 <partial name="_OrderCard" model="o" />

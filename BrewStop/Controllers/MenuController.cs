@@ -9,13 +9,20 @@ namespace BrewStop.Controllers;
 
 public class MenuController(ApplicationDbContext db, IImageResolver images) : Controller
 {
-    public async Task<IActionResult> Index(string? category, string? searchTerm)
+    private static readonly string[] PriceProps =
+        { "PriceModifier", "PriceDelta", "PriceAdjustment", "ExtraPrice", "AdditionalPrice", "ExtraCost", "Price" };
+
+    private static readonly string[] SortKeys = { "popularity", "price_asc", "price_desc" };
+
+    public async Task<IActionResult> Index(string? category, string? searchTerm, string? group, string? sort)
     {
         if (User.IsInRole(AppRoles.Admin))
             return RedirectToAction("Dashboard", "Admin");
 
         var term = searchTerm?.Trim();
         if (term is { Length: > 100 }) term = term[..100];
+
+        var sortKey = SortKeys.Contains(sort?.Trim().ToLowerInvariant()) ? sort!.Trim().ToLowerInvariant() : "popularity";
 
         var categories = await db.Categories
             .AsNoTracking()
@@ -41,54 +48,107 @@ public class MenuController(ApplicationDbContext db, IImageResolver images) : Co
             Name = c.Name,
             Group = c.Group,
             ImageUrl = images.Resolve(c.ImageUrl, c.Name),
-            Items = c.MenuItems.Select(m => new MenuItemDto
+            Items = c.MenuItems.Select(m =>
             {
-                Id = m.Id,
-                Name = m.Name,
-                Description = m.Description,
-                Price = m.Price,
-                ImageUrl = images.Resolve(m.ImageUrl, m.Name),
-                BadgeText = m.BadgeText,
-                CategorySlug = c.Slug,
-                CategoryName = c.Name,
-                Stock = stock.GetValueOrDefault(m.Id, 0),
-                AverageRating = stats.GetValueOrDefault(m.Id).Avg,
-                ReviewCount = stats.GetValueOrDefault(m.Id).Count,
-                IsFavorite = favs.Contains(m.Id)
+                var s = stats.GetValueOrDefault(m.Id);
+                return new MenuItemDto
+                {
+                    Id = m.Id,
+                    Name = m.Name,
+                    Description = m.Description,
+                    Price = m.Price,
+                    ImageUrl = images.Resolve(m.ImageUrl, m.Name),
+                    BadgeText = m.BadgeText,
+                    CategorySlug = c.Slug,
+                    CategoryName = c.Name,
+                    Group = c.Group,
+                    Stock = stock.GetValueOrDefault(m.Id, 0),
+                    AverageRating = s.Avg,
+                    ReviewCount = s.Count,
+                    Popularity = s.Count + s.Avg / 10d,
+                    IsFavorite = favs.Contains(m.Id)
+                };
             }).ToList()
         }).ToList();
 
-        var active = string.IsNullOrWhiteSpace(category) ? "all" : category.Trim();
-        if (!active.Equals("all", StringComparison.OrdinalIgnoreCase) &&
-            !all.Any(c => c.Slug.Equals(active, StringComparison.OrdinalIgnoreCase)))
-            active = "all";
+        var flat = all.SelectMany(c => c.Items).ToList();
 
-        var visible = all
-            .Where(c => active.Equals("all", StringComparison.OrdinalIgnoreCase) ||
-                        c.Slug.Equals(active, StringComparison.OrdinalIgnoreCase))
+        var activeGroup = "Drinks";
+        if (!string.IsNullOrWhiteSpace(group))
+        {
+            activeGroup = group.Trim().Equals("Drinks", StringComparison.OrdinalIgnoreCase) ? "Drinks" : "Pastries";
+        }
+        else if (!string.IsNullOrWhiteSpace(category))
+        {
+            var match = all.FirstOrDefault(c => c.Slug.Equals(category.Trim(), StringComparison.OrdinalIgnoreCase));
+            if (match is not null && !IsDrink(match.Group)) activeGroup = "Pastries";
+        }
+
+        IEnumerable<MenuItemDto> Filter(IEnumerable<MenuItemDto> src) =>
+            string.IsNullOrEmpty(term)
+                ? src
+                : src.Where(i =>
+                    i.Name.Contains(term, StringComparison.OrdinalIgnoreCase) ||
+                    i.Description.Contains(term, StringComparison.OrdinalIgnoreCase) ||
+                    i.CategoryName.Contains(term, StringComparison.OrdinalIgnoreCase));
+
+        List<MenuItemDto> Sort(IEnumerable<MenuItemDto> src) => (sortKey switch
+        {
+            "price_asc" => src.OrderBy(i => i.Price).ThenBy(i => i.Name),
+            "price_desc" => src.OrderByDescending(i => i.Price).ThenBy(i => i.Name),
+            _ => src.OrderByDescending(i => i.IsAvailable)
+                    .ThenByDescending(i => i.Popularity)
+                    .ThenBy(i => i.Name)
+        }).ToList();
+
+        var drinksAll = flat.Where(i => IsDrink(i.Group)).ToList();
+        var pastriesAll = flat.Where(i => !IsDrink(i.Group)).ToList();
+
+        var pairPool = drinksAll.OrderByDescending(d => d.Popularity).Select(d => d.Name).Take(6).ToList();
+        for (var i = 0; i < pastriesAll.Count; i++)
+            pastriesAll[i].PairingNote = pairPool.Count > 0 ? pairPool[i % pairPool.Count] : string.Empty;
+
+        var drinks = Sort(Filter(drinksAll));
+        var pastries = Sort(Filter(pastriesAll));
+
+        var hero = drinksAll.Where(d => !string.IsNullOrWhiteSpace(d.ImageUrl))
+                            .OrderByDescending(d => d.Popularity)
+                            .FirstOrDefault()
+                   ?? flat.FirstOrDefault(d => !string.IsNullOrWhiteSpace(d.ImageUrl));
+
+        var sizes = await db.ItemSizes.AsNoTracking()
+            .Where(s => s.IsActive).OrderBy(s => s.SortOrder).ToListAsync();
+        var addOns = await db.AddOns.AsNoTracking()
+            .Where(a => a.IsActive).OrderBy(a => a.Name).ToListAsync();
+
+        await LoadStaffReferenceAsync();
+
+        var visibleCats = all
             .Select(c => new CategoryGroupDto
             {
                 Slug = c.Slug,
                 Name = c.Name,
                 Group = c.Group,
                 ImageUrl = c.ImageUrl,
-                Items = string.IsNullOrEmpty(term)
-                    ? c.Items
-                    : c.Items.Where(i =>
-                        i.Name.Contains(term, StringComparison.OrdinalIgnoreCase) ||
-                        i.Description.Contains(term, StringComparison.OrdinalIgnoreCase)).ToList()
+                Items = Sort(Filter(c.Items))
             })
             .Where(c => c.Items.Count > 0)
             .ToList();
 
-        await LoadStaffReferenceAsync();
-
         return View(new MenuViewModel
         {
-            Categories = visible,
+            Categories = visibleCats,
             Pills = all,
-            ActiveCategory = active.ToLowerInvariant(),
-            SearchTerm = term
+            ActiveCategory = activeGroup.ToLowerInvariant(),
+            ActiveGroup = activeGroup,
+            Sort = sortKey,
+            SearchTerm = term,
+            Drinks = drinks,
+            Pastries = pastries,
+            HeroImageUrl = hero?.ImageUrl ?? string.Empty,
+            HeroImageAlt = hero?.Name ?? "BrewStop coffee",
+            Sizes = sizes.Select(s => new SizeOptionDto { Id = s.Id, Name = s.Name, Price = PriceOf(s) }).ToList(),
+            AddOns = addOns.Select(a => new AddOnOptionDto { Id = a.Id, Name = a.Name, Price = PriceOf(a) }).ToList()
         });
     }
 
@@ -142,6 +202,7 @@ public class MenuController(ApplicationDbContext db, IImageResolver images) : Co
                 BadgeText = m.BadgeText,
                 CategorySlug = m.Category.Slug,
                 CategoryName = m.Category.Name,
+                Group = m.Category.Group,
                 Stock = stock,
                 AverageRating = ratings.Count > 0 ? ratings.Average() : 0,
                 ReviewCount = ratings.Count,
@@ -164,6 +225,27 @@ public class MenuController(ApplicationDbContext db, IImageResolver images) : Co
             .Where(s => s.IsActive).OrderBy(s => s.SortOrder).ToListAsync();
         ViewBag.RefAddOns = await db.AddOns.AsNoTracking()
             .Where(a => a.IsActive).OrderBy(a => a.Name).ToListAsync();
+    }
+
+    private static bool IsDrink(string? group) =>
+        string.Equals(group?.Trim(), "Drinks", StringComparison.OrdinalIgnoreCase);
+
+    private static decimal PriceOf(object entity)
+    {
+        var type = entity.GetType();
+        foreach (var name in PriceProps)
+        {
+            var p = type.GetProperty(name);
+            if (p is null) continue;
+            switch (p.GetValue(entity))
+            {
+                case decimal d: return d;
+                case double db: return (decimal)db;
+                case float f: return (decimal)f;
+                case int i: return i;
+            }
+        }
+        return 0m;
     }
 
     private static string DisplayName(string? full)

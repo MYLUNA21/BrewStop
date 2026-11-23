@@ -11,10 +11,13 @@
     var inv = CultureInfo.InvariantCulture;
     var activeIsDrinks = Model.ActiveGroup == "Drinks";
 
+    var hasDrinkAddOns = Model.AddOns.Any(a => string.Equals(a.Group?.Trim(), "Drinks", StringComparison.OrdinalIgnoreCase));
+    var hasPastryAddOns = Model.AddOns.Any(a => string.Equals(a.Group?.Trim(), "Pastries", StringComparison.OrdinalIgnoreCase));
+
     var optionsJson = JsonSerializer.Serialize(new
     {
         sizes = Model.Sizes.Select(s => new { id = s.Id, name = s.Name, price = s.Price }),
-        addOns = Model.AddOns.Select(a => new { id = a.Id, name = a.Name, price = a.Price })
+        addOns = Model.AddOns.Select(a => new { id = a.Id, name = a.Name, price = a.Price, group = a.Group })
     }, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
 
     const string tabBase = "relative z-10 flex flex-1 flex-col items-start gap-0.5 rounded-2xl px-5 py-3 text-left transition-colors duration-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-caramel";
@@ -114,6 +117,7 @@
                 <div data-grid class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
                     @foreach (var item in Model.Drinks)
                     {
+                        var itemAddOns = refAddOns.Where(a => string.Equals(a.Group?.Trim(), item.Group?.Trim(), StringComparison.OrdinalIgnoreCase)).ToList();
                         <article data-card data-id="@item.Id" data-group="drinks"
                                  data-name="@item.Name" data-desc="@item.Description"
                                  data-price="@item.Price.ToString("0.00", inv)" data-img="@item.ImageUrl"
@@ -188,7 +192,7 @@
                                             <i class="fa-solid fa-ruler-vertical me-1"></i>Sizes
                                         </span>
                                     }
-                                    @if (Model.AddOns.Count > 0)
+                                    @if (hasDrinkAddOns)
                                     {
                                         <span class="rounded-full border border-caramel/40 bg-black/50 px-2.5 py-1 text-[11px] font-semibold text-caramel backdrop-blur">
                                             <i class="fa-solid fa-plus me-1"></i>Add-Ons
@@ -212,7 +216,21 @@
                                     <p class="shrink-0 text-lg font-bold text-caramel">&#8369;@item.Price.ToString("N2")</p>
                                 </div>
                                 <p class="mt-1 text-xs uppercase tracking-widest text-neutral-500">@item.CategoryName</p>
-                                <div class="mt-2"><partial name="_RatingBadge" model="item" /></div>
+
+                                @* Inline Rating Badge *@
+                                <div class="mt-2 flex items-center gap-1.5 text-xs">
+                                    @if (item.ReviewCount > 0)
+                                    {
+                                        <span class="inline-flex items-center gap-1 rounded-full bg-amber-400/15 px-2.5 py-0.5 font-semibold text-amber-300">
+                                            <i class="fa-solid fa-star text-[10px]"></i> @item.RatingText
+                                        </span>
+                                        <span class="text-neutral-400">(@item.ReviewCount)</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-neutral-500">No reviews yet</span>
+                                    }
+                                </div>
 
                                 <div class="mt-3 border-l-2 border-caramel/60 pl-3">
                                     <p class="text-[11px] font-semibold uppercase tracking-[0.2em] text-caramel">Tasting notes</p>
@@ -228,7 +246,17 @@
                                         }
                                         @if (isBarista)
                                         {
-                                            <partial name="_BaristaReference" model="(item.Group, refSizes, refAddOns)" />
+                                            <div class="space-y-1.5 rounded-2xl border border-white/10 bg-espresso/60 p-3 text-xs text-neutral-300">
+                                                @if (refSizes.Count > 0)
+                                                {
+                                                    <p><span class="font-semibold text-caramel">Sizes:</span> @string.Join(", ", refSizes.Select(s => s.Name))</p>
+                                                }
+                                                @if (itemAddOns.Count > 0)
+                                                {
+                                                    <p><span class="font-semibold text-caramel">Add-ons:</span> @string.Join(", ", itemAddOns.Select(a => a.Name))</p>
+                                                }
+                                                <p><span class="font-semibold text-caramel">Stock:</span> @item.Stock available</p>
+                                            </div>
                                         }
                                         else
                                         {
@@ -272,6 +300,7 @@
                 <div data-grid class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
                     @foreach (var item in Model.Pastries)
                     {
+                        var itemAddOns = refAddOns.Where(a => string.Equals(a.Group?.Trim(), item.Group?.Trim(), StringComparison.OrdinalIgnoreCase)).ToList();
                         <article data-card data-id="@item.Id" data-group="pastries"
                                  data-name="@item.Name" data-desc="@item.Description"
                                  data-price="@item.Price.ToString("0.00", inv)" data-img="@item.ImageUrl"
@@ -335,6 +364,350 @@
                                         <i class="fa-regular fa-heart"></i>
                                     </a>
                                 }
+
+                                @if (hasPastryAddOns)
+                                {
+                                    <div class="pointer-events-none absolute bottom-3 left-3 flex flex-wrap gap-1.5">
+                                        <span class="rounded-full border border-caramel/40 bg-[#1a0f0d]/85 px-2.5 py-1 text-[11px] font-semibold text-caramel backdrop-blur">
+                                            <i class="fa-solid fa-plus me-1"></i>Add-Ons
+                                        </span>
+                                    </div>
+                                }
                             </div>
 
-                            <div class="flex flex-1
+                            <div class="flex flex-1 flex-col p-5">
+                                <div class="flex items-start justify-between gap-3">
+                                    <h3 class="font-serif text-xl font-semibold text-[#1a0f0d]">
+                                        @if (isBarista)
+                                        {
+                                            <a asp-action="Details" asp-route-id="@item.Id" class="transition hover:text-[#8a5a2b]">@item.Name</a>
+                                        }
+                                        else
+                                        {
+                                            <button type="button" data-open class="text-left transition hover:text-[#8a5a2b]">@item.Name</button>
+                                        }
+                                    </h3>
+                                    <p class="shrink-0 text-lg font-bold text-[#8a5a2b]">&#8369;@item.Price.ToString("N2")</p>
+                                </div>
+                                <p class="mt-1 text-xs uppercase tracking-widest text-[#1a0f0d]/50">@item.CategoryName</p>
+
+                                @* Inline Rating Badge *@
+                                <div class="mt-2 flex items-center gap-1.5 text-xs">
+                                    @if (item.ReviewCount > 0)
+                                    {
+                                        <span class="inline-flex items-center gap-1 rounded-full bg-[#1a0f0d]/10 px-2.5 py-0.5 font-semibold text-[#8a5a2b]">
+                                            <i class="fa-solid fa-star text-[10px]"></i> @item.RatingText
+                                        </span>
+                                        <span class="text-[#1a0f0d]/60">(@item.ReviewCount)</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-[#1a0f0d]/45">No reviews yet</span>
+                                    }
+                                </div>
+
+                                <p class="mt-3 line-clamp-3 text-sm text-[#1a0f0d]/75">@item.Description</p>
+
+                                @if (!string.IsNullOrWhiteSpace(item.PairingNote))
+                                {
+                                    <p class="mt-3 text-xs font-semibold text-[#8a5a2b]">
+                                        <i class="fa-solid fa-mug-hot me-1"></i>Pairs well with @item.PairingNote
+                                    </p>
+                                }
+
+                                <div class="mt-auto pt-5">
+                                    @if (item.IsAvailable)
+                                    {
+                                        @if (item.Stock <= 5)
+                                        {
+                                            <p class="mb-2 text-xs font-semibold text-amber-700">Only @item.Stock left</p>
+                                        }
+                                        @if (isBarista)
+                                        {
+                                            <div class="space-y-1.5 rounded-2xl border border-[#1a0f0d]/15 bg-[#e9dfcf]/70 p-3 text-xs text-[#1a0f0d]/80">
+                                                @if (itemAddOns.Count > 0)
+                                                {
+                                                    <p><span class="font-semibold text-[#8a5a2b]">Add-ons:</span> @string.Join(", ", itemAddOns.Select(a => a.Name))</p>
+                                                }
+                                                <p><span class="font-semibold text-[#8a5a2b]">Stock:</span> @item.Stock available</p>
+                                            </div>
+                                        }
+                                        else
+                                        {
+                                            <button type="button" data-open
+                                                    class="w-full rounded-full bg-[#1a0f0d] px-5 py-3 text-center text-sm font-semibold text-caramel transition hover:bg-[#3a2418]">
+                                                <i class="fa-solid fa-cookie-bite me-1"></i> Customize &amp; Add to Cart
+                                            </button>
+                                        }
+                                    }
+                                    else
+                                    {
+                                        <button type="button" disabled aria-disabled="true"
+                                                class="w-full cursor-not-allowed rounded-full bg-black/10 px-5 py-3 text-sm font-semibold text-[#1a0f0d]/40">
+                                            Sold Out
+                                        </button>
+                                    }
+                                </div>
+                            </div>
+                        </article>
+                    }
+                </div>
+
+                <div data-empty class="@(Model.Pastries.Count == 0 ? "" : "hidden") mt-6 rounded-3xl border border-white/10 bg-card px-6 py-14 text-center">
+                    <div class="mx-auto grid size-16 place-items-center rounded-full bg-caramel/10 text-2xl text-caramel"><i class="fa-solid fa-cookie-bite"></i></div>
+                    <h3 class="mt-4 font-serif text-xl font-semibold text-cream">No pastries match your search</h3>
+                    <a asp-action="Index" asp-route-group="Pastries" class="mt-4 inline-block text-sm font-semibold text-caramel transition hover:text-cream">Clear filters</a>
+                </div>
+            </section>
+
+        </div>
+    </div>
+
+    @* ============ CUSTOMIZE MODAL ============ *@
+    @if (!isBarista)
+    {
+        <div id="menu-modal" class="fixed inset-0 z-50 hidden items-end justify-center bg-black/70 p-0 backdrop-blur-sm sm:items-center sm:p-6"
+             role="dialog" aria-modal="true" aria-labelledby="mm-title">
+            <div class="relative flex max-h-[92vh] w-full max-w-3xl flex-col overflow-hidden rounded-t-3xl border border-white/10 bg-card shadow-2xl sm:rounded-3xl md:flex-row">
+                <button type="button" id="mm-close" aria-label="Close"
+                        class="absolute right-3 top-3 z-10 grid size-9 place-items-center rounded-full bg-black/60 text-cream transition hover:bg-black/80">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+
+                <div class="relative h-52 shrink-0 bg-espresso md:h-auto md:w-2/5">
+                    <img id="mm-img" src="" alt="" referrerpolicy="no-referrer" class="size-full object-cover"
+                         onerror="this.onerror=null;this.src='@Url.Content("~/images/placeholder.svg")'" />
+                    <span id="mm-badge" class="absolute left-3 top-3 hidden rounded-full bg-black/60 px-3 py-1 text-xs font-semibold text-caramel backdrop-blur"></span>
+                </div>
+
+                <form asp-controller="Cart" asp-action="Add" method="post" id="mm-form"
+                      class="flex min-h-0 flex-1 flex-col md:w-3/5">
+                    <input type="hidden" name="MenuItemId" id="mm-id" value="" />
+
+                    <div class="flex-1 space-y-5 overflow-y-auto p-6">
+                        <div>
+                            <h2 id="mm-title" class="pr-10 font-serif text-2xl font-bold text-cream"></h2>
+                            <p id="mm-desc" class="mt-2 text-sm text-neutral-300"></p>
+                        </div>
+
+                        <fieldset id="mm-sizes-wrap" class="hidden">
+                            <legend class="mb-2 text-xs font-semibold uppercase tracking-[0.2em] text-caramel">Size</legend>
+                            <div id="mm-sizes" class="grid grid-cols-3 gap-3"></div>
+                        </fieldset>
+
+                        <fieldset id="mm-addons-wrap" class="hidden">
+                            <legend class="mb-2 text-xs font-semibold uppercase tracking-[0.2em] text-caramel">Add-ons</legend>
+                            <div id="mm-addons" class="space-y-2"></div>
+                        </fieldset>
+
+                        <div>
+                            <label for="mm-qty" class="mb-2 block text-xs font-semibold uppercase tracking-[0.2em] text-caramel">Quantity</label>
+                            <input id="mm-qty" name="Quantity" type="number" min="1" max="10" value="1"
+                                   class="w-24 rounded-full border border-white/15 bg-espresso px-4 py-2 text-sm text-cream focus:border-caramel focus:outline-none" />
+                        </div>
+                    </div>
+
+                    <div class="flex items-center justify-between gap-4 border-t border-white/10 bg-espresso/60 p-5">
+                        <p class="text-sm text-neutral-300">Total <span class="ms-1 font-serif text-xl font-bold text-caramel">&#8369;<span id="mm-total">0.00</span></span></p>
+                        <button type="submit" class="rounded-full bg-caramel px-6 py-3 text-sm font-semibold text-black transition hover:bg-cream">
+                            <i class="fa-solid fa-cart-plus me-1"></i> Add to Cart
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    }
+</div>
+
+<script id="menu-options" type="application/json">@Html.Raw(optionsJson)</script>
+<script>
+    (function() {
+        var tabs = document.querySelectorAll('#menu-tabs [data-tab]');
+        var indicator = document.getElementById('tab-indicator');
+        var groupInput = document.getElementById('f-group');
+        var sort = document.getElementById('menu-sort');
+        var form = document.getElementById('menu-form');
+        var search = document.getElementById('menu-search');
+
+        function moveIndicator(tab) {
+            if (!tab || !indicator) return;
+            indicator.style.width = tab.offsetWidth + 'px';
+            indicator.style.transform = 'translateX(' + tab.offsetLeft + 'px)';
+        }
+
+        function activate(name) {
+            tabs.forEach(function(t) {
+                var on = t.dataset.tab === name;
+                t.setAttribute('aria-selected', on ? 'true' : 'false');
+                t.classList.toggle('text-black', on);
+                t.classList.toggle('text-cream', !on);
+                var panel = document.getElementById('panel-' + t.dataset.tab);
+                if (panel) panel.classList.toggle('hidden', !on);
+                if (on) moveIndicator(t);
+            });
+            if (groupInput) groupInput.value = name === 'drinks' ? 'Drinks' : 'Pastries';
+        }
+
+        tabs.forEach(function(t) {
+            t.addEventListener('click', function() { activate(t.dataset.tab); });
+        });
+
+        var current = document.querySelector('#menu-tabs [aria-selected="true"]');
+        if (current) activate(current.dataset.tab);
+        window.addEventListener('resize', function() {
+            var c = document.querySelector('#menu-tabs [aria-selected="true"]');
+            if (c) moveIndicator(c);
+        });
+
+        if (sort && form) sort.addEventListener('change', function() { form.submit(); });
+
+        /* live search */
+        if (search) {
+            search.addEventListener('input', function() {
+                var q = search.value.trim().toLowerCase();
+                document.querySelectorAll('[data-panel]').forEach(function(panel) {
+                    var shown = 0;
+                    panel.querySelectorAll('[data-card]').forEach(function(card) {
+                        var hit = !q || (card.dataset.search || '').indexOf(q) !== -1;
+                        card.classList.toggle('hidden', !hit);
+                        if (hit) shown++;
+                    });
+                    var count = panel.querySelector('[data-count]');
+                    if (count) count.textContent = shown + ' items';
+                    var empty = panel.querySelector('[data-empty]');
+                    if (empty) empty.classList.toggle('hidden', shown !== 0);
+                });
+            });
+        }
+
+        /* customize modal */
+        var modal = document.getElementById('menu-modal');
+        if (!modal) return;
+
+        var opts = { sizes: [], addOns: [] };
+        try { opts = JSON.parse(document.getElementById('menu-options').textContent) || opts; } catch (e) { }
+
+        var el = {
+            id: document.getElementById('mm-id'),
+            img: document.getElementById('mm-img'),
+            badge: document.getElementById('mm-badge'),
+            title: document.getElementById('mm-title'),
+            desc: document.getElementById('mm-desc'),
+            sizesWrap: document.getElementById('mm-sizes-wrap'),
+            sizes: document.getElementById('mm-sizes'),
+            addonsWrap: document.getElementById('mm-addons-wrap'),
+            addons: document.getElementById('mm-addons'),
+            qty: document.getElementById('mm-qty'),
+            total: document.getElementById('mm-total'),
+            form: document.getElementById('mm-form'),
+            close: document.getElementById('mm-close')
+        };
+        var base = 0;
+        var maxQty = 10;
+        var lastFocus = null;
+
+        function peso(n) {
+            return n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        }
+
+        function esc(s) {
+            var d = document.createElement('div');
+            d.textContent = s == null ? '' : String(s);
+            return d.innerHTML;
+        }
+
+        function recalc() {
+            var unit = base;
+            var size = el.form.querySelector('input[name="SizeId"]:checked');
+            if (size) unit += parseFloat(size.dataset.delta) || 0;
+            el.form.querySelectorAll('input[name="AddOnIds"]:checked').forEach(function(c) {
+                unit += parseFloat(c.dataset.price) || 0;
+            });
+            var qty = Math.min(maxQty, Math.max(1, parseInt(el.qty.value, 10) || 1));
+            el.total.textContent = peso(unit * qty);
+        }
+
+        function openModal(card) {
+            var d = card.dataset;
+            var isDrink = d.group === 'drinks';
+            var stock = parseInt(d.stock, 10);
+            base = parseFloat(d.price) || 0;
+            maxQty = !isNaN(stock) && stock > 0 ? Math.min(10, stock) : 10;
+
+            el.id.value = d.id;
+            el.title.textContent = d.name || '';
+            el.desc.textContent = d.desc || '';
+            el.img.src = d.img || '';
+            el.img.alt = d.name || '';
+            el.badge.textContent = d.badge || '';
+            el.badge.classList.toggle('hidden', !d.badge);
+            el.qty.max = String(maxQty);
+            el.qty.value = 1;
+
+            el.sizes.innerHTML = '';
+            if (isDrink && opts.sizes.length) {
+                opts.sizes.forEach(function(s, i) {
+                    var label = document.createElement('label');
+                    label.className = 'cursor-pointer';
+                    label.innerHTML =
+                        '<input type="radio" name="SizeId" value="' + s.id + '" data-delta="' + s.price + '" class="peer sr-only"' + (i === 0 ? ' checked' : '') + ' />' +
+                        '<span class="block rounded-xl border border-white/15 px-3 py-3 text-center text-sm text-cream peer-checked:border-caramel peer-checked:bg-caramel/10 peer-focus-visible:ring-2 peer-focus-visible:ring-caramel">' +
+                        esc(s.name) +
+                        '<span class="block text-xs text-neutral-400">' + (s.price > 0 ? '+\u20B1' + peso(s.price) : 'Base price') + '</span></span>';
+                    el.sizes.appendChild(label);
+                });
+                el.sizesWrap.classList.remove('hidden');
+            } else {
+                el.sizesWrap.classList.add('hidden');
+            }
+
+            el.addons.innerHTML = '';
+            var list = opts.addOns.filter(function(a) { return (a.group || '').trim().toLowerCase() === d.group; });
+            if (list.length) {
+                list.forEach(function(a) {
+                    var label = document.createElement('label');
+                    label.className = 'flex cursor-pointer items-center justify-between gap-3 rounded-xl border border-white/10 px-4 py-2.5 text-sm text-cream transition hover:border-caramel/50';
+                    label.innerHTML =
+                        '<span class="flex items-center gap-3"><input type="checkbox" name="AddOnIds" value="' + a.id + '" data-price="' + a.price + '" class="size-4 accent-[#d4a373]" />' + esc(a.name) + '</span>' +
+                        '<span class="text-xs text-neutral-400">' + (a.price > 0 ? '+\u20B1' + peso(a.price) : 'Free') + '</span>';
+                    el.addons.appendChild(label);
+                });
+                el.addonsWrap.classList.remove('hidden');
+            } else {
+                el.addonsWrap.classList.add('hidden');
+            }
+
+            recalc();
+            lastFocus = document.activeElement;
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            document.body.style.overflow = 'hidden';
+            el.close.focus();
+        }
+
+        function closeModal() {
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+            document.body.style.overflow = '';
+            if (lastFocus && lastFocus.focus) lastFocus.focus();
+        }
+
+        document.addEventListener('click', function(e) {
+            var trigger = e.target.closest ? e.target.closest('[data-open]') : null;
+            if (!trigger) return;
+            var card = trigger.closest('[data-card]');
+            if (!card) return;
+            var stock = parseInt(card.dataset.stock, 10);
+            if (!isNaN(stock) && stock <= 0) return;
+            openModal(card);
+        });
+
+        el.close.addEventListener('click', closeModal);
+        modal.addEventListener('click', function(e) { if (e.target === modal) closeModal(); });
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape' && !modal.classList.contains('hidden')) closeModal();
+        });
+        el.form.addEventListener('change', recalc);
+        el.form.addEventListener('input', recalc);
+    })();
+</script>

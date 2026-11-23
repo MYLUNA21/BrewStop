@@ -45,6 +45,7 @@ namespace BrewStop.Models
         public int Id { get; set; }
         public string Name { get; set; } = string.Empty;
         public decimal Price { get; set; }
+        public string Group { get; set; } = "Drinks";
     }
 
     public class MenuViewModel

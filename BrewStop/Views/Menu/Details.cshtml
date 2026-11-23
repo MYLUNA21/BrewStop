@@ -50,12 +50,10 @@
                     }
                     else if (item.Stock <= 5)
                     {
-
                         <text>Only @item.Stock left</text>
                     }
                     else
                     {
-
                         <text>In stock</text>
                     }
                 </p>
@@ -106,7 +104,7 @@
                             <li class="flex items-center gap-3 text-xs text-neutral-300">
                                 <span class="w-10 shrink-0">@star &#9733;</span>
                                 <span class="h-2 flex-1 overflow-hidden rounded-full bg-white/10">
-                                    <span class="block h-full rounded-full bg-amber-400 w-[@(pct)%]"></span>
+                                    <span class="block h-full rounded-full bg-amber-400" style="width:@(pct)%"></span>
                                 </span>
                                 <span class="w-6 shrink-0 text-right text-neutral-400">@count</span>
                             </li>

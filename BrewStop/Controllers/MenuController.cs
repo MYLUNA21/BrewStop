@@ -148,7 +148,7 @@ public class MenuController(ApplicationDbContext db, IImageResolver images) : Co
             HeroImageUrl = hero?.ImageUrl ?? string.Empty,
             HeroImageAlt = hero?.Name ?? "BrewStop coffee",
             Sizes = sizes.Select(s => new SizeOptionDto { Id = s.Id, Name = s.Name, Price = PriceOf(s) }).ToList(),
-            AddOns = addOns.Select(a => new AddOnOptionDto { Id = a.Id, Name = a.Name, Price = PriceOf(a) }).ToList()
+            AddOns = addOns.Select(a => new AddOnOptionDto { Id = a.Id, Name = a.Name, Price = PriceOf(a), Group = a.Group }).ToList()
         });
     }
 

@@ -1,0 +1,22 @@
+﻿@model (string Group, List<BrewStop.Models.ItemSize> Sizes, List<BrewStop.Models.AddOn> AddOns)
+@{
+    var isDrink = string.Equals(Model.Group?.Trim(), "Drinks", StringComparison.OrdinalIgnoreCase);
+    var groupAddOns = Model.AddOns
+        .Where(a => string.Equals(a.Group?.Trim(), Model.Group?.Trim(), StringComparison.OrdinalIgnoreCase))
+        .ToList();
+}
+
+<div class="space-y-1.5 rounded-2xl border border-white/10 bg-espresso/60 p-3 text-xs text-neutral-300">
+    @if (isDrink && Model.Sizes.Count > 0)
+    {
+        <p><span class="font-semibold text-caramel">Sizes:</span> @string.Join(", ", Model.Sizes.Select(s => s.Name))</p>
+    }
+    @if (groupAddOns.Count > 0)
+    {
+        <p><span class="font-semibold text-caramel">Add-ons:</span> @string.Join(", ", groupAddOns.Select(a => a.Name))</p>
+    }
+    @if ((!isDrink || Model.Sizes.Count == 0) && groupAddOns.Count == 0)
+    {
+        <p class="text-neutral-400">Standard item (no size or add-on options)</p>
+    }
+</div>

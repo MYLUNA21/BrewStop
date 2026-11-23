@@ -1,4 +1,32 @@
-﻿@inject BrewStop.Services.ICartService Cart
+﻿@using Microsoft.AspNetCore.Identity
+@inject BrewStop.Services.ICartService Cart
+@inject UserManager<ApplicationUser> Users
+@{
+    var isAdmin = User.IsInRole("Admin");
+    var isBarista = User.IsInRole("Barista");
+    var staffShell = isBarista && !isAdmin;   // Barista-only accounts get the sidebar shell
+    var isCustomer = !isAdmin && !isBarista;
+    var signedIn = User.Identity?.IsAuthenticated == true;
+
+    ApplicationUser? me = null;
+    var hasPwd = false;
+    if (signedIn && isCustomer)
+    {
+        me = await Users.GetUserAsync(User);
+        hasPwd = me is not null && await Users.HasPasswordAsync(me);
+    }
+
+    var ctl = ViewContext.RouteData.Values["controller"]?.ToString() ?? "";
+    var act = ViewContext.RouteData.Values["action"]?.ToString() ?? "";
+    string Nav(string c, string a = "Index") =>
+        "rounded-full px-4 py-2 text-sm font-medium transition-colors duration-200 " +
+        (string.Equals(ctl, c, StringComparison.OrdinalIgnoreCase) && (c != "Home" || string.Equals(act, a, StringComparison.OrdinalIgnoreCase))
+            ? "bg-caramel/15 text-caramel"
+            : "text-neutral-200 hover:bg-caramel/10 hover:text-caramel");
+    const string ib = "relative grid size-10 place-items-center rounded-full text-cream transition hover:bg-caramel/15 hover:text-caramel focus:outline-none focus-visible:ring-2 focus-visible:ring-caramel";
+    const string panelBase = "invisible absolute right-0 top-full z-50 mt-2 origin-top-right scale-95 rounded-2xl border border-caramel/20 bg-card/95 text-cream opacity-0 shadow-2xl backdrop-blur transition duration-150 ease-out";
+    const string item = "flex items-center gap-3 rounded-xl px-3 py-2 text-sm text-neutral-200 transition hover:bg-caramel/10 hover:text-caramel";
+}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -9,7 +37,6 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
 
-    
     <script src="https://cdn.tailwindcss.com/3.4.17"></script>
     <script>
             tailwind.config = {
@@ -19,155 +46,385 @@
             };
     </script>
 </head>
-<body>
-    <!-- Elegant Glassmorphic Navbar -->
-    <header>
-        <nav class="navbar navbar-expand-sm navbar-toggleable-sm navbar-dark border-bottom box-shadow mb-3 fixed-top glass-nav">
-            <div class="container">
-                <a class="navbar-brand d-flex align-items-center gap-2" asp-area="" asp-controller="Home" asp-action="Index">
-                    <div class="brand-icon-wrapper">
-                        <i class="fa-solid fa-mug-hot"></i>
-                    </div>
-                    <span class="fw-bold tracking-wider font-serif">Brew<span class="text-caramel">Stop</span></span>
-                </a>
-                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target=".navbar-collapse" aria-controls="navbarSupportedContent"
-                        aria-expanded="false" aria-label="Toggle navigation">
-                    <span class="navbar-toggler-icon"></span>
-                </button>
-                <div class="navbar-collapse collapse d-sm-inline-flex justify-content-between">
-                    <ul class="navbar-nav ms-auto align-items-center gap-3">
-                        <li class="nav-item">
-                            <a class="nav-link text-light px-3 py-2 rounded-pill hover-effect" asp-controller="Home" asp-action="Index">Home</a>
-                        </li>
-                        @if (!User.IsInRole("Admin"))
-                        {
-                            <li class="nav-item">
-                                <a class="nav-link text-light px-3 py-2 rounded-pill hover-effect" asp-controller="Menu" asp-action="Index">Menu</a>
-                            </li>
-                        }
+<body style="@(staffShell ? "margin:0 !important; padding:0 !important; background:#1a0f0d !important;" : null)">
+    @if (staffShell)
+    {
+        <style>
+                .staff-shell .pt-24 {
+                    padding-top: 1.5rem !important;
+                }
+        </style>
+        <div class="tw staff-shell">
+            <div class="flex min-h-screen w-full flex-col bg-espresso md:flex-row">
+                <partial name="_StaffSidebar" />
+                <main role="main" class="min-w-0 flex-1 p-4 text-cream sm:p-6">
+                    @RenderBody()
+                </main>
+            </div>
+        </div>
+    }
+    else
+    {
+        <!-- Elegant Glassmorphic Navbar -->
+        <header>
+            <div class="tw">
+                <nav class="glass-nav fixed inset-x-0 top-0 z-[1030]" aria-label="Main">
+                    <div class="mx-auto flex h-16 max-w-7xl flex-row items-center justify-between gap-3 px-4">
+                        <!-- Left: brand -->
+                        <a asp-controller="Home" asp-action="Index" class="flex shrink-0 items-center gap-2 no-underline">
+                            <span class="brand-icon-wrapper"><i class="fa-solid fa-mug-hot"></i></span>
+                            <span class="font-serif text-lg font-bold tracking-wider text-cream">Brew<span class="text-caramel">Stop</span></span>
+                        </a>
 
-                        <li class="nav-item ms-2">
-                            @if (User.Identity?.IsAuthenticated == true)
+                        <!-- Center: links -->
+                        <ul id="nav-links"
+                            class="absolute inset-x-0 top-full hidden flex-col gap-1 border-b border-caramel/15 bg-espresso/95 p-3 backdrop-blur md:static md:flex md:flex-1 md:flex-row md:items-center md:justify-center md:gap-1 md:border-0 md:bg-transparent md:p-0 md:backdrop-blur-none">
+                            <li><a asp-controller="Home" asp-action="Index" class="@Nav("Home")">Home</a></li>
+                            @if (!isAdmin)
                             {
-                                if (!User.IsInRole("Admin"))
+                                <li><a asp-controller="Menu" asp-action="Index" class="@Nav("Menu")">Menu</a></li>
+                                @if (signedIn && isCustomer)
                                 {
-                                    <a class="nav-link text-light px-3 py-2 rounded-pill hover-effect" asp-controller="Order" asp-action="Index">My Orders</a>
-                                    <a class="nav-link text-light px-3 py-2 rounded-pill hover-effect" asp-controller="Favorites" asp-action="Index">Favorites</a>
+                                    <li><a asp-controller="Order" asp-action="Index" class="@Nav("Order")">My Orders</a></li>
+                                    <li><a asp-controller="Favorites" asp-action="Index" class="@Nav("Favorites")">Favorites</a></li>
                                 }
-                                <a class="nav-link text-light px-3 py-2 rounded-pill hover-effect" asp-controller="Account" asp-action="Manage">My Account</a>
-                                <form asp-controller="Account" asp-action="Logout" method="post" class="d-inline">
-                                    <button type="submit" class="btn btn-sm btn-outline-light rounded-pill px-3">
-                                        <i class="fa-solid fa-right-from-bracket me-1"></i> Logout
-                                    </button>
-                                </form>
                             }
                             else
                             {
-                                <a class="nav-link text-light px-3 py-2 rounded-pill hover-effect" asp-controller="Account" asp-action="Login">Login</a>
+                                <li><a asp-controller="MenuItems" asp-action="Index" class="@Nav("MenuItems")">Manage Menu</a></li>
+                                <li><a asp-controller="Inventory" asp-action="Index" class="@Nav("Inventory")">Inventory</a></li>
+                                <li><a asp-controller="Barista" asp-action="Index" class="@Nav("Barista")">Barista</a></li>
                             }
-                        </li>
+                            <li><a asp-controller="Home" asp-action="Privacy" class="@Nav("Home", "Privacy")">About</a></li>
+                        </ul>
 
-                        <li class="nav-item">
-                            <a class="nav-link text-light px-3 py-2 rounded-pill hover-effect" asp-controller="Home" asp-action="Privacy">About</a>
-                        </li>
-                        @if (!User.IsInRole("Admin"))
-                        {
-                            <li class="nav-item ms-2">
-                                <a class="btn btn-caramel rounded-pill px-4 shadow-sm text-dark fw-semibold" asp-controller="Cart" asp-action="Index">
-                                    <i class="fa-solid fa-bag-shopping me-1"></i> Cart
+                        <!-- Right: icons -->
+                        <div class="flex shrink-0 flex-row items-center gap-1">
+                            @if (!isAdmin)
+                            {
+                                <!-- a) Quick search -->
+                                <div class="relative" data-dd>
+                                    <button type="button" data-dd-btn class="@ib" aria-label="Search menu" aria-expanded="false" aria-haspopup="true" aria-controls="search-panel">
+                                        <i class="fa-solid fa-magnifying-glass"></i>
+                                    </button>
+                                    <div id="search-panel" data-dd-panel aria-hidden="true" class="@panelBase w-72 p-3 sm:w-80">
+                                        <form method="get" asp-controller="Menu" asp-action="Index" role="search" class="flex items-center gap-2">
+                                            <input type="search" name="searchTerm" data-autofocus maxlength="60" placeholder="Search drinks…" autocomplete="off"
+                                                   class="min-w-0 flex-1 rounded-full border border-white/10 bg-espresso px-4 py-2 text-sm text-cream placeholder:text-neutral-500 focus:border-caramel focus:outline-none" />
+                                            <button type="submit" class="rounded-full bg-caramel px-4 py-2 text-sm font-semibold text-black transition hover:bg-cream">Go</button>
+                                        </form>
+                                    </div>
+                                </div>
+                            }
+
+                            @if (signedIn && isCustomer)
+                            {
+                                <!-- b) Notification bell -->
+                                <div class="relative" data-dd id="bell-dd">
+                                    <button type="button" data-dd-btn class="@ib" aria-label="Order notifications" aria-expanded="false" aria-haspopup="true" aria-controls="bell-panel">
+                                        <i class="fa-solid fa-bell"></i>
+                                        <span id="bell-badge" class="absolute -right-0.5 -top-0.5 hidden min-w-[18px] rounded-full bg-red-500 px-1 text-center text-[10px] font-bold leading-[18px] text-white">0</span>
+                                    </button>
+                                    <div id="bell-panel" data-dd-panel aria-hidden="true" class="@panelBase w-80 max-w-[calc(100vw-2rem)]">
+                                        <div class="flex items-center justify-between border-b border-white/10 px-4 py-3">
+                                            <p class="font-serif text-sm font-semibold">Order updates</p>
+                                            <a asp-controller="Order" asp-action="Index" class="text-xs font-semibold text-caramel hover:text-cream">View all</a>
+                                        </div>
+                                        <ul id="bell-list" class="max-h-72 divide-y divide-white/5 overflow-y-auto">
+                                            <li class="px-4 py-6 text-center text-xs text-neutral-400">No recent updates.</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            }
+
+                            @if (!isAdmin && !isBarista)
+                            {
+                                <!-- c) Cart -->
+                                <a asp-controller="Cart" asp-action="Index" class="@ib" aria-label="Cart (@Cart.Count items)">
+                                    <i class="fa-solid fa-bag-shopping"></i>
                                     @if (Cart.Count > 0)
                                     {
-                                        <span class="badge bg-dark text-caramel ms-1">@Cart.Count</span>
+                                        <span class="absolute -right-0.5 -top-0.5 min-w-[18px] rounded-full bg-caramel px-1 text-center text-[10px] font-bold leading-[18px] text-black">@Cart.Count</span>
                                     }
                                 </a>
-                            </li>
-                        }
-                        @if (User.IsInRole("Admin"))
-                        {
-                            <li class="nav-item">
-                                <a class="nav-link text-light px-3 py-2 rounded-pill hover-effect" asp-controller="MenuItems" asp-action="Index">Manage Menu</a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link text-light px-3 py-2 rounded-pill hover-effect" asp-controller="Inventory" asp-action="Index">Inventory</a>
-                            </li>
-                        }
-                        @if (User.IsInRole("Barista") || User.IsInRole("Admin"))
-                        {
-                            <li class="nav-item">
-                                <a class="nav-link text-light px-3 py-2 rounded-pill hover-effect" asp-controller="Barista" asp-action="Index">Barista</a>
-                            </li>
-                        }
-                    </ul>
-                </div>
-            </div>
-        </nav>
-    </header>
+                            }
 
-    <!-- Main Content Container -->
-    <div class="main-wrapper">
-        <main role="main" class="pb-3">
-            @RenderBody()
-        </main>
-    </div>
+                            @if (signedIn)
+                            {
+                                <!-- d) Profile dropdown -->
+                                <div class="relative" data-dd>
+                                    <button type="button" data-dd-btn class="@ib ring-1 ring-caramel/30" aria-label="Account menu" aria-expanded="false" aria-haspopup="true" aria-controls="profile-panel">
+                                        @if (!string.IsNullOrEmpty(me?.AvatarUrl))
+                                        {
+                                            <img src="@me!.AvatarUrl" alt="" class="size-9 rounded-full object-cover" />
+                                        }
+                                        else
+                                        {
+                                            <i class="fa-solid fa-user"></i>
+                                        }
+                                    </button>
+                                    <div id="profile-panel" data-dd-panel role="menu" aria-hidden="true" class="@panelBase w-72 p-2">
+                                        @if (me is not null)
+                                        {
+                                            <div class="px-3 py-3">
+                                                <p class="truncate font-serif text-sm font-semibold text-cream">@me.FullName</p>
+                                                <p class="truncate text-xs text-neutral-400">@me.Email</p>
+                                            </div>
+                                            <div class="my-1 border-t border-white/10"></div>
+                                            <a role="menuitem" asp-controller="Account" asp-action="Manage" class="@item"><i class="fa-solid fa-id-badge w-4 text-center"></i>View Profile</a>
+                                            <a role="menuitem" asp-controller="Account" asp-action="Manage" asp-fragment="profile" class="@item"><i class="fa-solid fa-user-pen w-4 text-center"></i>Edit Personal Information</a>
+                                            <a role="menuitem" asp-controller="Account" asp-action="ChangePassword" class="@item"><i class="fa-solid fa-key w-4 text-center"></i>Change Password</a>
+                                            <a role="menuitem" asp-controller="Account" asp-action="Manage" asp-fragment="notifications" class="@item"><i class="fa-solid fa-bell w-4 text-center"></i>Notification Settings</a>
+                                            <a role="menuitem" asp-controller="Account" asp-action="Activity" class="@item"><i class="fa-solid fa-clock-rotate-left w-4 text-center"></i>Account Activity</a>
+                                        }
+                                        else
+                                        {
+                                            <a role="menuitem" asp-controller="Account" asp-action="Manage" class="@item"><i class="fa-solid fa-id-badge w-4 text-center"></i>My Account</a>
+                                        }
+                                        <div class="my-1 border-t border-white/10"></div>
+                                        <form asp-controller="Account" asp-action="Logout" method="post">
+                                            <button type="submit" role="menuitem" class="@item w-full text-left"><i class="fa-solid fa-right-from-bracket w-4 text-center"></i>Logout</button>
+                                        </form>
+                                        @if (me is not null)
+                                        {
+                                            <button type="button" role="menuitem" id="open-delete-dialog"
+                                                    class="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left text-sm font-semibold text-red-400 transition hover:bg-red-500/10 hover:text-red-300">
+                                                <i class="fa-solid fa-trash-can w-4 text-center"></i>Delete Account
+                                            </button>
+                                        }
+                                    </div>
+                                </div>
+                            }
+                            else
+                            {
+                                <a asp-controller="Account" asp-action="Login" class="ml-1 rounded-full bg-caramel px-5 py-2 text-sm font-semibold text-black transition hover:bg-cream">Login</a>
+                            }
 
-    <footer class="tw bs-footer mt-16 border-t border-white/10 bg-card">
-        <div class="mx-auto grid max-w-6xl gap-10 px-4 py-12 sm:grid-cols-2 lg:grid-cols-5">
-            <div>
-                <h3 class="font-serif text-base font-semibold text-cream">About Us</h3>
-                <ul class="mt-4 space-y-2.5 text-sm text-neutral-400">
-                    <li><a asp-controller="Home" asp-action="Privacy" class="hover:text-caramel">Our Shop</a></li>
-                    <li><a asp-controller="Home" asp-action="Privacy" class="hover:text-caramel">Customer Service</a></li>
-                </ul>
+                            <!-- Mobile toggle -->
+                            <button type="button" id="nav-toggle" class="@ib md:hidden" aria-label="Toggle navigation" aria-expanded="false" aria-controls="nav-links">
+                                <i class="fa-solid fa-bars"></i>
+                            </button>
+                        </div>
+                    </div>
+                </nav>
+
+                @if (me is not null)
+                {
+                    <!-- Delete Account confirmation -->
+                    <dialog id="delete-dialog" aria-labelledby="delete-title"
+                            class="w-[calc(100vw-2rem)] max-w-md rounded-3xl border border-red-500/30 bg-card p-0 text-cream backdrop:bg-black/70 backdrop:backdrop-blur-sm">
+                        <form asp-controller="Account" asp-action="DeleteAccount" method="post" class="space-y-4 p-6">
+                            <h2 id="delete-title" class="font-serif text-xl font-semibold text-red-400">Delete your account?</h2>
+                            <p class="text-sm text-neutral-300">This is permanent. Your personal details are erased and you can no longer sign in. Past orders are kept in anonymized form. You cannot delete while you have active pickup orders.</p>
+                            @if (hasPwd)
+                            {
+                                <div>
+                                    <label for="dlg-confirm-password" class="mb-1 block text-xs font-semibold uppercase tracking-wider text-neutral-400">Confirm your password</label>
+                                    <input id="dlg-confirm-password" name="confirmPassword" type="password" required autocomplete="current-password"
+                                           class="w-full rounded-xl border border-white/10 bg-espresso px-4 py-2.5 text-sm text-cream focus:border-red-400 focus:outline-none" />
+                                </div>
+                            }
+                            else
+                            {
+                                <div>
+                                    <label for="dlg-confirm-text" class="mb-1 block text-xs font-semibold uppercase tracking-wider text-neutral-400">Type DELETE to confirm</label>
+                                    <input id="dlg-confirm-text" name="confirmText" type="text" required autocomplete="off"
+                                           class="w-full rounded-xl border border-white/10 bg-espresso px-4 py-2.5 text-sm text-cream focus:border-red-400 focus:outline-none" />
+                                </div>
+                            }
+                            <div class="flex justify-end gap-2 pt-2">
+                                <button type="button" id="cancel-delete-dialog" class="rounded-full border border-white/15 px-5 py-2 text-sm font-semibold text-cream transition hover:bg-white/10">Cancel</button>
+                                <button type="submit" class="rounded-full bg-red-600 px-5 py-2 text-sm font-semibold text-white transition hover:bg-red-500">Delete permanently</button>
+                            </div>
+                        </form>
+                    </dialog>
+                }
             </div>
-            @if (!User.IsInRole("Admin"))
-            {
+        </header>
+
+        <!-- Main Content Container -->
+        <div class="main-wrapper">
+            <main role="main" class="pb-3">
+                @RenderBody()
+            </main>
+        </div>
+
+        <footer class="tw bs-footer mt-16 border-t border-white/10 bg-card">
+            <div class="mx-auto grid max-w-6xl gap-10 px-4 py-12 sm:grid-cols-2 lg:grid-cols-5">
                 <div>
-                    <h3 class="font-serif text-base font-semibold text-cream">Order Online</h3>
+                    <h3 class="font-serif text-base font-semibold text-cream">About Us</h3>
                     <ul class="mt-4 space-y-2.5 text-sm text-neutral-400">
-                        <li><a asp-controller="Menu" asp-action="Index" class="hover:text-caramel">Browse Menu</a></li>
-                        <li><a asp-controller="Cart" asp-action="Index" class="hover:text-caramel">Your Cart</a></li>
-                        <li><a asp-controller="Home" asp-action="Privacy" class="hover:text-caramel">Pickup Slots</a></li>
+                        <li><a asp-controller="Home" asp-action="Privacy" class="hover:text-caramel">Our Shop</a></li>
+                        <li><a asp-controller="Home" asp-action="Support" class="hover:text-caramel">Customer Service</a></li>
+                        <li><a asp-controller="Home" asp-action="Support" asp-fragment="faq" class="hover:text-caramel">Help &amp; FAQ</a></li>
+                        <li><a asp-controller="Home" asp-action="Support" asp-fragment="contact" class="hover:text-caramel">Contact Us</a></li>
                     </ul>
                 </div>
-            }
-            <div>
-                <h3 class="font-serif text-base font-semibold text-cream">My Account</h3>
-                <ul class="mt-4 space-y-2.5 text-sm text-neutral-400">
-                    <li><a asp-controller="Account" asp-action="Login" class="hover:text-caramel">Sign in</a></li>
-                    <li><a asp-controller="Account" asp-action="Register" class="hover:text-caramel">Join Now</a></li>
-                    <li><a asp-controller="Account" asp-action="ForgotPassword" class="hover:text-caramel">Forgot password</a></li>
-                </ul>
-            </div>
-            <div>
-                <h3 class="font-serif text-base font-semibold text-cream">Orders</h3>
-                <ul class="mt-4 space-y-2.5 text-sm text-neutral-400">
-                    <li><span>Order history</span></li>
-                    <li><span>Pickup verification</span></li>
-                </ul>
-            </div>
-            <div class="flex items-start lg:justify-end">
-                <span class="font-serif text-2xl font-bold tracking-[0.3em] text-cream lg:[writing-mode:vertical-rl]">
-                    BREW<span class="text-caramel">STOP</span>
-                </span>
-            </div>
-        </div>
-        <div class="border-t border-white/10">
-            <div class="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-5 text-xs text-neutral-500">
-                <div class="flex gap-5">
-                    <a asp-controller="Home" asp-action="Privacy" class="hover:text-caramel">Privacy Policy</a>
-                    <a asp-controller="Home" asp-action="Privacy" class="hover:text-caramel">Terms of Use</a>
+                @if (!User.IsInRole("Admin") && !isBarista)
+                {
+                    <div>
+                        <h3 class="font-serif text-base font-semibold text-cream">Order Online</h3>
+                        <ul class="mt-4 space-y-2.5 text-sm text-neutral-400">
+                            <li><a asp-controller="Menu" asp-action="Index" class="hover:text-caramel">Browse Menu</a></li>
+                            <li><a asp-controller="Cart" asp-action="Index" class="hover:text-caramel">Your Cart</a></li>
+                            <li><a asp-controller="Home" asp-action="Privacy" class="hover:text-caramel">Pickup Slots</a></li>
+                        </ul>
+                    </div>
+                }
+                <div>
+                    <h3 class="font-serif text-base font-semibold text-cream">My Account</h3>
+                    <ul class="mt-4 space-y-2.5 text-sm text-neutral-400">
+                        <li><a asp-controller="Account" asp-action="Login" class="hover:text-caramel">Sign in</a></li>
+                        <li><a asp-controller="Account" asp-action="Register" class="hover:text-caramel">Join Now</a></li>
+                        <li><a asp-controller="Account" asp-action="ForgotPassword" class="hover:text-caramel">Forgot password</a></li>
+                    </ul>
                 </div>
-                <p class="text-right">
-                    &copy; @DateTime.Now.Year BrewStop. Crafted with precision &amp; passion.<br />
-                    UC Banilad Campus Coffee Shop Ordering &amp; Pickup System &middot; Payment is made at pickup.
-                </p>
+                <div>
+                    <h3 class="font-serif text-base font-semibold text-cream">Orders</h3>
+                    <ul class="mt-4 space-y-2.5 text-sm text-neutral-400">
+                        <li><span>Order history</span></li>
+                        <li><span>Pickup verification</span></li>
+                    </ul>
+                </div>
+                <div class="flex items-start lg:justify-end">
+                    <span class="font-serif text-2xl font-bold tracking-[0.3em] text-cream lg:[writing-mode:vertical-rl]">
+                        BREW<span class="text-caramel">STOP</span>
+                    </span>
+                </div>
             </div>
-        </div>
-    </footer>
+            <div class="border-t border-white/10">
+                <div class="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-5 text-xs text-neutral-500">
+                    <div class="flex gap-5">
+                        <a asp-controller="Home" asp-action="Privacy" class="hover:text-caramel">Privacy Policy</a>
+                        <a asp-controller="Home" asp-action="Privacy" class="hover:text-caramel">Terms of Use</a>
+                    </div>
+                    <p class="text-right">
+                        &copy; @DateTime.Now.Year BrewStop. Crafted with precision &amp; passion.<br />
+                        UC Banilad Campus Coffee Shop Ordering &amp; Pickup System &middot; Payment is made at pickup.
+                    </p>
+                </div>
+            </div>
+        </footer>
+    }
 
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     <script src="~/js/site.js" asp-append-version="true"></script>
+    <script>
+            (function() {
+                var OPEN = ['visible', 'opacity-100', 'scale-100'], CLOSED = ['invisible', 'opacity-0', 'scale-95'];
+                var dds = [].slice.call(document.querySelectorAll('[data-dd]'));
+
+                function setOpen(dd, open) {
+                    var b = dd.querySelector('[data-dd-btn]'), p = dd.querySelector('[data-dd-panel]');
+                    b.setAttribute('aria-expanded', open ? 'true' : 'false');
+                    p.setAttribute('aria-hidden', open ? 'false' : 'true');
+                    CLOSED.forEach(function(c) { p.classList.toggle(c, !open); });
+                    OPEN.forEach(function(c) { p.classList.toggle(c, open); });
+                    if (open) { var f = p.querySelector('[data-autofocus]'); if (f) setTimeout(function() { f.focus(); }, 60); }
+                    dd.dispatchEvent(new CustomEvent('dd:toggle', { detail: open }));
+                }
+                function isOpen(dd) { return dd.querySelector('[data-dd-btn]').getAttribute('aria-expanded') === 'true'; }
+                function closeAll(except) { dds.forEach(function(d) { if (d !== except && isOpen(d)) setOpen(d, false); }); }
+
+                dds.forEach(function(dd) {
+                    dd.querySelector('[data-dd-btn]').addEventListener('click', function(e) {
+                        e.stopPropagation();
+                        var open = !isOpen(dd);
+                        closeAll(dd);
+                        setOpen(dd, open);
+                    });
+                });
+                document.addEventListener('click', function(e) {
+                    dds.forEach(function(d) { if (isOpen(d) && !d.contains(e.target)) setOpen(d, false); });
+                });
+                document.addEventListener('keydown', function(e) {
+                    if (e.key !== 'Escape') return;
+                    dds.forEach(function(d) {
+                        if (isOpen(d)) { setOpen(d, false); d.querySelector('[data-dd-btn]').focus(); }
+                    });
+                    var dlg = document.getElementById('delete-dialog'); if (dlg && dlg.open) dlg.close();
+                });
+
+                // Mobile collapse
+                var tg = document.getElementById('nav-toggle'), links = document.getElementById('nav-links');
+                if (tg && links) tg.addEventListener('click', function() {
+                    var show = links.classList.contains('hidden');
+                    links.classList.toggle('hidden', !show);
+                    links.classList.toggle('flex', show);
+                    tg.setAttribute('aria-expanded', show ? 'true' : 'false');
+                });
+
+                // Delete-account dialog
+                var dlg = document.getElementById('delete-dialog'), openBtn = document.getElementById('open-delete-dialog');
+                if (dlg && openBtn) {
+                    openBtn.addEventListener('click', function() { closeAll(); dlg.showModal(); });
+                    document.getElementById('cancel-delete-dialog').addEventListener('click', function() { dlg.close(); });
+                    dlg.addEventListener('click', function(e) { if (e.target === dlg) dlg.close(); });
+                }
+            })();
+    </script>
+    @if (signedIn && isCustomer)
+    {
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.7/signalr.min.js"></script>
+        <script>
+                (function() {
+                    var dd = document.getElementById('bell-dd'); if (!dd) return;
+                    var badge = document.getElementById('bell-badge'), list = document.getElementById('bell-list');
+                    var KEY = 'bs.notif.unread', loaded = false;
+
+                    function unread() { try { return parseInt(localStorage.getItem(KEY) || '0', 10) || 0; } catch (e) { return 0; } }
+                    function setUnread(n) {
+                        try { localStorage.setItem(KEY, String(n)); } catch (e) { }
+                        badge.textContent = n > 9 ? '9+' : String(n);
+                        badge.classList.toggle('hidden', n <= 0);
+                    }
+                    var LABEL = { Placed: 'was placed', Preparing: 'is being prepared', Ready: 'is ready for pickup', Claimed: 'was picked up', Cancelled: 'was cancelled' };
+
+                    function row(orderId, status, when) {
+                        var li = document.createElement('li');
+                        var a = document.createElement('a');
+                        a.href = '/Order/Details/' + encodeURIComponent(orderId);
+                        a.className = 'flex items-start gap-3 px-4 py-3 text-sm transition hover:bg-caramel/10';
+                        var i = document.createElement('i');
+                        i.className = 'fa-solid mt-0.5 ' + (status === 'Ready' ? 'fa-circle-check text-emerald-400' : 'fa-mug-hot text-caramel');
+                        var box = document.createElement('div');
+                        var t = document.createElement('p'); t.className = 'text-cream';
+                        t.textContent = 'Order #' + orderId + ' ' + (LABEL[status] || status.toLowerCase());
+                        var s = document.createElement('p'); s.className = 'text-xs text-neutral-400';
+                        s.textContent = when ? new Date(when).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : 'Just now';
+                        box.append(t, s); a.append(i, box); li.append(a);
+                        return li;
+                    }
+                    function clearEmpty() { var e = list.querySelector('li:not(:has(a))'); if (e) e.remove(); }
+
+                    function load() {
+                        if (loaded) return; loaded = true;
+                        fetch('/Order/RecentUpdates', { credentials: 'same-origin', headers: { Accept: 'application/json' } })
+                            .then(function(r) { return r.ok ? r.json() : []; })
+                            .then(function(rows) {
+                                if (!rows.length) return;
+                                list.replaceChildren.apply(list, rows.map(function(o) { return row(o.id, o.status, o.createdAtUtc); }));
+                            }).catch(function() { loaded = false; });
+                    }
+
+                    setUnread(unread());
+                    dd.addEventListener('dd:toggle', function(e) { if (e.detail) { load(); setUnread(0); } });
+
+                    if (!window.signalR) return;
+                    var conn = new signalR.HubConnectionBuilder().withUrl('/hubs/orders').withAutomaticReconnect().build();
+                    conn.on('OrderStatusChanged', function(u) {
+                        if (!u || !u.orderId || !u.status) return;
+                        clearEmpty();
+                        list.prepend(row(u.orderId, u.status, null));
+                        while (list.children.length > 8) list.lastElementChild.remove();
+                        var open = dd.querySelector('[data-dd-btn]').getAttribute('aria-expanded') === 'true';
+                        if (!open) setUnread(unread() + 1);
+                    });
+                    conn.start().catch(function(e) { console.warn('Order hub unavailable', e); });
+                })();
+        </script>
+    }
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>

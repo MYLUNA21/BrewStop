@@ -1,0 +1,140 @@
+﻿@model BrewStop.Models.Order
+@inject BrewStop.Services.IPickupSlotService Slots
+@using BrewStop.Models
+@{
+    var o = Model;
+    var nowUtc = DateTime.UtcNow;
+    var todayLocal = Slots.ToLocal(nowUtc).Date;
+    var inv = System.Globalization.CultureInfo.InvariantCulture;
+    var modRx = new System.Text.RegularExpressions.Regex(@"\b(ice|iced|sugar|sweet\w*|hot|warm|cold|less|no|decaf)\b",
+        System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+    var ret = ViewContext.RouteData.Values["action"]?.ToString();
+    if (ret is not ("Queue" or "Preparation" or "Status")) ret = "Status";
+
+    var pickup = Slots.ToLocal(o.PickupAtUtc);
+    var st = o.Status.ToString();
+    var created = DateTime.SpecifyKind(o.CreatedAtUtc, DateTimeKind.Utc);
+    var mins = (int)Math.Max(0, (nowUtc - created).TotalMinutes);
+    var wait = mins < 1 ? "Just now" : mins < 60 ? $"{mins} min" : $"{mins / 60}h {mins % 60}m";
+    var level = mins >= 15 ? "late" : mins >= 10 ? "warn" : "ok";
+}
+<article data-card data-status="@st" data-order="@o.Id" data-name="@o.User.FullName" data-campus="@o.User.CampusId"
+         class="kds-top-@st rounded-2xl border border-solid border-white/10 bg-card shadow-lg">
+
+    <div class="flex items-start justify-between gap-3 p-4 pb-3">
+        <div class="min-w-0">
+            <div class="flex flex-wrap items-center gap-2">
+                <span class="font-serif text-3xl font-extrabold leading-none text-cream">#@o.Id</span>
+                <span class="kds-b-@st rounded-full px-3 py-1 text-xs font-extrabold uppercase tracking-wide">@st</span>
+            </div>
+            <p class="mt-2 truncate text-base font-semibold text-cream">@o.User.FullName</p>
+            <p class="text-xs text-neutral-400">Campus ID: @o.User.CampusId</p>
+        </div>
+        <div class="shrink-0 text-right">
+            <p class="text-[10px] font-bold uppercase tracking-wider text-neutral-500">Pickup</p>
+            <p class="text-2xl font-extrabold leading-tight text-caramel">@pickup.ToString("h:mm tt")</p>
+            @if (pickup.Date != todayLocal)
+            {
+                <p class="text-xs text-neutral-400">@pickup.ToString("ddd, MMM d")</p>
+            }
+            <p class="kds-wait mt-1 text-xs" data-level="@level">
+                <i class="fa-regular fa-clock" aria-hidden="true"></i>
+                <span data-since="@created.ToString("o")" class="font-bold">@wait</span>
+                <span class="text-neutral-500">· received @Slots.ToLocal(o.CreatedAtUtc).ToString("h:mm tt")</span>
+            </p>
+        </div>
+    </div>
+
+    <ul class="space-y-3 border-t border-solid border-white/10 px-4 py-3">
+        @foreach (var i in o.Items)
+        {
+            var temp = i.ItemName.StartsWith("Iced", StringComparison.OrdinalIgnoreCase) ? "Iced"
+                     : i.ItemName.StartsWith("Hot", StringComparison.OrdinalIgnoreCase) ? "Hot" : null;
+            var mods = i.AddOns.Where(a => modRx.IsMatch(a.Name)).Select(a => a.Name).ToList();
+            var adds = i.AddOns.Where(a => !modRx.IsMatch(a.Name)).Select(a => a.Name).ToList();
+            <li class="flex items-start gap-3">
+                <span class="flex h-12 min-w-[3.25rem] items-center justify-center rounded-xl bg-[#00754a] px-2 text-2xl font-extrabold leading-none text-white">@(i.Quantity)x</span>
+                <div class="min-w-0 flex-1">
+                    <p class="break-words text-lg font-bold leading-tight text-cream">@i.ItemName</p>
+                    @if (!string.IsNullOrWhiteSpace(i.SizeName) || temp is not null)
+                    {
+                        <div class="mt-1.5 flex flex-wrap items-center gap-1.5">
+                            @if (!string.IsNullOrWhiteSpace(i.SizeName))
+                            {
+                                <span class="rounded-md bg-cream px-2 py-0.5 text-xs font-extrabold uppercase text-[#1e3932]">@i.SizeName</span>
+                            }
+                            @if (temp is not null)
+                            {
+                                <span class="rounded-md border border-solid border-sky-300/60 bg-sky-400/10 px-2 py-0.5 text-xs font-bold uppercase text-sky-200">@temp</span>
+                            }
+                        </div>
+                    }
+                    @if (mods.Count > 0)
+                    {
+                        <div class="mt-1.5 flex flex-wrap items-center gap-1.5">
+                            <span class="text-[10px] font-bold uppercase tracking-wider text-neutral-500">Modifiers</span>
+                            @foreach (var m in mods)
+                            {
+                                <span class="rounded-md border border-solid border-amber-300/60 bg-amber-400/10 px-2 py-0.5 text-xs font-semibold text-amber-200">@m</span>
+                            }
+                        </div>
+                    }
+                    @if (adds.Count > 0)
+                    {
+                        <div class="mt-1.5 flex flex-wrap items-center gap-1.5">
+                            <span class="text-[10px] font-bold uppercase tracking-wider text-neutral-500">Add-ons</span>
+                            @foreach (var a in adds)
+                            {
+                                <span class="rounded-md border border-solid border-[#00754a] bg-[#00754a]/20 px-2 py-0.5 text-xs font-semibold text-emerald-200">+ @a</span>
+                            }
+                        </div>
+                    }
+                </div>
+            </li>
+        }
+    </ul>
+
+    @if (!string.IsNullOrWhiteSpace(o.Note))
+    {
+        <div class="mx-4 mb-3 rounded-xl border-2 border-solid border-amber-400 bg-amber-400/15 p-3">
+            <p class="text-[11px] font-extrabold uppercase tracking-wider text-amber-300">
+                <i class="fa-solid fa-triangle-exclamation mr-1" aria-hidden="true"></i>Special instructions
+            </p>
+            <p class="mt-1 break-words text-base font-semibold text-amber-100">@o.Note</p>
+        </div>
+    }
+
+    <div class="flex flex-wrap items-center justify-between gap-2 border-t border-solid border-white/10 px-4 pt-3 text-xs text-neutral-400">
+        <span class="rounded-md border border-solid border-white/15 px-2 py-0.5 font-semibold @(o.PaymentStatus == PaymentStatus.Paid ? "text-emerald-300" : "text-neutral-300")">
+            @o.PaymentMethod &middot; @o.PaymentStatus
+        </span>
+        <span class="font-bold text-cream">&#8369;@o.Total.ToString("N2", inv)</span>
+    </div>
+
+    <div class="p-4">
+        @if (o.Status == OrderStatus.Placed)
+        {
+            <form asp-controller="Barista" asp-action="Advance" asp-route-id="@o.Id" method="post" data-kds-form>
+                <input type="hidden" name="returnTo" value="@ret" />
+                <button type="submit" class="h-12 w-full rounded-xl bg-[#00754a] text-base font-extrabold text-white transition hover:bg-[#1e3932] disabled:opacity-60">
+                    <i class="fa-solid fa-circle-check mr-2" aria-hidden="true"></i>Accept Order
+                </button>
+            </form>
+        }
+        else if (o.Status == OrderStatus.Preparing)
+        {
+            <form asp-controller="Barista" asp-action="Advance" asp-route-id="@o.Id" method="post" data-kds-form>
+                <input type="hidden" name="returnTo" value="@ret" />
+                <button type="submit" class="h-12 w-full rounded-xl bg-cream text-base font-extrabold text-[#1e3932] transition hover:bg-white disabled:opacity-60">
+                    <i class="fa-solid fa-check mr-2" aria-hidden="true"></i>Mark Ready / Completed
+                </button>
+            </form>
+        }
+        else
+        {
+            <button type="button" data-verify="@o.Id" class="h-12 w-full rounded-xl border-2 border-solid border-caramel bg-caramel/10 text-base font-extrabold text-caramel transition hover:bg-caramel hover:text-black">
+                <i class="fa-solid fa-qrcode mr-2" aria-hidden="true"></i>Complete / Verify QR
+            </button>
+        }
+    </div>
+</article>

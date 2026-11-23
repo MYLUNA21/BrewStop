@@ -81,6 +81,8 @@ public class MenuController(ApplicationDbContext db, IImageResolver images) : Co
             .Where(c => c.Items.Count > 0)
             .ToList();
 
+        await LoadStaffReferenceAsync();
+
         return View(new MenuViewModel
         {
             Categories = visible,
@@ -123,6 +125,9 @@ public class MenuController(ApplicationDbContext db, IImageResolver images) : Co
         var dist = new int[5];
         foreach (var r in ratings) dist[Math.Clamp(r, 1, 5) - 1]++;
 
+        await LoadStaffReferenceAsync();
+        ViewBag.RefGroup = m.Category.Group;
+
         return View(new MenuItemDetailsViewModel
         {
             CanFavorite = isCustomer,
@@ -150,6 +155,15 @@ public class MenuController(ApplicationDbContext db, IImageResolver images) : Co
                 CreatedAtUtc = r.CreatedAtUtc
             }).ToList()
         });
+    }
+
+    private async Task LoadStaffReferenceAsync()
+    {
+        if (!User.IsInRole(AppRoles.Barista)) return;
+        ViewBag.RefSizes = await db.ItemSizes.AsNoTracking()
+            .Where(s => s.IsActive).OrderBy(s => s.SortOrder).ToListAsync();
+        ViewBag.RefAddOns = await db.AddOns.AsNoTracking()
+            .Where(a => a.IsActive).OrderBy(a => a.Name).ToListAsync();
     }
 
     private static string DisplayName(string? full)

@@ -1,12 +1,6 @@
-﻿@model ManageViewModel
-@model ManageProfileViewModel
+﻿@model ManageProfileViewModel
 @{
     Layout = "_Layout";   // overrides Account/_ViewStart (_AuthLayout)
-    ViewData["Title"] = "My Account";
-    const string label = "mb-1.5 block text-xs font-semibold uppercase tracking-wider text-neutral-300";
-    const string field = "w-full rounded-xl border border-white/15 bg-transparent px-3 py-3 text-sm text-cream placeholder:text-neutral-500 focus:border-caramel focus:outline-none";
-    const string err = "mt-1 block text-xs text-red-300";
-    Layout = "_Layout";   
     ViewData["Title"] = "Personal Information";
     const string label = "mb-1 block text-xs font-semibold uppercase tracking-wider text-gray-500";
     const string field = "w-full border-0 border-b border-gray-300 bg-transparent px-0 py-2.5 text-sm text-[#1e3932] placeholder:text-gray-400 focus:border-[#00754a] focus:outline-none focus:ring-0";
@@ -15,7 +9,6 @@
 }
 
 <div class="tw">
-    <div class="mx-auto max-w-3xl px-4 pt-24 pb-16">
     <div class="mx-auto max-w-6xl px-4 pt-24 pb-16">
         <h1 class="font-serif text-3xl font-bold text-cream">My Account</h1>
         <p class="mt-1 text-sm text-neutral-400">@Model.Email</p>
@@ -25,13 +18,12 @@
                 <partial name="_AccountSettingsNav" />
             </aside>
 
-            <section class="rounded-3xl bg-white p-6 shadow-sm sm:p-10 lg:col-span-2">
+            <section id="profile" class="scroll-mt-24 rounded-3xl bg-white p-6 shadow-sm sm:p-10 lg:col-span-2">
                 <h2 class="font-serif text-2xl font-semibold text-[#1e3932]">Personal Information</h2>
                 <p class="mt-1 text-sm text-gray-500">Update your name, Campus ID, mobile number and profile photo.</p>
 
                 @if (TempData["Success"] is string ok)
                 {
-            <p class="mt-4 rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3 text-sm text-emerald-300" role="status">@ok</p>
                     <p class="mt-5 rounded-xl border border-[#00754a]/20 bg-[#e8f3ee] px-4 py-3 text-sm text-[#1e3932]" role="status">@ok</p>
                 }
 
@@ -56,10 +48,6 @@
                             <p class="mt-1 text-xs text-gray-400">JPG, PNG or WebP. Max 2 MB.</p>
                             <span asp-validation-for="Avatar" class="@err"></span>
                         </div>
-                    <div>
-                        <label asp-for="Profile.CampusId" class="@label"></label>
-                        <input asp-for="Profile.CampusId" maxlength="30" autocomplete="off" class="@field" />
-                        <span asp-validation-for="Profile.CampusId" class="@err"></span>
                     </div>
 
                     @if (string.IsNullOrEmpty(Model.CampusId))
@@ -69,14 +57,10 @@
                         </p>
                     }
 
-                <form asp-action="ChangePassword" method="post" class="mt-4 space-y-4">
-                    @if (Model.HasPassword)
-                    {
                     <div>
                         <label class="@label" for="profile-email">Email</label>
                         <input id="profile-email" value="@Model.Email" readonly disabled class="@field cursor-not-allowed text-gray-400" />
                     </div>
-                    }
                     <div>
                         <label asp-for="FullName" class="@label"></label>
                         <input asp-for="FullName" maxlength="150" autocomplete="name" class="@field" />
@@ -95,7 +79,6 @@
 
                     <button type="submit" class="@btn">Save changes</button>
                 </form>
-                </div>
             </section>
         </div>
     </div>
@@ -103,4 +86,7 @@
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
+    <script>
+        if (location.hash === '#notifications') location.replace('@Url.Action("Notifications", "Account")');
+    </script>
 }

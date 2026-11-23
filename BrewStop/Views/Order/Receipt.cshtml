@@ -1,0 +1,125 @@
+﻿@model BrewStop.Models.Order
+@inject BrewStop.Services.IPickupSlotService Slots
+@{
+    ViewData["Title"] = $"Receipt #{Model.Id}";
+    var pickup = Slots.ToLocal(Model.PickupAtUtc);
+    var placed = Slots.ToLocal(Model.CreatedAtUtc);
+    var subtotal = Model.Items.Sum(i => i.UnitPrice * i.Quantity);
+}
+
+<style>
+    @@media print {
+        header, footer, .no-print {
+            display: none !important;
+        }
+
+        html, body, .main-wrapper {
+            background: #fff !important;
+            margin: 0 !important;
+            padding: 0 !important;
+        }
+
+        .receipt-wrap {
+            padding: 0 !important;
+            max-width: 100% !important;
+        }
+
+        .receipt-sheet, .receipt-sheet * {
+            background: #fff !important;
+            color: #000 !important;
+            border-color: #ccc !important;
+            box-shadow: none !important;
+        }
+
+        .receipt-sheet {
+            border: 0 !important;
+            padding: 0 !important;
+        }
+
+        @@page {
+            margin: 14mm;
+        }
+    }
+</style>
+
+<div class="tw">
+    <div class="receipt-wrap mx-auto max-w-2xl px-4 pt-24 pb-12">
+        <div class="no-print flex items-center justify-between gap-3">
+            <a asp-action="Details" asp-route-id="@Model.Id" class="text-sm font-semibold text-caramel hover:text-cream">&larr; Back to order</a>
+            <button type="button" onclick="window.print()"
+                    class="rounded-full bg-caramel px-5 py-2 text-sm font-semibold text-black transition hover:bg-cream">
+                <i class="fa-solid fa-print mr-1"></i>Print receipt
+            </button>
+        </div>
+
+        <article class="receipt-sheet mt-4 rounded-3xl border border-white/10 bg-card p-6 text-cream sm:p-8">
+            <header class="border-b border-white/10 pb-4 text-center">
+                <h1 class="font-serif text-2xl font-bold tracking-wider">Brew<span class="text-caramel">Stop</span></h1>
+                <p class="text-xs text-neutral-400">UC Banilad Campus Coffee Shop &middot; Official Receipt</p>
+            </header>
+
+            <dl class="mt-4 grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+                <div><dt class="text-neutral-400">Order #</dt><dd class="font-semibold">@Model.Id</dd></div>
+                <div><dt class="text-neutral-400">Status</dt><dd>@Model.Status</dd></div>
+                <div><dt class="text-neutral-400">Customer</dt><dd>@Model.User.FullName</dd></div>
+                <div><dt class="text-neutral-400">Placed</dt><dd>@placed.ToString("MMM d, yyyy · h:mm tt")</dd></div>
+                <div><dt class="text-neutral-400">Pickup slot</dt><dd>@pickup.ToString("ddd, MMM d · h:mm tt")</dd></div>
+                <div>
+                    <dt class="text-neutral-400">Payment</dt>
+                    <dd>@Model.PaymentMethod &middot; @Model.PaymentStatus@(Model.PaidAtUtc is not null ? $" ({Slots.ToLocal(Model.PaidAtUtc.Value):MMM d, h:mm tt})" : "")</dd>
+                </div>
+                @if (!string.IsNullOrWhiteSpace(Model.PaymentReference))
+                {
+                    <div class="col-span-2"><dt class="text-neutral-400">GCash reference</dt><dd class="font-mono">@Model.PaymentReference</dd></div>
+                }
+            </dl>
+
+            <table class="mt-6 w-full text-sm">
+                <thead>
+                    <tr class="border-b border-white/10 text-left text-xs uppercase tracking-wider text-neutral-400">
+                        <th class="pb-2 font-semibold">Item</th>
+                        <th class="pb-2 text-right font-semibold">Qty</th>
+                        <th class="pb-2 text-right font-semibold">Unit</th>
+                        <th class="pb-2 text-right font-semibold">Amount</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-white/10">
+                    @foreach (var i in Model.Items)
+                    {
+                        <tr>
+                            <td class="py-2 pr-2">
+                                @i.ItemName @(i.SizeName is null ? "" : $"({i.SizeName})")
+                                @if (i.AddOns.Count > 0)
+                                {
+                                    <span class="block text-xs text-neutral-400">+ @string.Join(", ", i.AddOns.Select(a => a.Name))</span>
+                                }
+                            </td>
+                            <td class="py-2 text-right">@i.Quantity</td>
+                            <td class="py-2 text-right">&#8369;@i.UnitPrice.ToString("N2")</td>
+                            <td class="py-2 text-right">&#8369;@((i.UnitPrice * i.Quantity).ToString("N2"))</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+
+            @if (!string.IsNullOrWhiteSpace(Model.Note))
+            {
+                <p class="mt-3 text-sm"><span class="text-neutral-400">Note:</span> @Model.Note</p>
+            }
+
+            <dl class="mt-5 space-y-1 border-t border-white/10 pt-4 text-sm">
+                <div class="flex justify-between"><dt class="text-neutral-400">Subtotal</dt><dd>&#8369;@subtotal.ToString("N2")</dd></div>
+                @if (Model.DiscountAmount > 0)
+                {
+                    <div class="flex justify-between"><dt class="text-neutral-400">Promo @Model.PromoCode</dt><dd>&minus;&#8369;@Model.DiscountAmount.ToString("N2")</dd></div>
+                }
+                <div class="flex items-baseline justify-between pt-1">
+                    <dt class="font-semibold">Total</dt>
+                    <dd class="text-xl font-bold text-caramel">&#8369;@Model.Total.ToString("N2")</dd>
+                </div>
+            </dl>
+
+            <p class="mt-6 text-center text-xs text-neutral-500">Payment is made at pickup. Thank you for ordering with BrewStop!</p>
+        </article>
+    </div>
+</div>

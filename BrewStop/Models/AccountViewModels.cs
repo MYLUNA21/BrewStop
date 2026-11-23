@@ -122,3 +122,11 @@ public class DeleteAccountViewModel
 {
     public bool HasPassword { get; set; }
 }
+
+public class CompleteCampusIdViewModel
+{
+    [Required, StringLength(30), Display(Name = "Campus ID")]
+    public string CampusId { get; set; } = string.Empty;
+
+    public string? ReturnUrl { get; set; }
+}

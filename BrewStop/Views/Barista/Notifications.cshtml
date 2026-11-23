@@ -1,0 +1,177 @@
+﻿@model List<BrewStop.Models.BaristaAlertDto>
+@inject BrewStop.Services.IPickupSlotService Slots
+@{
+    ViewData["Title"] = "Notifications";
+    var nowUtc = DateTime.UtcNow;
+    string Ago(DateTime utc)
+    {
+        var m = (int)Math.Max(0, (nowUtc - DateTime.SpecifyKind(utc, DateTimeKind.Utc)).TotalMinutes);
+        return m < 1 ? "just now" : m < 60 ? $"{m} min ago" : m < 1440 ? $"{m / 60} h ago" : $"{m / 1440} d ago";
+    }
+    (string Icon, string Tone, string Label) Look(BrewStop.Models.BaristaAlertDto a) => a.Kind switch
+    {
+        "NewOrder" => ("fa-bag-shopping", "bg-[#00754a]/25 text-emerald-200", "New order"),
+        "Cancelled" => ("fa-ban", "bg-red-500/15 text-red-300", "Cancelled"),
+        "Note" => ("fa-triangle-exclamation", "bg-amber-400/15 text-amber-300", "Special note"),
+        _ => (a.Urgent ? "fa-circle-exclamation" : "fa-box-open", a.Urgent ? "bg-red-500/15 text-red-300" : "bg-yellow-500/15 text-yellow-300", "Low stock")
+    };
+    const string tab = "kds-tab flex shrink-0 items-center gap-2 rounded-full border border-solid border-white/15 bg-white/5 px-4 py-2 text-sm font-semibold text-cream";
+}
+
+<div class="tw">
+    <div class="mx-auto max-w-4xl px-4 pt-6 pb-8">
+        <h1 class="font-serif text-3xl font-bold text-cream">Notifications</h1>
+        <p class="mt-1 text-sm text-neutral-400">
+            New orders, cancellations, low-stock warnings and special instructions.
+            <span id="kds-live" class="ml-2 inline-flex items-center gap-2"><span class="kds-dot"></span><span id="kds-live-text">Connecting…</span></span>
+        </p>
+
+        <div class="mt-4 flex gap-2 overflow-x-auto" role="group" aria-label="Filter notifications">
+            <button type="button" data-kind-filter="all" aria-pressed="true" class="@tab">All <span data-kcount="all" class="rounded-full bg-black/30 px-2 py-0.5 text-xs">@Model.Count</span></button>
+            <button type="button" data-kind-filter="NewOrder" aria-pressed="false" class="@tab">New orders</button>
+            <button type="button" data-kind-filter="Cancelled" aria-pressed="false" class="@tab">Cancellations</button>
+            <button type="button" data-kind-filter="LowStock" aria-pressed="false" class="@tab">Low stock</button>
+            <button type="button" data-kind-filter="Note" aria-pressed="false" class="@tab">Special notes</button>
+        </div>
+
+        <div id="alerts-feed" class="kds-scroll mt-4 max-h-[calc(100vh-17rem)] min-h-[280px] overflow-y-auto rounded-2xl border border-solid border-white/10 bg-card">
+            <p data-alerts-empty hidden="@(Model.Count > 0 ? "hidden" : null)" class="px-4 py-14 text-center text-sm text-neutral-500">You're all caught up. No notifications.</p>
+            <ul>
+                @foreach (var a in Model)
+                {
+                    var look = Look(a);
+                    <li data-kind="@a.Kind" class="border-t border-solid border-white/10 first:border-t-0">
+                        <div class="flex items-start gap-3 px-4 py-3.5">
+                            <span class="mt-0.5 grid size-10 shrink-0 place-items-center rounded-full @look.Tone"><i class="fa-solid @look.Icon"></i></span>
+                            <div class="min-w-0 flex-1">
+                                <div class="flex flex-wrap items-center gap-2">
+                                    <p class="text-sm font-bold text-cream">@a.Title</p>
+                                    <span class="rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-neutral-300">@look.Label</span>
+                                </div>
+                                <p class="mt-0.5 break-words text-sm @(a.Kind == "Note" ? "font-semibold text-amber-200" : "text-neutral-300")">@a.Detail</p>
+                                @if (a.OrderId is > 0 && a.Kind is "NewOrder")
+                                {
+                                    <a href="/Barista/Queue" class="mt-1 inline-block text-xs font-semibold text-caramel no-underline hover:text-cream">Open Order Queue &rarr;</a>
+                                }
+                            </div>
+                            @if (a.AtUtc is not null)
+                            {
+                                <time datetime="@DateTime.SpecifyKind(a.AtUtc.Value, DateTimeKind.Utc).ToString("o")" class="shrink-0 text-xs text-neutral-500"
+                                      title="@Slots.ToLocal(a.AtUtc.Value).ToString("MMM d, h:mm tt")">@Ago(a.AtUtc.Value)</time>
+                            }
+                        </div>
+                    </li>
+                }
+            </ul>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <style>
+        .kds-scroll {
+            scrollbar-width: thin;
+            scrollbar-color: #00754a transparent;
+        }
+
+            .kds-scroll::-webkit-scrollbar {
+                width: 8px;
+            }
+
+            .kds-scroll::-webkit-scrollbar-thumb {
+                background: #1e3932;
+                border-radius: 9999px;
+            }
+
+        .kds-tab[aria-pressed="true"] {
+            background: #00754a;
+            border-color: #00754a;
+            color: #fff;
+        }
+
+        [data-kind][hidden], [data-alerts-empty][hidden] {
+            display: none !important;
+        }
+
+        .kds-dot {
+            display: inline-block;
+            width: .6rem;
+            height: .6rem;
+            border-radius: 9999px;
+            background: #737373;
+        }
+
+        .kds-live-on .kds-dot {
+            background: #34d399;
+            box-shadow: 0 0 0 3px rgba(52, 211, 153, .25);
+        }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.7/signalr.min.js"></script>
+    <script>
+        (function() {
+            var feed = document.getElementById('alerts-feed');
+            var live = document.getElementById('kds-live'), liveText = document.getElementById('kds-live-text');
+            var filter = 'all';
+
+            function apply() {
+                var shown = 0;
+                [].slice.call(feed.querySelectorAll('[data-kind]')).forEach(function(li) {
+                    var on = filter === 'all' || li.getAttribute('data-kind') === filter;
+                    li.hidden = !on;
+                    if (on) shown++;
+                });
+                var e = feed.querySelector('[data-alerts-empty]');
+                if (e) e.hidden = shown !== 0;
+                [].slice.call(document.querySelectorAll('[data-kind-filter]')).forEach(function(b) {
+                    b.setAttribute('aria-pressed', b.getAttribute('data-kind-filter') === filter ? 'true' : 'false');
+                });
+                var total = feed.querySelectorAll('[data-kind]').length;
+                var c = document.querySelector('[data-kcount="all"]');
+                if (c) c.textContent = total;
+            }
+
+            document.addEventListener('click', function(e) {
+                var b = e.target.closest('[data-kind-filter]');
+                if (!b) return;
+                filter = b.getAttribute('data-kind-filter');
+                apply();
+            });
+
+            var busy = false;
+            function refresh() {
+                if (busy) return;
+                busy = true;
+                fetch('/Barista/Notifications', { credentials: 'same-origin' })
+                    .then(function(r) { return r.ok ? r.text() : null; })
+                    .then(function(html) {
+                        if (!html) return;
+                        var nf = new DOMParser().parseFromString(html, 'text/html').getElementById('alerts-feed');
+                        if (!nf) return;
+                        var top = feed.scrollTop;
+                        feed.innerHTML = nf.innerHTML;
+                        feed.scrollTop = top;
+                        apply();
+                        window.dispatchEvent(new Event('barista:changed'));
+                    })
+                    .catch(function() { })
+                    .then(function() { busy = false; });
+            }
+
+            function setLive(on) {
+                live.classList.toggle('kds-live-on', on);
+                liveText.textContent = on ? 'Live' : 'Reconnecting…';
+            }
+
+            if (window.signalR) {
+                var conn = new signalR.HubConnectionBuilder().withUrl('/hubs/orders').withAutomaticReconnect().build();
+                conn.on('QueueChanged', refresh);
+                conn.onreconnecting(function() { setLive(false); });
+                conn.onreconnected(function() { setLive(true); refresh(); });
+                conn.onclose(function() { setLive(false); });
+                conn.start().then(function() { setLive(true); }).catch(function() { setLive(false); });
+            }
+            setInterval(function() { if (!document.hidden) refresh(); }, 30000);
+            apply();
+        })();
+    </script>
+}

@@ -17,6 +17,18 @@
             <partial name="_StatusBadge" model="Model" />
         </div>
 
+        <div class="mt-4 flex flex-wrap gap-2">
+            <form asp-action="Reorder" asp-route-id="@Model.Id" method="post">
+                <button type="submit" class="rounded-full bg-caramel px-5 py-2 text-sm font-semibold text-black transition hover:bg-cream">
+                    <i class="fa-solid fa-rotate-right mr-1"></i>Reorder
+                </button>
+            </form>
+            <a asp-action="Receipt" asp-route-id="@Model.Id"
+               class="rounded-full border border-white/15 px-5 py-2 text-sm font-semibold text-cream transition hover:border-caramel hover:text-caramel">
+                <i class="fa-solid fa-receipt mr-1"></i>View Receipt
+            </a>
+        </div>
+
         @if (TempData["Error"] is string err)
         {
             <p class="mt-4 rounded-xl border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-300">@err</p>

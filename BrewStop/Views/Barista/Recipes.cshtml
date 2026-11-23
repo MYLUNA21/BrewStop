@@ -1,0 +1,151 @@
+﻿@model BrewStop.Models.RecipeGuideViewModel
+@inject BrewStop.Services.IImageResolver Images
+@{
+    ViewData["Title"] = "Coffee Recipe Guide";
+    var drinkSteps = new[]
+    {
+        "Confirm the size, temperature and modifiers on the ticket.",
+        "Prepare the base drink to the shop's recipe standard.",
+        "Apply the ordered add-ons and read the special instructions.",
+        "Label the cup with the order number and customer name.",
+        "Mark the order Ready / Completed."
+    };
+    var foodSteps = new[]
+    {
+        "Confirm the quantity and any \"Warm It Up\" request.",
+        "Plate or pack the item per the shop standard.",
+        "Check the special instructions on the ticket.",
+        "Label the bag with the order number and customer name.",
+        "Mark the order Ready / Completed."
+    };
+}
+
+<div class="tw">
+    <div class="mx-auto max-w-6xl px-4 pt-6 pb-10">
+        <h1 class="font-serif text-3xl font-bold text-cream">Coffee Recipe Guide</h1>
+        <p class="mt-1 text-sm text-neutral-400">Read-only preparation reference: descriptions, serving sizes, add-ons and prep steps.</p>
+
+        <div class="relative mt-5">
+            <i class="fa-solid fa-magnifying-glass pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-sm text-caramel"></i>
+            <input id="rg-search" type="search" autocomplete="off" placeholder="Search drinks or pastries..." aria-label="Search recipes"
+                   class="w-full rounded-full border border-solid border-white/15 bg-card py-3 pl-11 pr-4 text-sm text-cream placeholder:text-neutral-500 focus:border-caramel focus:outline-none" />
+        </div>
+
+        <nav class="mt-4 flex gap-2 overflow-x-auto pb-1" aria-label="Recipe categories">
+            <button type="button" data-rg-cat="all" aria-pressed="true" class="rg-pill shrink-0 rounded-full border border-solid border-white/15 px-4 py-2 text-sm font-semibold text-cream">All</button>
+            @foreach (var c in Model.Categories.Where(c => c.MenuItems.Count > 0))
+            {
+                <button type="button" data-rg-cat="@c.Slug" aria-pressed="false" class="rg-pill shrink-0 rounded-full border border-solid border-white/15 px-4 py-2 text-sm font-semibold text-cream">@c.Name</button>
+            }
+        </nav>
+
+        <p id="rg-empty" hidden class="mt-8 rounded-2xl border border-dashed border-white/15 px-4 py-12 text-center text-sm text-neutral-500">Nothing matches your search.</p>
+
+        @foreach (var c in Model.Categories.Where(c => c.MenuItems.Count > 0))
+        {
+            var isDrink = c.Group == "Drinks";
+            var adds = Model.AddOns.Where(a => a.Group == c.Group).ToList();
+            <section data-rg-section="@c.Slug" class="mt-8">
+                <h2 class="border-b border-solid border-white/10 pb-3 font-serif text-2xl font-bold text-cream">@c.Name</h2>
+                <div class="mt-5 grid gap-5 md:grid-cols-2">
+                    @foreach (var m in c.MenuItems.OrderBy(m => m.Name))
+                    {
+                        <article data-rg-card data-search="@((m.Name + " " + m.Description).ToLowerInvariant())"
+                                 class="overflow-hidden rounded-2xl border border-solid border-white/10 bg-card">
+                            <div class="flex gap-4 p-4">
+                                <img src="@Images.Resolve(m.ImageUrl, m.Name)" alt="@m.Name" loading="lazy" referrerpolicy="no-referrer"
+                                     class="size-20 shrink-0 rounded-xl object-cover"
+                                     onerror="this.onerror=null;this.src='@Url.Content("~/images/placeholder.svg")'" />
+                                <div class="min-w-0">
+                                    <h3 class="font-serif text-lg font-semibold text-cream">@m.Name</h3>
+                                    <p class="text-xs font-semibold uppercase tracking-wider text-caramel">@c.Name</p>
+                                    <p class="mt-1 text-sm text-neutral-300">@m.Description</p>
+                                </div>
+                            </div>
+                            <div class="space-y-2 border-t border-solid border-white/10 px-4 py-3 text-xs">
+                                @if (isDrink && Model.Sizes.Count > 0)
+                                {
+                                    <div class="flex flex-wrap items-center gap-1.5">
+                                        <span class="text-[10px] font-bold uppercase tracking-wider text-neutral-500">Serving sizes</span>
+                                        @foreach (var s in Model.Sizes)
+                                        {
+                                            <span class="rounded-md bg-cream px-2 py-0.5 font-bold text-[#1e3932]">@s.Name</span>
+                                        }
+                                    </div>
+                                }
+                                <div class="flex flex-wrap items-center gap-1.5">
+                                    <span class="text-[10px] font-bold uppercase tracking-wider text-neutral-500">Add-ons</span>
+                                    @if (adds.Count == 0)
+                                    {
+                                        <span class="text-neutral-500">None</span>
+                                    }
+                                    @foreach (var a in adds)
+                                    {
+                                        <span class="rounded-md border border-solid border-[#00754a] bg-[#00754a]/20 px-2 py-0.5 font-semibold text-emerald-200">@a.Name</span>
+                                    }
+                                </div>
+                            </div>
+                            <details class="border-t border-solid border-white/10 px-4 py-3">
+                                <summary class="cursor-pointer text-sm font-semibold text-caramel">Preparation steps</summary>
+                                <ol class="mt-2 list-decimal space-y-1 pl-5 text-sm text-neutral-300">
+                                    @foreach (var step in (isDrink ? drinkSteps : foodSteps))
+                                    {
+                                        <li>@step</li>
+                                    }
+                                </ol>
+                            </details>
+                        </article>
+                    }
+                </div>
+            </section>
+        }
+    </div>
+</div>
+
+@section Scripts {
+    <style>
+        .rg-pill[aria-pressed="true"] {
+            background: #d4a373;
+            border-color: #d4a373;
+            color: #000;
+        }
+
+        [data-rg-card][hidden], [data-rg-section][hidden], #rg-empty[hidden] {
+            display: none !important;
+        }
+    </style>
+    <script>
+        (function() {
+            var input = document.getElementById('rg-search');
+            var cards = [].slice.call(document.querySelectorAll('[data-rg-card]'));
+            var sections = [].slice.call(document.querySelectorAll('[data-rg-section]'));
+            var empty = document.getElementById('rg-empty');
+            var cat = 'all';
+
+            function apply() {
+                var q = input.value.trim().toLowerCase(), shown = 0;
+                cards.forEach(function(c) {
+                    var sec = c.closest('[data-rg-section]');
+                    var ok = (!q || c.getAttribute('data-search').indexOf(q) !== -1) &&
+                        (cat === 'all' || sec.getAttribute('data-rg-section') === cat);
+                    c.hidden = !ok;
+                    if (ok) shown++;
+                });
+                sections.forEach(function(s) { s.hidden = !s.querySelector('[data-rg-card]:not([hidden])'); });
+                empty.hidden = shown !== 0;
+                [].slice.call(document.querySelectorAll('[data-rg-cat]')).forEach(function(b) {
+                    b.setAttribute('aria-pressed', b.getAttribute('data-rg-cat') === cat ? 'true' : 'false');
+                });
+            }
+
+            input.addEventListener('input', apply);
+            document.addEventListener('click', function(e) {
+                var b = e.target.closest('[data-rg-cat]');
+                if (!b) return;
+                cat = b.getAttribute('data-rg-cat');
+                apply();
+            });
+            apply();
+        })();
+    </script>
+}

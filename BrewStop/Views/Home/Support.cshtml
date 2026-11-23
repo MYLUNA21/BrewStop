@@ -1,0 +1,99 @@
+﻿@model SupportViewModel
+@{
+    ViewData["Title"] = "Help & Contact";
+    const string label = "mb-1 block text-xs font-semibold uppercase tracking-wider text-neutral-400";
+    const string field = "w-full rounded-xl border border-white/10 bg-espresso px-4 py-2.5 text-sm text-cream placeholder:text-neutral-500 focus:border-caramel focus:outline-none";
+    const string err = "mt-1 block text-xs text-red-400";
+    var faqs = new (string Q, string A)[]
+    {
+        ("How do I place a pickup order?", "Browse the menu, customize your drink, add it to your cart, choose a 10-minute pickup slot at checkout and submit. You'll get a QR code to show at the counter."),
+        ("How do I pay?", "Choose Cash or GCash at checkout. Payment is settled at the counter when you pick up your order; there is no online payment gateway."),
+        ("Can I cancel my order?", "Yes, but only while the order is still Placed. Once the barista starts preparing it, it can no longer be cancelled."),
+        ("My QR code was rejected. What now?", "Each QR code works only once and is invalid after cancellation or expiry. Ask the barista to look up your order number."),
+        ("How do I reorder a previous drink?", "Open My Orders, then press Reorder on a past order. Items that are sold out are skipped and you'll be told which ones."),
+        ("How do I change my password or delete my account?", "Open the profile icon in the top bar. You'll find Change Password and Delete Account there.")
+    };
+}
+
+<style>
+    .faq summary::-webkit-details-marker {
+        display: none;
+    }
+
+    .faq details[open] .faq-chev {
+        transform: rotate(180deg);
+    }
+
+    .faq-chev {
+        transition: transform .2s ease;
+    }
+</style>
+
+<div class="tw">
+    <div class="mx-auto max-w-4xl px-4 pt-24 pb-12">
+        <h1 class="font-serif text-3xl font-bold text-cream">Help &amp; Contact</h1>
+        <p class="mt-1 text-sm text-neutral-400">Answers to common questions, or send us a message.</p>
+
+        <section id="faq" class="faq mt-8 scroll-mt-24" aria-labelledby="faq-h">
+            <h2 id="faq-h" class="font-serif text-xl font-semibold text-caramel">Frequently asked questions</h2>
+            <div class="mt-4 space-y-3">
+                @foreach (var f in faqs)
+                {
+                    <details class="rounded-2xl border border-white/10 bg-card px-5 py-4">
+                        <summary class="flex cursor-pointer list-none items-center justify-between gap-4 text-sm font-semibold text-cream">
+                            <span>@f.Q</span>
+                            <i class="fa-solid fa-chevron-down faq-chev text-caramel" aria-hidden="true"></i>
+                        </summary>
+                        <p class="mt-3 text-sm leading-relaxed text-neutral-300">@f.A</p>
+                    </details>
+                }
+            </div>
+        </section>
+
+        <section id="contact" class="mt-12 scroll-mt-24" aria-labelledby="contact-h">
+            <h2 id="contact-h" class="font-serif text-xl font-semibold text-caramel">Contact us</h2>
+
+            @if (TempData["Success"] is string ok)
+            {
+                <p class="mt-4 rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3 text-sm text-emerald-300" role="status">@ok</p>
+            }
+
+            <form asp-action="Support" method="post" class="mt-4 space-y-4 rounded-3xl border border-white/10 bg-card p-6">
+                <div asp-validation-summary="ModelOnly" class="text-sm text-red-400"></div>
+                <div class="grid gap-4 sm:grid-cols-2">
+                    <div>
+                        <label asp-for="Name" class="@label"></label>
+                        <input asp-for="Name" maxlength="100" autocomplete="name" class="@field" />
+                        <span asp-validation-for="Name" class="@err"></span>
+                    </div>
+                    <div>
+                        <label asp-for="Email" class="@label"></label>
+                        <input asp-for="Email" type="email" maxlength="150" autocomplete="email" class="@field" />
+                        <span asp-validation-for="Email" class="@err"></span>
+                    </div>
+                </div>
+                <div>
+                    <label asp-for="Topic" class="@label"></label>
+                    <select asp-for="Topic" class="@field">
+                        <option>Order issue</option>
+                        <option>Payment question</option>
+                        <option>Account help</option>
+                        <option>Feedback</option>
+                        <option>Other</option>
+                    </select>
+                    <span asp-validation-for="Topic" class="@err"></span>
+                </div>
+                <div>
+                    <label asp-for="Message" class="@label"></label>
+                    <textarea asp-for="Message" rows="5" maxlength="1000" class="@field"></textarea>
+                    <span asp-validation-for="Message" class="@err"></span>
+                </div>
+                <button type="submit" class="rounded-full bg-caramel px-7 py-2.5 text-sm font-semibold text-black transition hover:bg-cream">Send message</button>
+            </form>
+        </section>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

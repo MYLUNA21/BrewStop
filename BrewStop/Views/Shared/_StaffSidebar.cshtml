@@ -1,0 +1,177 @@
+﻿@{
+    var path = Context.Request.Path.Value ?? string.Empty;
+
+    var main = new (string Href, string Label, string Icon, bool Exact, string? Badge)[]
+    {
+        ("/Barista", "Dashboard", "fa-gauge", true, null),
+        ("/Barista/Queue", "Order Queue", "fa-list-ol", false, "placed"),
+        ("/Barista/Preparation", "Order Preparation", "fa-mug-hot", false, "preparing"),
+        ("/Barista/Status", "Order Status", "fa-table-columns", false, null),
+        ("/Barista/Recipes", "Coffee Recipe Guide", "fa-book-open", false, null),
+        ("/Barista/Notifications", "Notifications", "fa-bell", false, "alerts"),
+    };
+    var account = new (string Href, string Label, string Icon, bool Exact, string? Badge)[]
+    {
+        ("/Account/Manage", "My Profile", "fa-user", false, null),
+        ("/Account/ChangePassword", "Change Password", "fa-key", false, null),
+        ("/Barista/Shifts", "Shift Management", "fa-clock", false, null),
+    };
+
+    bool IsActive(string href, bool exact) =>
+        href == "/Barista" && exact
+            ? path.TrimEnd('/').Equals("/Barista", StringComparison.OrdinalIgnoreCase) || path.Equals("/Barista/Dashboard", StringComparison.OrdinalIgnoreCase)
+            : path.StartsWith(href, StringComparison.OrdinalIgnoreCase);
+
+    const string linkBase = "flex items-center gap-3 rounded-lg border-l-2 border-solid px-3 py-2.5 text-sm font-medium no-underline transition";
+}
+
+<style>
+    .staff-aside {
+        position: fixed;
+        inset: 0 auto 0 0;
+        z-index: 60;
+        width: 17rem;
+        transform: translateX(-100%);
+        transition: transform .2s ease;
+        overflow-y: auto;
+    }
+
+        .staff-aside.is-open {
+            transform: none;
+        }
+
+    .staff-overlay {
+        position: fixed;
+        inset: 0;
+        z-index: 55;
+        background: rgba(0, 0, 0, .6);
+    }
+
+        .staff-overlay[hidden] {
+            display: none;
+        }
+
+    .staff-badge[hidden] {
+        display: none;
+    }
+
+    @@media (min-width: 768px) {
+        .staff-aside {
+            position: sticky;
+            top: 0;
+            height: 100vh;
+            transform: none;
+            z-index: auto;
+        }
+
+        .staff-overlay {
+            display: none !important;
+        }
+    }
+</style>
+
+<div class="sticky top-0 z-40 flex items-center justify-between border-b border-solid border-white/10 bg-card px-4 py-3 md:hidden">
+    <a href="/Barista" class="flex items-center gap-2 no-underline">
+        <i class="fa-solid fa-mug-hot text-caramel"></i>
+        <span class="font-serif text-lg font-bold tracking-wider text-cream">Brew<span class="text-caramel">Stop</span></span>
+        <span class="rounded-full bg-[#00754a] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">Barista</span>
+    </a>
+    <button type="button" id="staff-open" aria-label="Open navigation" aria-controls="staff-aside" aria-expanded="false"
+            class="grid size-10 place-items-center rounded-lg border border-solid border-white/15 text-cream hover:bg-white/5">
+        <i class="fa-solid fa-bars"></i>
+    </button>
+</div>
+
+<div id="staff-overlay" class="staff-overlay" hidden></div>
+
+<aside id="staff-aside" aria-label="Barista navigation" class="staff-aside flex shrink-0 flex-col border-r border-solid border-white/10 bg-card">
+    <a href="/Barista" class="flex items-center gap-2 border-b border-solid border-white/10 px-5 py-5 no-underline">
+        <i class="fa-solid fa-mug-hot text-caramel"></i>
+        <span class="text-sm font-bold uppercase tracking-wider text-cream">BrewStop <span class="text-neutral-500">—</span> <span class="text-caramel">Barista Panel</span></span>
+        <span class="ml-auto rounded-full bg-[#00754a] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">Barista</span>
+    </a>
+
+    <div class="border-b border-solid border-white/10 px-5 py-4">
+        <p class="text-[10px] font-bold uppercase tracking-wider text-neutral-500">Signed in as</p>
+        <p class="mt-0.5 truncate text-sm font-semibold text-cream">@User.Identity?.Name</p>
+    </div>
+
+    <nav class="flex-1 px-3 py-4">
+        <p class="px-3 pb-2 text-[10px] font-bold uppercase tracking-[0.2em] text-neutral-500">Main Menu</p>
+        <div class="space-y-1">
+            @foreach (var l in main)
+            {
+                var active = IsActive(l.Href, l.Exact);
+                <a href="@l.Href" aria-current="@(active ? "page" : null)"
+                   class="@linkBase @(active ? "border-caramel bg-caramel/15 text-caramel" : "border-transparent text-neutral-300 hover:bg-white/5 hover:text-cream")">
+                    <i class="fa-solid @l.Icon w-4 text-center"></i>
+                    <span class="flex-1">@l.Label</span>
+                    @if (l.Badge is not null)
+                    {
+                        <span data-badge="@l.Badge" hidden class="staff-badge rounded-full bg-[#00754a] px-2 py-0.5 text-[10px] font-bold text-white"></span>
+                    }
+                </a>
+            }
+        </div>
+
+        <p class="mt-6 px-3 pb-2 text-[10px] font-bold uppercase tracking-[0.2em] text-neutral-500">Account</p>
+        <div class="space-y-1">
+            @foreach (var l in account)
+            {
+                var active = IsActive(l.Href, l.Exact);
+                <a href="@l.Href" aria-current="@(active ? "page" : null)"
+                   class="@linkBase @(active ? "border-caramel bg-caramel/15 text-caramel" : "border-transparent text-neutral-300 hover:bg-white/5 hover:text-cream")">
+                    <i class="fa-solid @l.Icon w-4 text-center"></i>
+                    <span class="flex-1">@l.Label</span>
+                </a>
+            }
+            <form method="post" action="/Account/Logout">
+                @Html.AntiForgeryToken()
+                <button type="submit" class="@linkBase w-full border-transparent text-left text-neutral-300 hover:bg-white/5 hover:text-cream">
+                    <i class="fa-solid fa-right-from-bracket w-4 text-center"></i>
+                    <span class="flex-1">Logout</span>
+                </button>
+            </form>
+        </div>
+    </nav>
+</aside>
+
+<script>
+    (function() {
+        var aside = document.getElementById('staff-aside');
+        var overlay = document.getElementById('staff-overlay');
+        var openBtn = document.getElementById('staff-open');
+        if (!aside || !overlay || !openBtn) return;
+
+        function setOpen(on) {
+            aside.classList.toggle('is-open', on);
+            overlay.hidden = !on;
+            openBtn.setAttribute('aria-expanded', on ? 'true' : 'false');
+            document.body.style.overflow = on ? 'hidden' : '';
+        }
+        openBtn.addEventListener('click', function() { setOpen(true); });
+        overlay.addEventListener('click', function() { setOpen(false); });
+        aside.addEventListener('click', function(e) { if (e.target.closest('a')) setOpen(false); });
+        document.addEventListener('keydown', function(e) { if (e.key === 'Escape') setOpen(false); });
+        window.addEventListener('resize', function() { if (window.innerWidth >= 768) setOpen(false); });
+
+        // Live badge counts (queue / preparation / notifications)
+        function loadCounts() {
+            if (!window.fetch || document.hidden) return;
+            fetch('/Barista/Counts', { credentials: 'same-origin' })
+                .then(function(r) { return r.ok ? r.json() : null; })
+                .then(function(d) {
+                    if (!d) return;
+                    [].slice.call(document.querySelectorAll('[data-badge]')).forEach(function(el) {
+                        var n = d[el.getAttribute('data-badge')] || 0;
+                        el.textContent = n > 99 ? '99+' : n;
+                        el.hidden = n === 0;
+                    });
+                })
+                .catch(function() { });
+        }
+        loadCounts();
+        setInterval(loadCounts, 30000);
+        window.addEventListener('barista:changed', loadCounts);
+    })();
+</script>

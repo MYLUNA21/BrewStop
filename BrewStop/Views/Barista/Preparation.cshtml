@@ -1,0 +1,13 @@
+﻿@model List<BrewStop.Models.Order>
+@{
+    ViewData["Title"] = "Order Preparation";
+    ViewData["Heading"] = "Order Preparation";
+    ViewData["Sub"] = "Orders you are preparing. Check size, add-ons and special instructions, then mark them ready.";
+    ViewData["CountLabel"] = "in progress";
+    ViewData["EmptyText"] = "Nothing is being prepared. Accept an order from the Order Queue.";
+    ViewData["Url"] = "/Barista/Preparation";
+}
+<partial name="_OrderList" model="Model" />
+@section Scripts {
+    <partial name="_KdsAssets" />
+}

@@ -4,6 +4,10 @@
     ViewData["Title"] = item.Name;
     var returnUrl = Context.Request.Path + Context.Request.QueryString;
     var total = Model.Item.ReviewCount;
+    var isBarista = User.IsInRole(AppRoles.Barista);
+    var refSizes = (ViewBag.RefSizes as List<BrewStop.Models.ItemSize>) ?? new List<BrewStop.Models.ItemSize>();
+    var refAddOns = (ViewBag.RefAddOns as List<BrewStop.Models.AddOn>) ?? new List<BrewStop.Models.AddOn>();
+    var refGroup = (ViewBag.RefGroup as string) ?? "Drinks";
 }
 
 <div class="tw">
@@ -57,7 +61,11 @@
                 </p>
 
                 <div class="mt-auto pt-6">
-                    @if (item.IsAvailable)
+                    @if (isBarista)
+                    {
+                        <partial name="_BaristaReference" model="(refGroup, refSizes, refAddOns)" />
+                    }
+                    else if (item.IsAvailable)
                     {
                         <a asp-controller="Cart" asp-action="Customize" asp-route-id="@item.Id"
                            class="block rounded-full bg-caramel px-6 py-3 text-center text-sm font-semibold text-black transition hover:bg-cream">

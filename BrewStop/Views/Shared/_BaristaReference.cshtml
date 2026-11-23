@@ -1,0 +1,31 @@
+﻿@model (string Group, List<BrewStop.Models.ItemSize> Sizes, List<BrewStop.Models.AddOn> AddOns)
+@{
+    var adds = Model.AddOns.Where(a => a.Group == Model.Group).ToList();
+    var showSizes = Model.Group == "Drinks" && Model.Sizes.Count > 0;
+}
+<div class="space-y-2 rounded-xl border border-solid border-white/10 bg-espresso/60 p-3 text-xs">
+    <p class="text-[10px] font-bold uppercase tracking-wider text-caramel">
+        <i class="fa-solid fa-eye mr-1"></i>Reference only
+    </p>
+    @if (showSizes)
+    {
+        <div class="flex flex-wrap items-center gap-1.5">
+            <span class="text-[10px] font-bold uppercase tracking-wider text-neutral-500">Sizes</span>
+            @foreach (var s in Model.Sizes)
+            {
+                <span class="rounded-md bg-cream px-2 py-0.5 font-bold text-[#1e3932]">@s.Name@(s.PriceDelta > 0 ? " +\u20B1" + s.PriceDelta.ToString("N2") : "")</span>
+            }
+        </div>
+    }
+    <div class="flex flex-wrap items-center gap-1.5">
+        <span class="text-[10px] font-bold uppercase tracking-wider text-neutral-500">Add-ons</span>
+        @if (adds.Count == 0)
+        {
+            <span class="text-neutral-500">None</span>
+        }
+        @foreach (var a in adds)
+        {
+            <span class="rounded-md border border-solid border-[#00754a] bg-[#00754a]/20 px-2 py-0.5 font-semibold text-emerald-200">@a.Name @(a.Price > 0 ? "+\u20B1" + a.Price.ToString("N2") : "")</span>
+        }
+    </div>
+</div>

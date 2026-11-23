@@ -2,6 +2,9 @@
 @{
     ViewData["Title"] = "Menu";
     var isCustomer = User.IsInRole(AppRoles.Student) || User.IsInRole(AppRoles.Faculty);
+    var isBarista = User.IsInRole(AppRoles.Barista);
+    var refSizes = (ViewBag.RefSizes as List<BrewStop.Models.ItemSize>) ?? new List<BrewStop.Models.ItemSize>();
+    var refAddOns = (ViewBag.RefAddOns as List<BrewStop.Models.AddOn>) ?? new List<BrewStop.Models.AddOn>();
     var returnUrl = Context.Request.Path + Context.Request.QueryString;
     const string pillBase = "inline-flex shrink-0 items-center gap-1.5 rounded-full border px-4 py-2 text-sm font-semibold transition";
     const string pillOn = "border-caramel bg-caramel text-black";
@@ -122,10 +125,17 @@
                                         {
                                             <p class="mb-2 text-xs font-semibold text-yellow-300">Only @item.Stock left</p>
                                         }
-                                        <a asp-controller="Cart" asp-action="Customize" asp-route-id="@item.Id"
-                                           class="block rounded-full bg-caramel px-5 py-2.5 text-center text-sm font-semibold text-black transition hover:bg-cream">
-                                            <i class="fa-solid fa-mug-hot me-1"></i> Customize &amp; Order
-                                        </a>
+                                        @if (isBarista)
+                                        {
+                                            <partial name="_BaristaReference" model="(cat.Group, refSizes, refAddOns)" />
+                                        }
+                                        else
+                                        {
+                                            <a asp-controller="Cart" asp-action="Customize" asp-route-id="@item.Id"
+                                               class="block rounded-full bg-caramel px-5 py-2.5 text-center text-sm font-semibold text-black transition hover:bg-cream">
+                                                <i class="fa-solid fa-mug-hot me-1"></i> Customize &amp; Order
+                                            </a>
+                                        }
                                     }
                                     else
                                     {

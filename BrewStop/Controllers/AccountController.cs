@@ -71,7 +71,6 @@ public class AccountController(
 
         await users.AddToRoleAsync(user, m.Role);
 
-
         await audit.LogAsync(user.Id, "RoleAssigned", $"Role={m.Role}; Source=Registration");
 
         await SendConfirmationAsync(user);
@@ -351,92 +350,6 @@ public class AccountController(
         return RedirectToAction("Index", "Home");
     }
 
-    // My Account
-    [HttpGet, Authorize]
-    public async Task<IActionResult> Manage()
-    {
-        var user = await users.GetUserAsync(User);
-        if (user is null) return RedirectToAction(nameof(Login));
-        return View(await BuildManageAsync(user));
-    }
-
-    [HttpPost, Authorize, ValidateAntiForgeryToken]
-    public async Task<IActionResult> UpdateProfile([Bind(Prefix = "Profile")] ProfileInput input)
-    {
-        var user = await users.GetUserAsync(User);
-        if (user is null) return RedirectToAction(nameof(Login));
-
-        var fullName = (input.FullName ?? string.Empty).Trim();
-        var campusId = (input.CampusId ?? string.Empty).Trim();
-
-        if (campusId.StartsWith("GOOGLE-", StringComparison.OrdinalIgnoreCase))
-            ModelState.AddModelError("Profile.CampusId", "Please enter your real Campus ID.");
-        else if (campusId.Length > 0 &&
-                 await users.Users.AnyAsync(u => u.Id != user.Id && u.CampusId == campusId, HttpContext.RequestAborted))
-            ModelState.AddModelError("Profile.CampusId", "This Campus ID is already registered to another account.");
-
-        if (!ModelState.IsValid)
-            return View(nameof(Manage), await BuildManageAsync(user, input));
-
-        user.FullName = fullName;
-        user.CampusId = campusId;
-
-        var result = await users.UpdateAsync(user);
-        if (!result.Succeeded)
-        {
-            foreach (var e in result.Errors) ModelState.AddModelError(string.Empty, e.Description);
-            return View(nameof(Manage), await BuildManageAsync(user, input));
-        }
-
-        await signIn.RefreshSignInAsync(user);
-        await audit.LogAsync(user.Id, "ProfileUpdated", "Fields=FullName,CampusId");
-        TempData["Success"] = "Profile updated.";
-        return RedirectToAction(nameof(Manage));
-    }
-
-    [HttpPost, Authorize, ValidateAntiForgeryToken]
-    public async Task<IActionResult> ChangePassword([Bind(Prefix = "Password")] ChangePasswordInput input)
-    {
-        var user = await users.GetUserAsync(User);
-        if (user is null) return RedirectToAction(nameof(Login));
-
-        var hasPassword = await users.HasPasswordAsync(user);
-        if (hasPassword && string.IsNullOrEmpty(input.CurrentPassword))
-            ModelState.AddModelError("Password.CurrentPassword", "Enter your current password.");
-
-        if (!ModelState.IsValid)
-            return View(nameof(Manage), await BuildManageAsync(user));
-
-        var result = hasPassword
-            ? await users.ChangePasswordAsync(user, input.CurrentPassword!, input.NewPassword)
-            : await users.AddPasswordAsync(user, input.NewPassword);
-
-        if (!result.Succeeded)
-        {
-            foreach (var e in result.Errors)
-                ModelState.AddModelError(hasPassword && e.Code == "PasswordMismatch"
-                    ? "Password.CurrentPassword" : "Password.NewPassword", e.Description);
-            return View(nameof(Manage), await BuildManageAsync(user));
-        }
-
-        await signIn.RefreshSignInAsync(user);
-        await audit.LogAsync(user.Id, hasPassword ? "PasswordChanged" : "PasswordSet", "Source=Manage");
-        TempData["Success"] = hasPassword ? "Password changed." : "Password set. You can now also sign in with email.";
-        return RedirectToAction(nameof(Manage));
-    }
-
-    private async Task<ManageViewModel> BuildManageAsync(ApplicationUser user, ProfileInput? profile = null) => new()
-    {
-        Email = user.Email ?? user.UserName ?? string.Empty,
-        HasPassword = await users.HasPasswordAsync(user),
-        IsCustomer = User.IsInRole(AppRoles.Student) || User.IsInRole(AppRoles.Faculty),
-        Profile = profile ?? new ProfileInput
-        {
-            FullName = user.FullName,
-            CampusId = user.CampusId.StartsWith("GOOGLE-", StringComparison.OrdinalIgnoreCase) ? string.Empty : user.CampusId
-        }
-    };
-
     [HttpGet, AllowAnonymous]
     public IActionResult ForgotPassword() => View(new ForgotPasswordViewModel());
 
@@ -502,7 +415,7 @@ public class AccountController(
         return View();
     }
 
-    // Helpers 
+    // Helpers
     private async Task SendConfirmationAsync(ApplicationUser user)
     {
         var token = await users.GenerateEmailConfirmationTokenAsync(user);
@@ -777,6 +690,14 @@ public class AccountController(
     }
 
     // ---- Activity ----
+    private static readonly string[] CustomerVisibleActions =
+    [
+        "OrderPlaced", "OrderCancelled", "PromoApplied", "ReviewCreated",
+        "ProfileUpdated", "PasswordChanged", "PasswordSet", "SignedOutAllDevices",
+        "NotificationsUpdated", "ExternalLogin", "ExternalLoginLinked",
+        "UserRegistered", "GoogleOAuthRegistered", "AccountDeleted"
+    ];
+
     [HttpGet, Authorize]
     public async Task<IActionResult> Activity()
     {
@@ -785,9 +706,9 @@ public class AccountController(
 
         var entries = await db.AuditLogs
             .AsNoTracking()
-            .Where(a => a.UserId == user.Id)
+            .Where(a => a.UserId == user.Id && CustomerVisibleActions.Contains(a.Action))
             .OrderByDescending(a => a.CreatedAtUtc)
-            .Take(20)
+            .Take(50)
             .ToListAsync();
 
         return View(new ActivityViewModel { Entries = entries });

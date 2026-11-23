@@ -45,7 +45,20 @@
                 <div class="mt-3 space-y-3">
                     @foreach (var o in past)
                     {
-                        <partial name="_OrderCard" model="o" />
+                        <div>
+                            <partial name="_OrderCard" model="o" />
+                            <div class="mt-2 flex justify-end gap-2">
+                                <a asp-action="Receipt" asp-route-id="@o.Id"
+                                   class="rounded-full border border-white/15 px-4 py-1.5 text-xs font-semibold text-cream transition hover:border-caramel hover:text-caramel">
+                                    <i class="fa-solid fa-receipt mr-1"></i>Receipt
+                                </a>
+                                <form asp-action="Reorder" asp-route-id="@o.Id" method="post">
+                                    <button type="submit" class="rounded-full bg-caramel px-4 py-1.5 text-xs font-semibold text-black transition hover:bg-cream">
+                                        <i class="fa-solid fa-rotate-right mr-1"></i>Reorder
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
                     }
                 </div>
             }

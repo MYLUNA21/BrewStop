@@ -9,7 +9,7 @@ using Microsoft.EntityFrameworkCore;
 namespace BrewStop.Controllers;
 
 [Authorize(Policy = "CustomerOnly")]
-public class OrderController(ApplicationDbContext db, IQrTokenService qr, IAuditService audit) : Controller
+public class OrderController(ApplicationDbContext db, IQrTokenService qr, IAuditService audit, ICartService cart) : Controller
 {
     private string? UserId => User.FindFirstValue(ClaimTypes.NameIdentifier);
 
@@ -112,5 +112,65 @@ public class OrderController(ApplicationDbContext db, IQrTokenService qr, IAudit
 
         TempData["Success"] = "Your order was cancelled.";
         return RedirectToAction(nameof(Index));
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> RecentUpdates()
+    {
+        var rows = await db.Orders.AsNoTracking()
+            .Where(o => o.UserId == UserId)
+            .OrderByDescending(o => o.CreatedAtUtc)
+            .Take(5)
+            .Select(o => new { id = o.Id, status = o.Status.ToString(), total = o.Total, createdAtUtc = o.CreatedAtUtc })
+            .ToListAsync(HttpContext.RequestAborted);
+        return Json(rows);
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> Receipt(int id)
+    {
+        var order = await db.Orders.AsNoTracking()
+            .Include(o => o.User)
+            .Include(o => o.Items).ThenInclude(i => i.AddOns)
+            .FirstOrDefaultAsync(o => o.Id == id && o.UserId == UserId);
+
+        if (order is null) return NotFound();
+        return View(order);
+    }
+
+    [HttpPost, ValidateAntiForgeryToken]
+    public async Task<IActionResult> Reorder(int id)
+    {
+        var order = await db.Orders.AsNoTracking()
+            .Include(o => o.Items).ThenInclude(i => i.AddOns)
+            .FirstOrDefaultAsync(o => o.Id == id && o.UserId == UserId);
+
+        if (order is null) return NotFound();
+
+        var sizes = await db.ItemSizes.AsNoTracking().Where(s => s.IsActive).ToListAsync();
+        var added = 0;
+        var skipped = new List<string>();
+
+        foreach (var i in order.Items)
+        {
+            int? sizeId = null;
+            if (i.SizeName is not null)
+            {
+                sizeId = sizes.FirstOrDefault(s => s.Name == i.SizeName)?.Id;
+                if (sizeId is null) { skipped.Add(i.ItemName); continue; }
+            }
+
+            var (ok, _) = await cart.AddAsync(i.MenuItemId, sizeId, i.AddOns.Select(a => a.AddOnId), i.Quantity);
+            if (ok) added++; else skipped.Add(i.ItemName);
+        }
+
+        await audit.LogAsync(UserId, "OrderReordered", $"OrderId={id}; Added={added}; Skipped={skipped.Count}");
+
+        if (skipped.Count > 0)
+            TempData["Warning"] = "Skipped (out of stock or unavailable): " + string.Join(", ", skipped.Distinct()) + ".";
+        if (added > 0)
+            TempData["Success"] = $"{added} item(s) from order #{id} added to your cart.";
+
+        return RedirectToAction("Index", "Cart");
     }
 }

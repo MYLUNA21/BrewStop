@@ -1,66 +1,216 @@
 ﻿@model List<BrewStop.Models.Order>
+@inject BrewStop.Services.IPickupSlotService Slots
+@inject BrewStop.Services.IImageResolver Images
 @{
     ViewData["Title"] = "My Orders";
+    ViewData["LiveReload"] = false;
+
     var active = Model.Where(o => o.Status is OrderStatus.Placed or OrderStatus.Preparing or OrderStatus.Ready).ToList();
     var past = Model.Where(o => !active.Contains(o)).ToList();
-    ViewData["LiveReload"] = false;
+
+    const string whenFmt = "ddd, MMM d \u00B7 h:mm tt";
+    const string payTone = "text-cream";
 }
 
 <div class="tw">
-    <div class="mx-auto max-w-4xl px-4 pt-24 pb-12">
-        <div class="flex items-end justify-between gap-3">
-            <h1 class="font-serif text-3xl font-bold text-cream">My Orders</h1>
-            <a asp-controller="Account" asp-action="Manage" class="text-sm font-semibold text-caramel hover:text-cream">My account</a>
-        </div>
+    <div class="mx-auto max-w-5xl px-4 pt-24 pb-16">
+
+        <!-- Header -->
+        <header class="flex flex-wrap items-end justify-between gap-3 border-b border-white/10 pb-5">
+            <div class="min-w-0">
+                <h1 class="font-serif text-3xl font-bold text-cream">My Orders</h1>
+                <p class="mt-1 text-sm text-neutral-400">Manage and track your coffee orders.</p>
+            </div>
+            <a asp-controller="Account" asp-action="Manage"
+               class="text-sm font-semibold text-caramel transition hover:text-cream">My Account &rarr;</a>
+        </header>
 
         @if (TempData["Success"] is string ok)
         {
-            <p class="mt-4 rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3 text-sm text-emerald-300">@ok</p>
+            <p class="mt-5 rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3 text-sm text-emerald-300" role="status">@ok</p>
+        }
+        @if (TempData["Warning"] is string warn)
+        {
+            <p class="mt-5 rounded-xl border border-amber-400/40 bg-amber-500/10 p-3 text-sm text-amber-200" role="alert">@warn</p>
+        }
+        @if (TempData["Error"] is string err)
+        {
+            <p class="mt-5 rounded-xl border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-200" role="alert">@err</p>
         }
 
         @if (Model.Count == 0)
         {
-            <div class="mt-8 rounded-3xl border border-white/10 bg-card px-6 py-14 text-center">
-                <div class="mx-auto grid size-16 place-items-center rounded-full bg-caramel/10 text-2xl text-caramel"><i class="fa-solid fa-receipt"></i></div>
-                <h2 class="mt-4 font-serif text-xl font-semibold text-cream">No orders yet</h2>
+            <!-- Empty state -->
+            <div class="mt-8 rounded-3xl border border-white/10 bg-card px-6 py-16 text-center">
+                <div class="relative mx-auto grid size-28 place-items-center rounded-full bg-caramel/10 ring-1 ring-caramel/20">
+                    <i class="fa-solid fa-mug-hot text-5xl text-caramel"></i>
+                    <i class="fa-solid fa-wind absolute -top-1 right-5 -rotate-12 text-sm text-caramel/50"></i>
+                    <i class="fa-solid fa-wind absolute -top-3 right-11 -rotate-12 text-xs text-caramel/30"></i>
+                </div>
+                <h2 class="mt-6 font-serif text-2xl font-semibold text-cream">No orders yet</h2>
+                <p class="mx-auto mt-2 max-w-sm text-sm text-neutral-400">
+                    Your first cup is waiting. Order ahead and skip the queue at pickup.
+                </p>
                 <a asp-controller="Menu" asp-action="Index"
-                   class="mt-5 inline-block rounded-full bg-caramel px-8 py-3 text-sm font-semibold text-black hover:bg-cream">Browse the menu</a>
+                   class="mt-7 inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-caramel to-[#e9c46a] px-8 py-3 text-sm font-semibold text-black shadow-lg shadow-caramel/20 transition hover:brightness-110">
+                    Explore Menu <i class="fa-solid fa-arrow-right text-xs"></i>
+                </a>
             </div>
         }
         else
         {
-            @if (active.Count > 0)
-            {
-                <h2 class="mt-8 text-sm font-semibold uppercase tracking-wider text-caramel">Active</h2>
-                <div class="mt-3 space-y-3">
-                    @foreach (var o in active)
+            <!-- Active Orders -->
+            <section class="mt-8" aria-labelledby="active-heading">
+                <div class="flex items-center gap-3">
+                    <h2 id="active-heading" class="font-serif text-2xl font-semibold text-cream">Active Orders</h2>
+                    @if (active.Count > 0)
                     {
-                        <partial name="_OrderCard" model="o" />
+                        <span class="rounded-full bg-caramel/15 px-2.5 py-0.5 text-xs font-bold text-caramel">@active.Count</span>
                     }
                 </div>
-            }
+
+                @if (active.Count == 0)
+                {
+                    <div class="mt-4 flex flex-wrap items-center justify-between gap-4 rounded-3xl border border-dashed border-white/15 bg-card/60 px-5 py-6">
+                        <div class="flex items-center gap-4">
+                            <div class="grid size-12 shrink-0 place-items-center rounded-full bg-caramel/10 text-lg text-caramel"><i class="fa-solid fa-mug-hot"></i></div>
+                            <p class="text-sm text-neutral-300">Nothing brewing right now. Ready for another round?</p>
+                        </div>
+                        <a asp-controller="Menu" asp-action="Index"
+                           class="rounded-full bg-caramel px-5 py-2 text-sm font-semibold text-black transition hover:bg-cream">Explore Menu</a>
+                    </div>
+                }
+                else
+                {
+                    <div class="mt-4 space-y-5">
+                        @foreach (var o in active)
+                        {
+                            var local = Slots.ToLocal(o.PickupAtUtc);
+                            var shown = o.Items.Take(3).ToList();
+                            var more = o.Items.Count - shown.Count;
+
+                            <article class="rounded-3xl border border-white/10 bg-card p-5 shadow-lg shadow-black/20 transition hover:border-caramel/40 sm:p-6">
+                                <div class="flex items-start justify-between gap-3">
+                                    <div class="flex min-w-0 flex-wrap items-center gap-2.5">
+                                        <h3 class="font-serif text-xl font-semibold text-cream">Order #@o.Id</h3>
+                                        <partial name="_StatusBadge" model="o" />
+                                    </div>
+                                    <p class="shrink-0 text-xl font-bold text-caramel">&#8369;@o.Total.ToString("N2")</p>
+                                </div>
+
+                                <div class="mt-4 flex gap-4">
+                                    <div class="flex shrink-0 -space-x-4 self-start">
+                                        @foreach (var i in shown)
+                                        {
+                                            <img src="@Images.Resolve(i.MenuItem?.ImageUrl, i.ItemName)" alt="@i.ItemName" loading="lazy"
+                                                 class="size-16 rounded-2xl object-cover ring-2 ring-card sm:size-20" />
+                                        }
+                                        @if (more > 0)
+                                        {
+                                            <span class="grid size-16 place-items-center rounded-2xl bg-espresso text-xs font-bold text-caramel ring-2 ring-card sm:size-20">+@more</span>
+                                        }
+                                    </div>
+
+                                    <ul class="min-w-0 flex-1 space-y-2">
+                                        @foreach (var i in o.Items)
+                                        {
+                                            <li class="min-w-0">
+                                                <p class="truncate text-sm font-semibold text-cream">@i.Quantity&times; @i.ItemName</p>
+                                                @if (i.SizeName is not null || i.AddOns.Count > 0)
+                                                {
+                                                    <div class="mt-1 flex flex-wrap gap-1.5">
+                                                        @if (i.SizeName is not null)
+                                                        {
+                                                            <span class="rounded-full bg-white/5 px-2 py-0.5 text-[11px] text-neutral-300">@i.SizeName</span>
+                                                        }
+                                                        @foreach (var a in i.AddOns)
+                                                        {
+                                                            <span class="rounded-full bg-caramel/10 px-2 py-0.5 text-[11px] text-caramel">+ @a.Name</span>
+                                                        }
+                                                    </div>
+                                                }
+                                            </li>
+                                        }
+                                    </ul>
+                                </div>
+
+                                <dl class="mt-4 flex flex-wrap gap-x-6 gap-y-1 text-xs text-neutral-400">
+                                    <div><dt class="inline">Ready by: </dt><dd class="inline @payTone">@local.ToString(whenFmt)</dd></div>
+                                    <div><dt class="inline">Payment: </dt><dd class="inline @payTone">@o.PaymentMethod</dd></div>
+                                </dl>
+
+                                <div class="mt-5 border-t border-white/10 pt-5">
+                                    <partial name="_Progress" model="o" />
+                                </div>
+
+                                <div class="mt-5 flex justify-end">
+                                    <a asp-action="Details" asp-route-id="@o.Id"
+                                       class="inline-flex items-center gap-1.5 text-xs font-semibold text-caramel transition hover:text-cream">
+                                        View order details <i class="fa-solid fa-arrow-right text-[10px]"></i>
+                                    </a>
+                                </div>
+                            </article>
+                        }
+                    </div>
+                }
+            </section>
+
+            <!-- Order History -->
             @if (past.Count > 0)
             {
-                <h2 class="mt-8 text-sm font-semibold uppercase tracking-wider text-neutral-400">History</h2>
-                <div class="mt-3 space-y-3">
-                    @foreach (var o in past)
-                    {
-                        <div>
-                            <partial name="_OrderCard" model="o" />
-                            <div class="mt-2 flex justify-end gap-2">
-                                <a asp-action="Receipt" asp-route-id="@o.Id"
-                                   class="rounded-full border border-white/15 px-4 py-1.5 text-xs font-semibold text-cream transition hover:border-caramel hover:text-caramel">
-                                    <i class="fa-solid fa-receipt mr-1"></i>Receipt
-                                </a>
-                                <form asp-action="Reorder" asp-route-id="@o.Id" method="post">
-                                    <button type="submit" class="rounded-full bg-caramel px-4 py-1.5 text-xs font-semibold text-black transition hover:bg-cream">
-                                        <i class="fa-solid fa-rotate-right mr-1"></i>Reorder
-                                    </button>
-                                </form>
-                            </div>
-                        </div>
-                    }
-                </div>
+                <section class="mt-12" aria-labelledby="history-heading">
+                    <h2 id="history-heading" class="font-serif text-2xl font-semibold text-cream">Order History</h2>
+
+                    <div class="mt-4 space-y-3">
+                        @foreach (var o in past)
+                        {
+                            var local = Slots.ToLocal(o.PickupAtUtc);
+                            var shown = o.Items.Take(2).ToList();
+                            var summary = string.Join(", ", o.Items.Select(i => $"{i.Quantity}\u00D7 {i.ItemName}"));
+
+                            <article class="rounded-2xl border border-white/10 bg-card p-4 transition hover:border-caramel/40 sm:p-5">
+                                <div class="flex items-start justify-between gap-3">
+                                    <div class="flex min-w-0 flex-wrap items-center gap-2">
+                                        <h3 class="font-serif text-lg font-semibold text-cream">Order #@o.Id</h3>
+                                        <partial name="_StatusBadge" model="o" />
+                                    </div>
+                                    <p class="shrink-0 text-lg font-bold text-caramel">&#8369;@o.Total.ToString("N2")</p>
+                                </div>
+
+                                <div class="mt-3 flex gap-4">
+                                    <div class="flex shrink-0 -space-x-3 self-start">
+                                        @foreach (var i in shown)
+                                        {
+                                            <img src="@Images.Resolve(i.MenuItem?.ImageUrl, i.ItemName)" alt="@i.ItemName" loading="lazy"
+                                                 class="size-14 rounded-xl object-cover ring-2 ring-card" />
+                                        }
+                                    </div>
+                                    <div class="min-w-0 flex-1">
+                                        <p class="line-clamp-2 text-sm text-neutral-200">@summary</p>
+                                        <dl class="mt-2 flex flex-wrap gap-x-5 gap-y-1 text-xs text-neutral-400">
+                                            <div><dt class="inline">Ready by: </dt><dd class="inline @payTone">@local.ToString(whenFmt)</dd></div>
+                                            <div><dt class="inline">Payment: </dt><dd class="inline @payTone">@o.PaymentMethod</dd></div>
+                                            <div><dt class="inline">Payment status: </dt><dd class="inline @payTone">@o.PaymentStatus</dd></div>
+                                        </dl>
+                                    </div>
+                                </div>
+
+                                <div class="mt-4 flex flex-wrap justify-end gap-2 border-t border-white/10 pt-4">
+                                    <a asp-action="Receipt" asp-route-id="@o.Id"
+                                       class="inline-flex items-center gap-1.5 rounded-full border border-white/15 px-4 py-1.5 text-xs font-semibold text-cream transition hover:border-caramel hover:text-caramel">
+                                        <i class="fa-solid fa-receipt"></i> View Receipt
+                                    </a>
+                                    <form asp-action="Reorder" asp-route-id="@o.Id" method="post">
+                                        <button type="submit"
+                                                class="inline-flex items-center gap-1.5 rounded-full bg-caramel px-4 py-1.5 text-xs font-semibold text-black transition hover:bg-cream">
+                                            <i class="fa-solid fa-rotate-right"></i> Order Again
+                                        </button>
+                                    </form>
+                                </div>
+                            </article>
+                        }
+                    </div>
+                </section>
             }
         }
     </div>

@@ -18,7 +18,8 @@ public class OrderController(ApplicationDbContext db, IQrTokenService qr, IAudit
     {
         var orders = await db.Orders.AsNoTracking()
             .Where(o => o.UserId == UserId)
-            .Include(o => o.Items)
+            .Include(o => o.Items).ThenInclude(i => i.AddOns)
+            .Include(o => o.Items).ThenInclude(i => i.MenuItem)
             .OrderByDescending(o => o.CreatedAtUtc)
             .Take(50)
             .ToListAsync();

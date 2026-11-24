@@ -171,7 +171,11 @@
                                                 <p class="truncate text-xs text-neutral-400">@me.Email</p>
                                             </div>
                                             <div class="my-1 border-t border-white/10"></div>
-                                            <a role="menuitem" asp-controller="Account" asp-action="Manage" class="@item"><i class="fa-solid fa-id-badge w-4 text-center"></i>View Profile</a>
+                                            <a role="menuitem" asp-controller="Account" asp-action="Manage" class="@item"><i class="fa-solid fa-id-badge w-4 text-center"></i>My Account</a>
+                                            @if (isCustomer)
+                                            {
+                                                <a role="menuitem" asp-controller="Order" asp-action="Index" class="@item"><i class="fa-solid fa-receipt w-4 text-center"></i>Order History</a>
+                                            }
                                             <a role="menuitem" asp-controller="Account" asp-action="Manage" asp-fragment="profile" class="@item"><i class="fa-solid fa-user-pen w-4 text-center"></i>Edit Personal Information</a>
                                             <a role="menuitem" asp-controller="Account" asp-action="ChangePassword" class="@item"><i class="fa-solid fa-key w-4 text-center"></i>Change Password</a>
                                             <a role="menuitem" asp-controller="Account" asp-action="Manage" asp-fragment="notifications" class="@item"><i class="fa-solid fa-bell w-4 text-center"></i>Notification Settings</a>
@@ -183,7 +187,7 @@
                                         }
                                         <div class="my-1 border-t border-white/10"></div>
                                         <form asp-controller="Account" asp-action="Logout" method="post">
-                                            <button type="submit" role="menuitem" class="@item w-full text-left"><i class="fa-solid fa-right-from-bracket w-4 text-center"></i>Logout</button>
+                                            <button type="submit" role="menuitem" class="@item w-full text-left"><i class="fa-solid fa-right-from-bracket w-4 text-center"></i>Sign Out</button>
                                         </form>
                                         @if (me is not null)
                                         {
@@ -274,15 +278,34 @@
                 <div>
                     <h3 class="font-serif text-base font-semibold text-cream">My Account</h3>
                     <ul class="mt-4 space-y-2.5 text-sm text-neutral-400">
-                        <li><a asp-controller="Account" asp-action="Login" class="hover:text-caramel">Sign in</a></li>
-                        <li><a asp-controller="Account" asp-action="Register" class="hover:text-caramel">Join Now</a></li>
-                        <li><a asp-controller="Account" asp-action="ForgotPassword" class="hover:text-caramel">Forgot password</a></li>
+                        @if (signedIn)
+                        {
+                            <li><a asp-controller="Account" asp-action="Manage" class="hover:text-caramel">My Profile</a></li>
+                            @if (isCustomer)
+                            {
+                                <li><a asp-controller="Favorites" asp-action="Index" class="hover:text-caramel">Favorites</a></li>
+                                <li><a asp-controller="Account" asp-action="Activity" class="hover:text-caramel">Account Activity</a></li>
+                            }
+                        }
+                        else
+                        {
+                            <li><a asp-controller="Account" asp-action="Login" class="hover:text-caramel">Sign in</a></li>
+                            <li><a asp-controller="Account" asp-action="Register" class="hover:text-caramel">Join Now</a></li>
+                            <li><a asp-controller="Account" asp-action="ForgotPassword" class="hover:text-caramel">Forgot password</a></li>
+                        }
                     </ul>
                 </div>
                 <div>
                     <h3 class="font-serif text-base font-semibold text-cream">Orders</h3>
                     <ul class="mt-4 space-y-2.5 text-sm text-neutral-400">
-                        <li><span>Order history</span></li>
+                        @if (signedIn && isCustomer)
+                        {
+                            <li><a asp-controller="Order" asp-action="Index" class="hover:text-caramel">Order history</a></li>
+                        }
+                        else
+                        {
+                            <li><span>Order history</span></li>
+                        }
                         <li><span>Pickup verification</span></li>
                     </ul>
                 </div>

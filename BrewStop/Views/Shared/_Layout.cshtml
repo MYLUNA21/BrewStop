@@ -121,17 +121,22 @@
                             {
                                 <!-- b) Notification bell -->
                                 <div class="relative" data-dd id="bell-dd">
-                                    <button type="button" data-dd-btn class="@ib" aria-label="Order notifications" aria-expanded="false" aria-haspopup="true" aria-controls="bell-panel">
+                                    <button type="button" data-dd-btn class="@ib" aria-label="Notifications" aria-expanded="false" aria-haspopup="true" aria-controls="bell-panel">
                                         <i class="fa-solid fa-bell"></i>
-                                        <span id="bell-badge" class="absolute -right-0.5 -top-0.5 hidden min-w-[18px] rounded-full bg-red-500 px-1 text-center text-[10px] font-bold leading-[18px] text-white">0</span>
+                                        <span id="bell-ping" aria-hidden="true" class="pointer-events-none absolute -right-1 -top-1 hidden size-[18px] animate-ping rounded-full bg-red-500/60"></span>
+                                        <span id="bell-badge" aria-live="polite" class="absolute -right-1 -top-1 hidden min-w-[18px] rounded-full bg-red-500 px-1 text-center text-[10px] font-bold leading-[18px] text-white ring-2 ring-[#1a0f0d]">0</span>
                                     </button>
                                     <div id="bell-panel" data-dd-panel aria-hidden="true" class="@panelBase w-80 max-w-[calc(100vw-2rem)]">
-                                        <div class="flex items-center justify-between border-b border-white/10 px-4 py-3">
-                                            <p class="font-serif text-sm font-semibold">Order updates</p>
-                                            <a asp-controller="Order" asp-action="Index" class="text-xs font-semibold text-caramel hover:text-cream">View all</a>
+                                        @Html.AntiForgeryToken()
+                                        <div class="flex items-center justify-between gap-2 border-b border-white/10 px-4 py-3">
+                                            <p class="font-serif text-sm font-semibold">Notifications</p>
+                                            <div class="flex items-center gap-3">
+                                                <button type="button" id="bell-markall" class="text-xs font-semibold text-caramel hover:text-cream">Mark all as read</button>
+                                                <a asp-controller="Order" asp-action="Index" class="text-xs font-semibold text-caramel hover:text-cream">View all</a>
+                                            </div>
                                         </div>
                                         <ul id="bell-list" class="max-h-72 divide-y divide-white/5 overflow-y-auto">
-                                            <li class="px-4 py-6 text-center text-xs text-neutral-400">No recent updates.</li>
+                                            <li class="px-4 py-6 text-center text-xs text-neutral-400">No notifications yet.</li>
                                         </ul>
                                     </div>
                                 </div>
@@ -393,57 +398,100 @@
         <script>
                 (function() {
                     var dd = document.getElementById('bell-dd'); if (!dd) return;
-                    var badge = document.getElementById('bell-badge'), list = document.getElementById('bell-list');
-                    var KEY = 'bs.notif.unread', loaded = false;
+                    var btn = dd.querySelector('[data-dd-btn]');
+                    var badge = document.getElementById('bell-badge'), ping = document.getElementById('bell-ping');
+                    var list = document.getElementById('bell-list'), markAllBtn = document.getElementById('bell-markall');
+                    var tokenEl = dd.querySelector('input[name="__RequestVerificationToken"]');
+                    var count = 0;
 
-                    function unread() { try { return parseInt(localStorage.getItem(KEY) || '0', 10) || 0; } catch (e) { return 0; } }
-                    function setUnread(n) {
-                        try { localStorage.setItem(KEY, String(n)); } catch (e) { }
-                        badge.textContent = n > 9 ? '9+' : String(n);
-                        badge.classList.toggle('hidden', n <= 0);
+                    var ICON = {
+                        OrderPreparing: ['fa-mug-hot', 'text-caramel'],
+                        OrderReady: ['fa-circle-check', 'text-emerald-400'],
+                        OrderCompleted: ['fa-check-double', 'text-emerald-400'],
+                        OrderCancelled: ['fa-ban', 'text-red-400'],
+                        Promotion: ['fa-tag', 'text-caramel']
+                    };
+
+                    function isOpen() { return btn.getAttribute('aria-expanded') === 'true'; }
+
+                    function render(n) {
+                        count = Math.max(0, parseInt(n, 10) || 0);
+                        badge.textContent = count > 9 ? '9+' : String(count);
+                        badge.classList.toggle('hidden', count <= 0);
+                        if (ping) ping.classList.toggle('hidden', count <= 0);
+                        btn.setAttribute('aria-label', count > 0 ? 'Notifications (' + count + ' unread)' : 'Notifications');
                     }
-                    var LABEL = { Placed: 'was placed', Preparing: 'is being prepared', Ready: 'is ready for pickup', Claimed: 'was picked up', Cancelled: 'was cancelled' };
 
-                    function row(orderId, status, when) {
+                    function row(n) {
                         var li = document.createElement('li');
                         var a = document.createElement('a');
-                        a.href = '/Order/Details/' + encodeURIComponent(orderId);
-                        a.className = 'flex items-start gap-3 px-4 py-3 text-sm transition hover:bg-caramel/10';
+                        a.href = n.orderId ? '/Order/Details/' + encodeURIComponent(n.orderId) : '/Menu';
+                        a.className = 'flex items-start gap-3 px-4 py-3 text-sm transition hover:bg-caramel/10' + (n.isRead ? '' : ' bg-caramel/5');
+                        var ic = ICON[n.type] || ICON.OrderPreparing;
                         var i = document.createElement('i');
-                        i.className = 'fa-solid mt-0.5 ' + (status === 'Ready' ? 'fa-circle-check text-emerald-400' : 'fa-mug-hot text-caramel');
-                        var box = document.createElement('div');
-                        var t = document.createElement('p'); t.className = 'text-cream';
-                        t.textContent = 'Order #' + orderId + ' ' + (LABEL[status] || status.toLowerCase());
-                        var s = document.createElement('p'); s.className = 'text-xs text-neutral-400';
-                        s.textContent = when ? new Date(when).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : 'Just now';
-                        box.append(t, s); a.append(i, box); li.append(a);
+                        i.className = 'fa-solid mt-0.5 ' + ic[0] + ' ' + ic[1];
+                        var box = document.createElement('div'); box.className = 'min-w-0 flex-1';
+                        var t = document.createElement('p'); t.className = 'font-semibold text-cream'; t.textContent = n.title;
+                        var m = document.createElement('p'); m.className = 'text-xs text-neutral-300'; m.textContent = n.message || '';
+                        var s = document.createElement('p'); s.className = 'mt-0.5 text-[11px] text-neutral-500';
+                        s.textContent = n.createdAtUtc ? new Date(n.createdAtUtc.endsWith && !/Z|[+-]\d\d:\d\d$/.test(n.createdAtUtc) ? n.createdAtUtc + 'Z' : n.createdAtUtc)
+                            .toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : 'Just now';
+                        box.append(t, m, s); a.append(i, box); li.append(a);
                         return li;
                     }
+
                     function clearEmpty() { var e = list.querySelector('li:not(:has(a))'); if (e) e.remove(); }
 
-                    function load() {
-                        if (loaded) return; loaded = true;
-                        fetch('/Order/RecentUpdates', { credentials: 'same-origin', headers: { Accept: 'application/json' } })
-                            .then(function(r) { return r.ok ? r.json() : []; })
-                            .then(function(rows) {
-                                if (!rows.length) return;
-                                list.replaceChildren.apply(list, rows.map(function(o) { return row(o.id, o.status, o.createdAtUtc); }));
-                            }).catch(function() { loaded = false; });
+                    function getJson(url) {
+                        return fetch(url, { credentials: 'same-origin', headers: { Accept: 'application/json' } })
+                            .then(function(r) { return r.ok ? r.json() : null; })
+                            .catch(function() { return null; });
                     }
 
-                    setUnread(unread());
-                    dd.addEventListener('dd:toggle', function(e) { if (e.detail) { load(); setUnread(0); } });
+                    function loadList() {
+                        return getJson('/api/notifications/recent').then(function(rows) {
+                            if (!rows || !rows.length) return;
+                            list.replaceChildren.apply(list, rows.map(row));
+                        });
+                    }
+
+                    function refreshCount() {
+                        return getJson('/api/notifications/unread-count').then(function(d) { if (d) render(d.count); });
+                    }
+
+                    function markAllRead() {
+                        if (count <= 0) return Promise.resolve();
+                        render(0);
+                        return fetch('/api/notifications/mark-all-read', {
+                            method: 'POST',
+                            credentials: 'same-origin',
+                            headers: { 'RequestVerificationToken': tokenEl ? tokenEl.value : '' }
+                        }).catch(function() { refreshCount(); });
+                    }
+
+                    refreshCount();
+
+                    dd.addEventListener('dd:toggle', function(e) {
+                        if (e.detail) loadList().then(markAllRead);
+                    });
+                    if (markAllBtn) markAllBtn.addEventListener('click', function() {
+                        markAllRead();
+                        list.querySelectorAll('a.bg-caramel\\/5').forEach(function(a) { a.classList.remove('bg-caramel/5'); });
+                    });
 
                     if (!window.signalR) return;
                     var conn = new signalR.HubConnectionBuilder().withUrl('/hubs/orders').withAutomaticReconnect().build();
-                    conn.on('OrderStatusChanged', function(u) {
-                        if (!u || !u.orderId || !u.status) return;
+
+                    conn.on('NotificationReceived', function(n) {
+                        if (!n || !n.title) return;
                         clearEmpty();
-                        list.prepend(row(u.orderId, u.status, null));
+                        list.prepend(row(n));
                         while (list.children.length > 8) list.lastElementChild.remove();
-                        var open = dd.querySelector('[data-dd-btn]').getAttribute('aria-expanded') === 'true';
-                        if (!open) setUnread(unread() + 1);
+                        render(n.unreadCount);
+                        if (isOpen()) markAllRead();
                     });
+                    conn.on('UnreadCountChanged', function(d) { if (d) render(d.unreadCount); });
+                    conn.onreconnected(refreshCount);
                     conn.start().catch(function(e) { console.warn('Order hub unavailable', e); });
                 })();
         </script>

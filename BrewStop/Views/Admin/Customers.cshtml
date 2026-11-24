@@ -3,16 +3,12 @@
     Layout = "_AdminLayout";
     ViewData["Title"] = "Customer Management";
 
-    // ---- View-only helpers (no controller / model changes) ----------------------------------
-    // Tab bucket: Admin > Barista > Student. Faculty and role-less accounts are customers,
-    // so they are grouped under the "Student" tab.
     bool InRole(AdminCustomerRow row, string role) =>
         row.Roles.Any(x => string.Equals(x, role, StringComparison.OrdinalIgnoreCase));
 
     string Bucket(AdminCustomerRow row) =>
         InRole(row, "Admin") ? "admin" : InRole(row, "Barista") ? "barista" : "student";
 
-    // Left-border accent: Inactive(locked)=crimson, Admin=amber, Barista=cyan, Active=green.
     string Accent(AdminCustomerRow row) =>
         row.IsLocked ? "locked" : InRole(row, "Admin") ? "admin" : InRole(row, "Barista") ? "barista" : "active";
 
@@ -21,10 +17,27 @@
         : string.Equals(role, "Barista", StringComparison.OrdinalIgnoreCase) ? "cm-role-barista"
         : "cm-role-customer";
 
-    var totalCount = Model.Rows.Count;
-    var studentCount = Model.Rows.Count(r => Bucket(r) == "student");
-    var baristaCount = Model.Rows.Count(r => Bucket(r) == "barista");
-    var adminCount = Model.Rows.Count(r => Bucket(r) == "admin");
+    var pills = new (string Key, string Label, string Dot)[]
+    {
+        ("all", "All", "#FFD9A0"),
+        ("customers", "Customers", "#4ADE80"),
+        ("staff", "Staff", "#22D3EE"),
+        ("frequent", "Frequent", "#F5A524"),
+        ("locked", "Locked", "#E5484D")
+    };
+
+    string Link(string filter, int page)
+    {
+        var parts = new List<string>();
+        if (!string.IsNullOrWhiteSpace(Model.Query)) parts.Add("q=" + Uri.EscapeDataString(Model.Query.Trim()));
+        if (filter != "all") parts.Add("filter=" + filter);
+        if (page > 1) parts.Add("page=" + page);
+        return "/Admin/Customers" + (parts.Count > 0 ? "?" + string.Join("&", parts) : "");
+    }
+
+    var clearHref = Model.Filter == "all" ? "/Admin/Customers" : "/Admin/Customers?filter=" + Model.Filter;
+    var first = Model.TotalCount == 0 ? 0 : (Model.Page - 1) * Model.PageSize + 1;
+    var last = first == 0 ? 0 : first + Model.Rows.Count - 1;
     var rowIndex = 0;
 }
 
@@ -745,22 +758,48 @@
             transform: none;
         }
     }
+
+    /* ---------- Server-side filter links + pager ---------- */
+    .cm-root a.cm-tab {
+        text-decoration: none;
+    }
+
+    .cm-root .cm-clear[hidden] {
+        display: none;
+    }
+
+    .cm-root #cmDynamic {
+        transition: opacity .15s var(--cm-ease);
+    }
+
+    .cm-root .cm-pager {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: center;
+        gap: 14px;
+        margin-top: 18px;
+    }
+
+    .cm-root .cm-pg-off {
+        opacity: .4;
+        pointer-events: none;
+        transform: none;
+    }
 </style>
 
 <div class="tw cm-root">
     <div class="cm-top">
         <h1 class="font-serif text-2xl font-bold">Customer <span class="text-caramel">Management</span></h1>
-        <form method="get" action="/Admin/Customers" class="cm-form">
+        <form method="get" action="/Admin/Customers" class="cm-form" id="cmForm">
             <div class="cm-search">
                 <i class="fa-solid fa-magnifying-glass cm-search-icon" aria-hidden="true"></i>
                 <input type="text" name="q" value="@Model.Query" placeholder="Name, email, campus ID, role"
                        class="cm-input" autocomplete="off" aria-label="Search customers" />
             </div>
+            <input type="hidden" name="filter" value="@Model.Filter" />
             <button type="submit" class="cm-btn">Search</button>
-            @if (!string.IsNullOrWhiteSpace(Model.Query))
-            {
-                <a href="/Admin/Customers" class="cm-clear">Clear</a>
-            }
+            <a href="@clearHref" id="cmClear" class="cm-clear" @(string.IsNullOrWhiteSpace(Model.Query) ? "hidden" : null)>Clear</a>
         </form>
     </div>
 
@@ -773,231 +812,237 @@
         <div class="mb-3 rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-red-300">@err</div>
     }
 
-    <div class="cm-filterbar">
-        <div class="cm-tabs-scroll">
-            <div class="cm-tabs" id="cmTabs" role="tablist" aria-label="Filter accounts by role">
-                <span class="cm-pill" id="cmPill" aria-hidden="true"></span>
-                <button type="button" class="cm-tab" role="tab" data-filter="all" aria-selected="true" tabindex="0" style="--d:#FFD9A0">
-                    <span class="cm-tab-dot"></span>All <span class="cm-tab-count" data-count="all">@totalCount</span>
-                </button>
-                <button type="button" class="cm-tab" role="tab" data-filter="student" aria-selected="false" tabindex="-1" style="--d:#4ADE80">
-                    <span class="cm-tab-dot"></span>Student <span class="cm-tab-count" data-count="student">@studentCount</span>
-                </button>
-                <button type="button" class="cm-tab" role="tab" data-filter="barista" aria-selected="false" tabindex="-1" style="--d:#22D3EE">
-                    <span class="cm-tab-dot"></span>Barista <span class="cm-tab-count" data-count="barista">@baristaCount</span>
-                </button>
-                <button type="button" class="cm-tab" role="tab" data-filter="admin" aria-selected="false" tabindex="-1" style="--d:#F5A524">
-                    <span class="cm-tab-dot"></span>Admin <span class="cm-tab-count" data-count="admin">@adminCount</span>
-                </button>
+    <div id="cmDynamic">
+        <div class="cm-filterbar">
+            <div class="cm-tabs-scroll">
+                <div class="cm-tabs" id="cmTabs" role="tablist" aria-label="Filter accounts">
+                    <span class="cm-pill" id="cmPill" aria-hidden="true"></span>
+                    @foreach (var p in pills)
+                    {
+                        <a href="@Link(p.Key, 1)" data-nav class="cm-tab" role="tab" aria-selected="@(Model.Filter == p.Key ? "true" : "false")" style="--d:@p.Dot">
+                            <span class="cm-tab-dot"></span>@p.Label <span class="cm-tab-count">@Model.Counts.GetValueOrDefault(p.Key)</span>
+                        </a>
+                    }
+                </div>
             </div>
-        </div>
-        <p class="cm-meta" id="cmMeta" aria-live="polite">Showing <strong>@totalCount</strong> of @totalCount accounts</p>
-    </div>
-
-    <div class="cm-list" role="table" aria-label="Customer accounts">
-        <div class="cm-head" role="row">
-            <div role="columnheader">Customer</div>
-            <div role="columnheader">Campus ID</div>
-            <div role="columnheader">Email</div>
-            <div role="columnheader">Role</div>
-            <div role="columnheader">Account</div>
-            <div role="columnheader" class="cm-h-num">Orders</div>
-            <div role="columnheader" class="cm-h-num">&#8369; Total Spent</div>
-            <div role="columnheader"><span class="sr-only">Actions</span></div>
+            <p class="cm-meta" id="cmMeta" aria-live="polite">Showing <strong>@first&ndash;@last</strong> of @Model.TotalCount accounts</p>
         </div>
 
-        <div class="cm-rows" role="rowgroup" id="cmRows">
-            @foreach (var r in Model.Rows)
-            {
-                var initial = string.IsNullOrWhiteSpace(r.FullName) ? "?" : r.FullName.Trim().Substring(0, 1).ToUpperInvariant();
-                <div class="cm-row cm-enter cm-acc-@(Accent(r))" role="row"
-                     data-role="@Bucket(r)" data-state="@(r.IsLocked ? "locked" : "active")"
-                     style="--i:@(Math.Min(rowIndex, 12))">
+        <div class="cm-list" role="table" aria-label="Customer accounts">
+            <div class="cm-head" role="row">
+                <div role="columnheader">Customer</div>
+                <div role="columnheader">Campus ID</div>
+                <div role="columnheader">Email</div>
+                <div role="columnheader">Role</div>
+                <div role="columnheader">Account</div>
+                <div role="columnheader" class="cm-h-num">Orders</div>
+                <div role="columnheader" class="cm-h-num">&#8369; Total Spent</div>
+                <div role="columnheader"><span class="sr-only">Actions</span></div>
+            </div>
 
-                    <div class="cm-cell cm-who" role="cell">
-                        <span class="cm-avatar" aria-hidden="true">@initial</span>
-                        <div class="cm-who-text">
-                            <span class="cm-name" title="@r.FullName">@r.FullName</span>
-                            @if (r.IsFrequent)
-                            {
-                                <span class="cm-freq"><i class="fa-solid fa-star" aria-hidden="true"></i>Frequent Customer</span>
-                            }
+            <div class="cm-rows" role="rowgroup" id="cmRows">
+                @foreach (var r in Model.Rows)
+                {
+                    var initial = string.IsNullOrWhiteSpace(r.FullName) ? "?" : r.FullName.Trim().Substring(0, 1).ToUpperInvariant();
+                    <div class="cm-row cm-enter cm-acc-@(Accent(r))" role="row"
+                         data-role="@Bucket(r)" data-state="@(r.IsLocked ? "locked" : "active")"
+                         style="--i:@(Math.Min(rowIndex, 12))">
+
+                        <div class="cm-cell cm-who" role="cell">
+                            <span class="cm-avatar" aria-hidden="true">@initial</span>
+                            <div class="cm-who-text">
+                                <span class="cm-name" title="@r.FullName">@r.FullName</span>
+                                @if (r.IsFrequent)
+                                {
+                                    <span class="cm-freq"><i class="fa-solid fa-star" aria-hidden="true"></i>Frequent Customer</span>
+                                }
+                            </div>
                         </div>
-                    </div>
 
-                    <div class="cm-cell cm-campus" role="cell">
-                        @if (string.IsNullOrWhiteSpace(r.CampusId))
-                        {
-                            <span class="cm-role-none">&mdash;</span>
-                        }
-                        else
-                        {
-                            <span class="cm-campus-badge" title="Campus ID">@r.CampusId</span>
-                        }
-                    </div>
-
-                    <div class="cm-cell cm-email" role="cell">
-                        @if (string.IsNullOrWhiteSpace(r.Email))
-                        {
-                            <span class="cm-role-none">&mdash;</span>
-                        }
-                        else
-                        {
-                            <span class="cm-email-text" title="@r.Email">@r.Email</span>
-                            if (r.EmailConfirmed)
+                        <div class="cm-cell cm-campus" role="cell">
+                            @if (string.IsNullOrWhiteSpace(r.CampusId))
                             {
-                                <i class="fa-solid fa-circle-check cm-verified cm-verified-yes" title="Email confirmed" aria-hidden="true"></i>
-                                <span class="sr-only">Email confirmed</span>
+                                <span class="cm-role-none">&mdash;</span>
                             }
                             else
                             {
-                                <i class="fa-solid fa-triangle-exclamation cm-verified cm-verified-no" title="Email not confirmed" aria-hidden="true"></i>
-                                <span class="sr-only">Email not confirmed</span>
+                                <span class="cm-campus-badge" title="Campus ID">@r.CampusId</span>
                             }
-                        }
-                    </div>
+                        </div>
 
-                    <div class="cm-cell cm-role" role="cell">
-                        @if (r.Roles.Count == 0)
-                        {
-                            <span class="cm-role-none">&mdash;</span>
-                        }
-                        else
-                        {
-                            foreach (var role in r.Roles)
+                        <div class="cm-cell cm-email" role="cell">
+                            @if (string.IsNullOrWhiteSpace(r.Email))
                             {
-                                <span class="cm-pillrole @RolePillClass(role)">@role</span>
+                                <span class="cm-role-none">&mdash;</span>
                             }
-                        }
+                            else
+                            {
+                                <span class="cm-email-text" title="@r.Email">@r.Email</span>
+                                if (r.EmailConfirmed)
+                                {
+                                    <i class="fa-solid fa-circle-check cm-verified cm-verified-yes" title="Email confirmed" aria-hidden="true"></i>
+                                    <span class="sr-only">Email confirmed</span>
+                                }
+                                else
+                                {
+                                    <i class="fa-solid fa-triangle-exclamation cm-verified cm-verified-no" title="Email not confirmed" aria-hidden="true"></i>
+                                    <span class="sr-only">Email not confirmed</span>
+                                }
+                            }
+                        </div>
+
+                        <div class="cm-cell cm-role" role="cell">
+                            @if (r.Roles.Count == 0)
+                            {
+                                <span class="cm-role-none">&mdash;</span>
+                            }
+                            else
+                            {
+                                foreach (var role in r.Roles)
+                                {
+                                    <span class="cm-pillrole @RolePillClass(role)">@role</span>
+                                }
+                            }
+                        </div>
+
+                        <div class="cm-cell cm-status" role="cell">
+                            <span class="cm-badge @(r.IsLocked ? "cm-badge-locked" : "cm-badge-active")">
+                                <span class="cm-dot" aria-hidden="true"></span>@(r.IsLocked ? "Locked" : "Active")
+                            </span>
+                        </div>
+
+                        <div class="cm-cell cm-num cm-orders" role="cell" data-label="Orders">@r.TotalOrders</div>
+
+                        <div class="cm-cell cm-num cm-spent" role="cell" data-label="&#8369; Total Spent">&#8369;@r.TotalSpent.ToString("N2")</div>
+
+                        <div class="cm-cell cm-action" role="cell">
+                            <a href="/Admin/CustomerDetails/@r.Id" class="cm-view" aria-label="View @r.FullName">View<i class="fa-solid fa-arrow-right" aria-hidden="true"></i></a>
+                        </div>
                     </div>
+                    rowIndex++;
+                }
+            </div>
 
-                    <div class="cm-cell cm-status" role="cell">
-                        <span class="cm-badge @(r.IsLocked ? "cm-badge-locked" : "cm-badge-active")">
-                            <span class="cm-dot" aria-hidden="true"></span>@(r.IsLocked ? "Locked" : "Active")
-                        </span>
-                    </div>
-
-                    <div class="cm-cell cm-num cm-orders" role="cell" data-label="Orders">@r.TotalOrders</div>
-
-                    <div class="cm-cell cm-num cm-spent" role="cell" data-label="&#8369; Total Spent">&#8369;@r.TotalSpent.ToString("N2")</div>
-
-                    <div class="cm-cell cm-action" role="cell">
-                        <a href="/Admin/CustomerDetails/@r.Id" class="cm-view" aria-label="View @r.FullName">View<i class="fa-solid fa-arrow-right" aria-hidden="true"></i></a>
-                    </div>
-                </div>
-                rowIndex++;
-            }
+            <div class="cm-empty" id="cmEmpty" role="status" @(Model.Rows.Count == 0 ? "" : "hidden")>
+                <i class="fa-solid fa-user-slash" aria-hidden="true"></i>
+                <span id="cmEmptyText">@(string.IsNullOrWhiteSpace(Model.Query) ? "No users found." : "No users match your search.")</span>
+            </div>
         </div>
 
-        <div class="cm-empty" id="cmEmpty" role="status" @(Model.Rows.Count == 0 ? "" : "hidden")>
-            <i class="fa-solid fa-user-slash" aria-hidden="true"></i>
-            <span id="cmEmptyText">No users found.</span>
-        </div>
+        @if (Model.TotalPages > 1)
+        {
+            <nav class="cm-pager" aria-label="Pagination">
+                @if (Model.Page > 1)
+                {
+                    <a href="@Link(Model.Filter, Model.Page - 1)" data-nav class="cm-clear" rel="prev">Previous</a>
+                }
+                else
+                {
+                    <span class="cm-clear cm-pg-off" aria-disabled="true">Previous</span>
+                }
+                <span class="cm-meta">Page <strong>@Model.Page</strong> of <strong>@Model.TotalPages</strong></span>
+                @if (Model.Page < Model.TotalPages)
+                {
+                    <a href="@Link(Model.Filter, Model.Page + 1)" data-nav class="cm-btn" rel="next">Next</a>
+                }
+                else
+                {
+                    <span class="cm-btn cm-pg-off" aria-disabled="true">Next</span>
+                }
+            </nav>
+        }
     </div>
 </div>
 
 @section Scripts {
     <script>
         (function() {
-            var tabsEl = document.getElementById('cmTabs');
-            var pill = document.getElementById('cmPill');
-            var meta = document.getElementById('cmMeta');
-            var empty = document.getElementById('cmEmpty');
-            var emptyText = document.getElementById('cmEmptyText');
-            if (!tabsEl || !pill) return;
+            var form = document.getElementById('cmForm');
+            var dyn = document.getElementById('cmDynamic');
+            if (!form || !dyn) return;
+            var input = form.querySelector('input[name="q"]');
+            var filterInput = form.querySelector('input[name="filter"]');
+            var clear = document.getElementById('cmClear');
+            var seq = 0, timer = null;
 
-            var tabs = Array.prototype.slice.call(tabsEl.querySelectorAll('.cm-tab'));
-            var rows = Array.prototype.slice.call(document.querySelectorAll('#cmRows .cm-row'));
-            var current = 'all';
-
-            var labels = { all: 'All', student: 'Student', barista: 'Barista', admin: 'Admin' };
-
-            // Live counts straight from the rendered rows
-            function updateCounts() {
-                var c = { all: rows.length, student: 0, barista: 0, admin: 0 };
-                rows.forEach(function(r) { var k = r.getAttribute('data-role'); if (c[k] !== undefined) c[k]++; });
-                Object.keys(c).forEach(function(k) {
-                    var el = tabsEl.querySelector('[data-count="' + k + '"]');
-                    if (el) el.textContent = c[k];
-                });
-                return c;
+            function active() {
+                var t = document.getElementById('cmTabs');
+                return t && (t.querySelector('[aria-selected="true"]') || t.querySelector('.cm-tab'));
             }
-
-            // Sliding active pill
-            function movePill(btn, animate) {
-                if (!btn) return;
-                if (animate) pill.classList.add('cm-animate');
-                pill.style.width = btn.offsetWidth + 'px';
-                pill.style.transform = 'translateX(' + btn.offsetLeft + 'px)';
-            }
-
-            function applyFilter(filter) {
-                current = filter;
-                var shown = 0;
-                rows.forEach(function(r) {
-                    var match = filter === 'all' || r.getAttribute('data-role') === filter;
-                    r.hidden = !match;
-                    if (match) {
-                        r.style.setProperty('--i', Math.min(shown, 12));
-                        r.classList.remove('cm-enter');
-                        void r.offsetWidth; // restart staggered entrance
-                        r.classList.add('cm-enter');
-                        shown++;
-                    }
-                });
-
-                if (meta) meta.innerHTML = 'Showing <strong>' + shown + '</strong> of ' + rows.length + ' accounts';
-
-                if (empty) {
-                    var none = shown === 0;
-                    empty.hidden = !none;
-                    if (none && emptyText) {
-                        emptyText.textContent = rows.length === 0
-                            ? 'No users found.'
-                            : 'No ' + labels[filter].toLowerCase() + ' accounts in these results.';
-                    }
+            function place(animate, from) {
+                var pill = document.getElementById('cmPill'), a = active();
+                if (!pill || !a) return;
+                if (from) {                       // start where the old pill was, then glide
+                    pill.classList.remove('cm-animate');
+                    pill.style.width = from.w + 'px';
+                    pill.style.transform = 'translateX(' + from.x + 'px)';
+                    void pill.offsetWidth;
                 }
+                pill.classList.toggle('cm-animate', !!animate);
+                pill.style.width = a.offsetWidth + 'px';
+                pill.style.transform = 'translateX(' + a.offsetLeft + 'px)';
+            }
+            function snapshot() {
+                var a = active();
+                return a ? { x: a.offsetLeft, w: a.offsetWidth } : null;
             }
 
-            function select(btn, focus) {
-                tabs.forEach(function(t) {
-                    var on = t === btn;
-                    t.setAttribute('aria-selected', on ? 'true' : 'false');
-                    t.setAttribute('tabindex', on ? '0' : '-1');
-                });
-                movePill(btn, true);
-                applyFilter(btn.getAttribute('data-filter'));
-                if (focus) btn.focus();
+            function urlFor(q, f) {
+                var p = [];
+                q = (q || '').trim();
+                if (q) p.push('q=' + encodeURIComponent(q));
+                if (f && f !== 'all') p.push('filter=' + encodeURIComponent(f));
+                return '/Admin/Customers' + (p.length ? '?' + p.join('&') : '');
             }
 
-            tabs.forEach(function(t, i) {
-                t.addEventListener('click', function() { select(t, false); });
-                t.addEventListener('keydown', function(e) {
-                    var next = null;
-                    if (e.key === 'ArrowRight') next = tabs[(i + 1) % tabs.length];
-                    else if (e.key === 'ArrowLeft') next = tabs[(i - 1 + tabs.length) % tabs.length];
-                    else if (e.key === 'Home') next = tabs[0];
-                    else if (e.key === 'End') next = tabs[tabs.length - 1];
-                    if (next) { e.preventDefault(); select(next, true); }
-                });
+            function load(url) {
+                var id = ++seq;
+                dyn.style.opacity = '.6';
+                dyn.setAttribute('aria-busy', 'true');
+                fetch(url, { credentials: 'same-origin', headers: { 'X-Requested-With': 'fetch' } })
+                    .then(function(r) { return r.ok ? r.text() : Promise.reject(); })
+                    .then(function(html) {
+                        if (id !== seq) return;
+                        var next = new DOMParser().parseFromString(html, 'text/html').getElementById('cmDynamic');
+                        if (!next) throw 0;
+                        var prev = snapshot();
+                        dyn.innerHTML = next.innerHTML;
+                        history.replaceState(null, '', url);
+                        var f = new URL(url, location.origin).searchParams.get('filter') || 'all';
+                        if (filterInput) filterInput.value = f;
+                        if (clear) clear.href = f === 'all' ? '/Admin/Customers' : '/Admin/Customers?filter=' + f;
+                        place(true, prev);
+                    })
+                    .catch(function() { if (id === seq) location.href = url; })
+                    .then(function() {
+                        if (id !== seq) return;
+                        dyn.style.opacity = '';
+                        dyn.removeAttribute('aria-busy');
+                    });
+            }
+
+            function syncClear() { if (clear) clear.hidden = !input.value.trim(); }
+            function search() { clearTimeout(timer); syncClear(); load(urlFor(input.value, filterInput.value)); }
+
+            input.addEventListener('input', function() {
+                syncClear();
+                clearTimeout(timer);
+                timer = setTimeout(search, 300);
+            });
+            form.addEventListener('submit', function(e) { e.preventDefault(); search(); });
+            if (clear) clear.addEventListener('click', function(e) { e.preventDefault(); input.value = ''; search(); input.focus(); });
+
+            dyn.addEventListener('click', function(e) {
+                var a = e.target.closest('a[data-nav]');
+                if (!a || e.button || e.metaKey || e.ctrlKey || e.shiftKey) return;
+                e.preventDefault();
+                load(a.getAttribute('href'));
+                if (a.closest('.cm-pager')) dyn.scrollIntoView({ behavior: 'smooth', block: 'start' });
             });
 
-            function activeTab() {
-                return tabs.filter(function(t) { return t.getAttribute('aria-selected') === 'true'; })[0] || tabs[0];
-            }
-
-            updateCounts();
-            movePill(activeTab(), false);          // initial placement without animation
-            window.requestAnimationFrame(function() { pill.classList.add('cm-animate'); });
-
-            // Keep the pill aligned if layout / fonts / viewport change
-            window.addEventListener('resize', function() { pill.classList.remove('cm-animate'); movePill(activeTab(), false); });
-            if (document.fonts && document.fonts.ready) {
-                document.fonts.ready.then(function() { pill.classList.remove('cm-animate'); movePill(activeTab(), false); });
-            }
-            if (window.ResizeObserver) {
-                new ResizeObserver(function() { movePill(activeTab(), false); }).observe(tabsEl);
-            }
+            place(false);
+            if (document.fonts && document.fonts.ready) document.fonts.ready.then(function() { place(false); });
+            window.addEventListener('resize', function() { place(false); });
         })();
     </script>
 }

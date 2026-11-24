@@ -19,8 +19,12 @@ public class AdminController(
     IQrTokenService qr,
     UserManager<ApplicationUser> users,
     IPickupSlotService slots,
-    IImageResolver images) : Controller
+    IImageResolver images,
+    ICustomerNotifier notifier) : Controller
 {
+    private const int CustomerPageSize = 15;
+    private static readonly string[] CustomerFilters = ["all", "customers", "staff", "frequent", "locked"];
+
     private string? ActorId => User.FindFirstValue(ClaimTypes.NameIdentifier);
 
     [HttpGet(""), HttpGet("Index")]
@@ -228,19 +232,23 @@ public class AdminController(
     [HttpGet("Orders")]
     public async Task<IActionResult> Orders(string? status, CancellationToken ct)
     {
-        var q = db.Orders.AsNoTracking().Include(o => o.User).AsQueryable();
-        var filter = "All";
-        if (Enum.TryParse<OrderStatus>(status, true, out var s) && Enum.IsDefined(s))
-        {
-            q = q.Where(o => o.Status == s);
-            filter = s.ToString();
-        }
+        var filter = Enum.TryParse<OrderStatus>(status, true, out var s) && Enum.IsDefined(s) ? s.ToString() : "All";
+        var since = DateTime.UtcNow.AddDays(-14);
+
+        var orders = await db.Orders.AsNoTracking()
+            .Include(o => o.User)
+            .Include(o => o.Items).ThenInclude(i => i.AddOns)
+            .Where(o => o.CreatedAtUtc >= since
+                     || o.Status == OrderStatus.Placed || o.Status == OrderStatus.Preparing || o.Status == OrderStatus.Ready)
+            .OrderByDescending(o => o.CreatedAtUtc)
+            .AsSplitQuery()
+            .ToListAsync(ct);
 
         return View(new AdminOrdersViewModel
         {
             Filter = filter,
-            Orders = await q.OrderByDescending(o => o.CreatedAtUtc).ToListAsync(ct),
-            PendingCount = await db.Orders.CountAsync(o => o.Status == OrderStatus.Placed || o.Status == OrderStatus.Preparing, ct)
+            Orders = orders,
+            PendingCount = orders.Count(o => o.Status is OrderStatus.Placed or OrderStatus.Preparing)
         });
     }
 
@@ -297,6 +305,8 @@ public class AdminController(
         await db.SaveChangesAsync(ct);
         await tx.CommitAsync(ct);
 
+        await notifier.OrderStatusAsync(id, order.UserId, status, ct);
+
         TempData["Success"] = $"Order #{id} is now {status}.";
         return RedirectToAction(nameof(OrderDetails), new { id });
     }
@@ -307,16 +317,64 @@ public class AdminController(
     // ---------------- Customer Management ----------------
 
     [HttpGet("Customers")]
-    public async Task<IActionResult> Customers(string? q, CancellationToken ct)
+    public async Task<IActionResult> Customers(string? q, string? filter, int page = 1, CancellationToken ct = default)
     {
+        filter = CustomerFilters.Contains(filter) ? filter! : "all";
+        var now = DateTimeOffset.UtcNow;
+
+        var staffIds = db.UserRoles
+            .Where(ur => db.Roles.Any(r => r.Id == ur.RoleId && (r.Name == AppRoles.Admin || r.Name == AppRoles.Barista)))
+            .Select(ur => ur.UserId);
+        var frequentIds = db.Orders
+            .Where(o => o.Status == OrderStatus.Claimed)
+            .GroupBy(o => o.UserId)
+            .Where(g => g.Count() >= 5)
+            .Select(g => g.Key);
+
+        var search = db.Users.AsNoTracking().AsQueryable();
+        if (!string.IsNullOrWhiteSpace(q))
+        {
+            var t = q.Trim();
+            search = search.Where(u =>
+                u.FullName.Contains(t)
+                || (u.Email != null && u.Email.Contains(t))
+                || u.CampusId.Contains(t)
+                || db.UserRoles.Any(ur => ur.UserId == u.Id
+                    && db.Roles.Any(r => r.Id == ur.RoleId && r.Name!.Contains(t))));
+        }
+
+        IQueryable<ApplicationUser> Apply(string f) => f switch
+        {
+            "customers" => search.Where(u => !staffIds.Contains(u.Id)),
+            "staff" => search.Where(u => staffIds.Contains(u.Id)),
+            "frequent" => search.Where(u => frequentIds.Contains(u.Id)),
+            "locked" => search.Where(u => u.LockoutEnd != null && u.LockoutEnd > now),
+            _ => search
+        };
+
+        var counts = new Dictionary<string, int>();
+        foreach (var f in CustomerFilters)
+            counts[f] = await Apply(f).CountAsync(ct);
+
+        var total = counts[filter];
+        var pages = Math.Max(1, (int)Math.Ceiling(total / (double)CustomerPageSize));
+        page = Math.Clamp(page, 1, pages);
+
+        var pageUsers = await Apply(filter)
+            .OrderBy(u => u.FullName).ThenBy(u => u.Id)
+            .Skip((page - 1) * CustomerPageSize).Take(CustomerPageSize)
+            .ToListAsync(ct);
+        var ids = pageUsers.Select(u => u.Id).ToList();
+
         var roleMap = (await (from ur in db.UserRoles
                               join r in db.Roles on ur.RoleId equals r.Id
+                              where ids.Contains(ur.UserId)
                               select new { ur.UserId, r.Name }).ToListAsync(ct))
             .GroupBy(x => x.UserId)
             .ToDictionary(g => g.Key, g => g.Select(x => x.Name!).ToList());
 
         var stats = (await db.Orders.AsNoTracking()
-                .Where(o => o.Status != OrderStatus.Cancelled)
+                .Where(o => o.Status != OrderStatus.Cancelled && ids.Contains(o.UserId))
                 .GroupBy(o => o.UserId)
                 .Select(g => new
                 {
@@ -327,34 +385,34 @@ public class AdminController(
                 }).ToListAsync(ct))
             .ToDictionary(x => x.UserId);
 
-        var now = DateTimeOffset.UtcNow;
-        var rows = (await db.Users.AsNoTracking().OrderBy(u => u.FullName).ToListAsync(ct))
-            .Select(u =>
-            {
-                stats.TryGetValue(u.Id, out var s);
-                return new AdminCustomerRow
-                {
-                    Id = u.Id,
-                    FullName = u.FullName,
-                    CampusId = u.CampusId,
-                    Email = u.Email,
-                    Roles = roleMap.GetValueOrDefault(u.Id) ?? new List<string>(),
-                    EmailConfirmed = u.EmailConfirmed,
-                    IsLocked = u.LockoutEnd.HasValue && u.LockoutEnd > now,
-                    TotalOrders = s?.Count ?? 0,
-                    TotalSpent = s?.Spent ?? 0,
-                    IsFrequent = (s?.Completed ?? 0) >= 5
-                };
-            });
-
-        if (!string.IsNullOrWhiteSpace(q))
+        var rows = pageUsers.Select(u =>
         {
-            var t = q.Trim();
-            bool Has(string? v) => v?.Contains(t, StringComparison.OrdinalIgnoreCase) == true;
-            rows = rows.Where(r => Has(r.FullName) || Has(r.Email) || Has(r.CampusId) || r.Roles.Any(Has));
-        }
+            stats.TryGetValue(u.Id, out var s);
+            return new AdminCustomerRow
+            {
+                Id = u.Id,
+                FullName = u.FullName,
+                CampusId = u.CampusId,
+                Email = u.Email,
+                Roles = roleMap.GetValueOrDefault(u.Id) ?? new List<string>(),
+                EmailConfirmed = u.EmailConfirmed,
+                IsLocked = u.LockoutEnd.HasValue && u.LockoutEnd > now,
+                TotalOrders = s?.Count ?? 0,
+                TotalSpent = s?.Spent ?? 0,
+                IsFrequent = (s?.Completed ?? 0) >= 5
+            };
+        }).ToList();
 
-        return View(new AdminCustomersViewModel { Rows = rows.ToList(), Query = q });
+        return View(new AdminCustomersViewModel
+        {
+            Rows = rows,
+            Query = q,
+            Filter = filter,
+            Page = page,
+            PageSize = CustomerPageSize,
+            TotalCount = total,
+            Counts = counts
+        });
     }
 
     [HttpGet("CustomerDetails/{id}")]
@@ -591,6 +649,8 @@ public class AdminController(
 
         await audit.LogAsync(ActorId, "PromotionCreated",
             $"PromotionId={promo.Id}; Code={promo.Code}; {promo.DiscountType}={promo.DiscountValue:0.00}; Expires={promo.ExpiryDate:yyyy-MM-dd}; MaxUses={promo.MaxUses?.ToString() ?? "none"}", ct);
+
+        await notifier.PromotionAsync(promo, ct);
 
         TempData["Success"] = $"Promotion {promo.Code} created.";
         return RedirectToAction(nameof(Promotions));

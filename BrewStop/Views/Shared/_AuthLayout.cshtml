@@ -9,10 +9,13 @@
 </head>
 <body class="min-h-screen bg-stone-950 text-stone-100 flex items-center justify-center p-4">
 
-    <main class="w-full max-w-md rounded-2xl bg-stone-900 border border-stone-800 p-8 shadow-xl">
-        <a href="/" class="block text-center text-2xl font-bold mb-6">Brew<span class="text-amber-500">Stop</span></a>
-        @RenderBody()
-    </main>
+    <div class="w-full max-w-md">
+        <main class="w-full rounded-2xl bg-stone-900 border border-stone-800 p-8 shadow-xl">
+            <a href="/" class="block text-center text-2xl font-bold mb-6">Brew<span class="text-amber-500">Stop</span></a>
+            @RenderBody()
+        </main>
+        @await RenderSectionAsync("Below", required: false)
+    </div>
 
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <partial name="_ValidationScriptsPartial" />

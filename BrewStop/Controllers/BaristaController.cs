@@ -17,7 +17,8 @@ public class BaristaController(
     IQrTokenService qr,
     IAuditService audit,
     IHubContext<OrderHub> hub,
-    IPickupSlotService slots) : Controller
+    IPickupSlotService slots,
+    ICustomerNotifier notifier) : Controller
 {
     public const int LowStockThreshold = 5;
 
@@ -156,6 +157,7 @@ public class BaristaController(
         await audit.LogAsync(UserId, "OrderStatusChanged", $"OrderId={id}; {from}->{to}");
         await hub.Clients.Group($"user:{order.UserId}")
             .SendAsync("OrderStatusChanged", new { orderId = id, status = to.ToString() });
+        await notifier.OrderStatusAsync(id, order.UserId, to);
         await hub.Clients.Group("staff").SendAsync("QueueChanged");
 
         TempData["Success"] = to == OrderStatus.Preparing
@@ -175,16 +177,19 @@ public class BaristaController(
 
         var (result, orderId) = await qr.ClaimAsync(token.Trim(), UserId, HttpContext.RequestAborted);
 
-        if (result == ScanResult.Ok)
+        if (result == ScanResult.Ok && orderId.HasValue)
         {
             var ownerId = await db.Orders.AsNoTracking()
-                .Where(o => o.Id == orderId).Select(o => o.UserId).FirstOrDefaultAsync();
+                .Where(o => o.Id == orderId.Value).Select(o => o.UserId).FirstOrDefaultAsync();
             if (ownerId is not null)
+            {
                 await hub.Clients.Group($"user:{ownerId}")
-                    .SendAsync("OrderStatusChanged", new { orderId, status = nameof(OrderStatus.Claimed) });
+                    .SendAsync("OrderStatusChanged", new { orderId = orderId.Value, status = nameof(OrderStatus.Claimed) });
+                await notifier.OrderStatusAsync(orderId.Value, ownerId, OrderStatus.Claimed);
+            }
             await hub.Clients.Group("staff").SendAsync("QueueChanged");
 
-            TempData["Success"] = $"Order #{orderId} claimed. Collect payment at the counter.";
+            TempData["Success"] = $"Order #{orderId.Value} claimed. Collect payment at the counter.";
         }
         else
             TempData["Error"] = result switch

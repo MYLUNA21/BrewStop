@@ -1,16 +1,48 @@
-﻿@model AdminOrdersViewModel
+﻿@using System.Text.Json
+@model AdminOrdersViewModel
 @{
     Layout = "_AdminLayout";
     ViewData["Title"] = "Order Management";
-    var filters = new[] { "All", "Placed", "Preparing", "Ready", "Claimed", "Cancelled" };
+
+    var json = JsonSerializer.Serialize(Model.Orders.Select(o => new
+    {
+        id = o.Id,
+        status = o.Status.ToString(),
+        name = o.User.FullName,
+        campus = o.User.CampusId,
+        method = o.PaymentMethod.ToString(),
+        pay = o.PaymentStatus.ToString(),
+        reference = o.PaymentReference,
+        note = o.Note,
+        promo = o.PromoCode,
+        discount = o.DiscountAmount,
+        total = o.Total,
+        created = DateTime.SpecifyKind(o.CreatedAtUtc, DateTimeKind.Utc),
+        pickup = DateTime.SpecifyKind(o.PickupAtUtc, DateTimeKind.Utc),
+        next = AdminOrderRules.NextOptions(o.Status).Select(s => s.ToString()),
+        items = o.Items.Select(i => new
+        {
+            name = i.ItemName,
+            size = i.SizeName,
+            price = i.UnitPrice,
+            qty = i.Quantity,
+            addOns = i.AddOns.Select(a => new { name = a.Name, price = a.Price })
+        })
+    }));
 }
 
-<div class="tw">
-    <div class="mb-5 flex items-center justify-between">
-        <h1 class="font-serif text-2xl font-bold">Order <span class="text-caramel">Management</span></h1>
-        <span class="rounded-full bg-amber-500/15 px-3 py-1 text-xs font-semibold text-amber-300">
-            @Model.PendingCount pending (Placed / Preparing)
-        </span>
+<div class="tw" id="orders-root">
+    <div class="mb-5 flex flex-wrap items-center justify-between gap-3">
+        <div class="flex items-center gap-3">
+            <h1 class="font-serif text-2xl font-bold">Order <span class="text-caramel">Management</span></h1>
+            <span class="inline-flex items-center gap-1.5 rounded-full border border-white/10 px-2.5 py-1 text-[11px] font-semibold text-neutral-400">
+                <span id="live-dot" class="size-2 rounded-full bg-neutral-500"></span><span id="live-txt">Connecting</span>
+            </span>
+        </div>
+        <div class="inline-flex rounded-full border border-white/10 bg-card p-1" role="group" aria-label="Switch view">
+            <button type="button" data-view="kanban" class="rounded-full px-4 py-1.5 text-xs font-semibold transition"><i class="fa-solid fa-table-columns mr-1.5"></i>Board</button>
+            <button type="button" data-view="table" class="rounded-full px-4 py-1.5 text-xs font-semibold transition"><i class="fa-solid fa-list mr-1.5"></i>Table</button>
+        </div>
     </div>
 
     @if (TempData["Success"] is string ok)
@@ -22,49 +54,314 @@
         <div class="mb-3 rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-red-300">@err</div>
     }
 
-    <div class="mb-4 flex flex-wrap gap-2">
-        @foreach (var f in filters)
-        {
-            var on = Model.Filter == f;
-            <a href="/Admin/Orders?status=@f"
-               class="rounded-full border px-4 py-1.5 text-sm no-underline @(on ? "border-caramel bg-caramel/15 text-caramel" : "border-white/20 text-neutral-300 hover:border-caramel hover:text-caramel")">@f</a>
-        }
+    @Html.AntiForgeryToken()
+
+    <section id="kpis" class="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4" aria-label="Queue summary"></section>
+
+    <div class="mb-4 flex flex-col gap-3 rounded-2xl border border-white/10 bg-card p-3 lg:flex-row lg:items-center">
+        <label class="relative min-w-0 flex-1">
+            <span class="sr-only">Search orders</span>
+            <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-xs text-neutral-500"></i>
+            <input id="q" type="search" autocomplete="off" placeholder="Search order #, customer or ID..."
+                   class="w-full rounded-full border border-white/10 bg-espresso py-2 pl-9 pr-4 text-sm text-cream placeholder:text-neutral-500 focus:border-caramel focus:outline-none" />
+        </label>
+        <div id="pay" class="flex gap-1.5" role="group" aria-label="Payment method"></div>
+        <div id="tabs" class="flex gap-1.5 overflow-x-auto" role="group" aria-label="Status"></div>
     </div>
 
-    <div class="overflow-x-auto rounded-xl border border-white/10 bg-card">
-        <table class="min-w-full text-left text-sm">
-            <thead class="bg-black/30 text-xs uppercase tracking-wider text-caramel">
-                <tr>
-                    <th class="px-4 py-3">Order</th>
-                    <th class="px-4 py-3">Customer</th>
-                    <th class="px-4 py-3">Pickup</th>
-                    <th class="px-4 py-3">Total</th>
-                    <th class="px-4 py-3">Status</th>
-                    <th class="px-4 py-3"></th>
-                </tr>
-            </thead>
-            <tbody class="divide-y divide-white/5">
-                @foreach (var o in Model.Orders)
-                {
-                    var pending = o.Status is OrderStatus.Placed or OrderStatus.Preparing;
-                    <tr>
-                        <td class="px-4 py-3">#@o.Id<div class="text-xs text-neutral-400">@o.CreatedAtUtc.ToLocalTime().ToString("MMM d, h:mm tt")</div></td>
-                        <td class="px-4 py-3">@o.User.FullName<div class="text-xs text-neutral-400">@o.User.CampusId</div></td>
-                        <td class="px-4 py-3">@o.PickupAtUtc.ToLocalTime().ToString("MMM d, h:mm tt")</td>
-                        <td class="px-4 py-3">₱@o.Total.ToString("N2")</td>
-                        <td class="px-4 py-3">
-                            <span class="rounded-full px-2.5 py-1 text-xs font-semibold @(pending ? "bg-amber-500/15 text-amber-300" : o.Status == OrderStatus.Cancelled ? "bg-red-500/15 text-red-300" : "bg-green-500/15 text-green-300")">@o.Status</span>
-                        </td>
-                        <td class="px-4 py-3 text-right">
-                            <a href="/Admin/OrderDetails/@o.Id" class="text-caramel no-underline hover:underline">View</a>
-                        </td>
-                    </tr>
-                }
-                @if (Model.Orders.Count == 0)
-                {
-                    <tr><td colspan="6" class="px-4 py-8 text-center text-neutral-400">No orders found.</td></tr>
-                }
-            </tbody>
-        </table>
-    </div>
+    <section id="view-kanban"></section>
+    <section id="view-table" class="hidden"></section>
+
+    <div id="od-overlay" class="fixed inset-0 z-[1100] hidden bg-black/60 backdrop-blur-sm"></div>
+    <aside id="od" role="dialog" aria-label="Order details" aria-hidden="true"
+           class="fixed right-0 top-0 z-[1110] flex h-full w-full max-w-md translate-x-full flex-col border-l border-white/10 bg-card shadow-2xl transition-transform duration-300">
+        <div id="od-body" class="flex min-h-0 flex-1 flex-col"></div>
+    </aside>
+    <div id="toast" class="hidden" role="status" aria-live="polite"></div>
 </div>
+
+<script id="orders-data" type="application/json">@Html.Raw(json)</script>
+
+@section Scripts {
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.7/signalr.min.js"></script>
+    <script>
+        (function() {
+            var D = JSON.parse(document.getElementById('orders-data').textContent);
+            var root = document.getElementById('orders-root');
+            var $ = function(s) { return root.querySelector(s); };
+            var PAGE = 10, PESO = '\u20B1';
+            var TABS = [['All', 'All'], ['Placed', 'Placed'], ['Preparing', 'Preparing'], ['Ready', 'Ready'], ['Claimed', 'Completed'], ['Cancelled', 'Cancelled']];
+            var TONE = {
+                Placed: { dot: 'bg-amber-400', chip: 'bg-amber-500/15 text-amber-300' },
+                Preparing: { dot: 'bg-sky-400', chip: 'bg-sky-500/15 text-sky-300' },
+                Ready: { dot: 'bg-emerald-400', chip: 'bg-emerald-500/15 text-emerald-300' },
+                Claimed: { dot: 'bg-neutral-400', chip: 'bg-white/10 text-neutral-300' },
+                Cancelled: { dot: 'bg-red-400', chip: 'bg-red-500/15 text-red-300' }
+            };
+            var ACT = { Preparing: 'Accept', Ready: 'Mark ready', Claimed: 'Complete', Cancelled: 'Cancel order' };
+            var PILL = 'whitespace-nowrap rounded-full border px-3.5 py-1.5 text-xs font-semibold transition ';
+            var PILL_ON = 'border-caramel bg-caramel/15 text-caramel', PILL_OFF = 'border-white/15 text-neutral-300 hover:border-caramel hover:text-caramel';
+
+            function store(k, v) { try { if (v === undefined) return localStorage.getItem(k); localStorage.setItem(k, v); } catch (e) { } }
+            var S = { view: store('bs.orders.view') || 'kanban', q: '', pay: 'All', tab: '@Model.Filter', page: 1, closed: 'Claimed', closedOpen: false, open: null, fresh: {}, busy: false };
+            if (S.tab === 'Claimed' || S.tab === 'Cancelled') { S.closed = S.tab; S.closedOpen = true; }
+
+            function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function(c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+            function money(n) { return PESO + Number(n || 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+            function when(s) { return new Date(s).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }); }
+            function ago(s) { var m = Math.max(0, Math.round((Date.now() - new Date(s)) / 60000)); return m < 1 ? 'just now' : m < 60 ? m + 'm ago' : m < 1440 ? Math.floor(m / 60) + 'h ago' : Math.floor(m / 1440) + 'd ago'; }
+            function lbl(s) { return s === 'Claimed' ? 'Completed' : s; }
+            function find(id) { for (var i = 0; i < D.length; i++) if (D[i].id == id) return D[i]; return null; }
+            function by(f, dir) { return function(a, b) { return (a[f] < b[f] ? -1 : a[f] > b[f] ? 1 : 0) * dir; }; }
+            function isStatus(st) { return function(o) { return o.status === st; }; }
+            function summary(o) { return o.items.map(function(i) { return i.qty + 'x ' + esc(i.name); }).join(', ') || '-'; }
+
+            function payChip(o) {
+                var tone = o.pay === 'Paid' ? 'text-emerald-300' : o.pay === 'Refunded' ? 'text-red-300' : 'text-amber-300';
+                return '<span class="inline-flex items-center gap-1 rounded-full bg-white/5 px-2 py-0.5 text-[11px] ' + tone + '"><i class="fa-solid ' + (o.method === 'GCash' ? 'fa-mobile-screen' : 'fa-money-bill-wave') + '"></i>' + o.method + ' &middot; ' + o.pay + '</span>';
+            }
+            function chip(st) { return '<span class="rounded-full px-2.5 py-1 text-xs font-semibold ' + TONE[st].chip + '">' + lbl(st) + '</span>'; }
+
+            function scoped() {
+                var q = S.q.trim().toLowerCase().replace('#', '');
+                return D.filter(function(o) {
+                    if (S.pay !== 'All' && o.method !== S.pay) return false;
+                    return !q || String(o.id).indexOf(q) >= 0 || o.name.toLowerCase().indexOf(q) >= 0 || (o.campus || '').toLowerCase().indexOf(q) >= 0;
+                });
+            }
+
+            // ---------- KPI / filters ----------
+            function paintKpis() {
+                var c = function(s) { return D.filter(isStatus(s)).length; };
+                var cards = [
+                    ['All', 'Active Queue', c('Placed') + c('Preparing') + c('Ready'), 'fa-layer-group', 'text-caramel'],
+                    ['Placed', 'Placed', c('Placed'), 'fa-bell-concierge', 'text-amber-300'],
+                    ['Preparing', 'Preparing', c('Preparing'), 'fa-mug-hot', 'text-sky-300'],
+                    ['Ready', 'Ready', c('Ready'), 'fa-circle-check', 'text-emerald-300']
+                ];
+                $('#kpis').innerHTML = cards.map(function(k) {
+                    var on = S.tab === k[0];
+                    return '<button type="button" data-tab="' + k[0] + '" class="flex items-center justify-between rounded-2xl border p-4 text-left transition ' + (on ? 'border-caramel/60 bg-caramel/10' : 'border-white/10 bg-card hover:border-caramel/40') + '">'
+                        + '<span><span class="block text-[11px] font-semibold uppercase tracking-wider text-neutral-400">' + k[1] + '</span><span class="font-serif text-3xl font-bold text-cream">' + k[2] + '</span></span>'
+                        + '<i class="fa-solid ' + k[3] + ' text-xl ' + k[4] + '"></i></button>';
+                }).join('');
+            }
+            function paintFilters(all) {
+                $('#pay').innerHTML = ['All', 'Cash', 'GCash'].map(function(p) {
+                    return '<button type="button" data-pay="' + p + '" class="' + PILL + (S.pay === p ? PILL_ON : PILL_OFF) + '">' + (p === 'All' ? 'All payments' : p) + '</button>';
+                }).join('');
+                $('#tabs').innerHTML = TABS.map(function(t) {
+                    var n = t[0] === 'All' ? all.length : all.filter(isStatus(t[0])).length;
+                    return '<button type="button" data-tab="' + t[0] + '" class="' + PILL + (S.tab === t[0] ? PILL_ON : PILL_OFF) + '">' + t[1] + ' <span class="ml-1 opacity-70">' + n + '</span></button>';
+                }).join('');
+                root.querySelectorAll('[data-view]').forEach(function(b) {
+                    var on = b.dataset.view === S.view;
+                    b.className = 'rounded-full px-4 py-1.5 text-xs font-semibold transition ' + (on ? 'bg-caramel text-espresso' : 'text-neutral-300 hover:text-caramel');
+                });
+            }
+
+            // ---------- Kanban ----------
+            function card(o) {
+                var nx = o.next.filter(function(s) { return s !== 'Cancelled'; })[0];
+                return '<article tabindex="0" data-id="' + o.id + '" class="cursor-pointer rounded-xl border bg-espresso/60 p-3 transition hover:border-caramel/50 hover:bg-espresso ' + (S.fresh[o.id] ? 'animate-pulse border-caramel' : 'border-white/10') + '">'
+                    + '<div class="flex items-start justify-between gap-2"><span class="font-semibold text-cream">#' + o.id + '</span><span class="text-[11px] text-neutral-400">' + ago(o.created) + '</span></div>'
+                    + '<div class="mt-1 truncate text-sm text-neutral-200">' + esc(o.name) + ' <span class="text-xs text-neutral-500">' + esc(o.campus) + '</span></div>'
+                    + '<div class="mt-1 line-clamp-2 text-xs text-neutral-400">' + summary(o) + '</div>'
+                    + '<div class="mt-2 flex items-center justify-between text-xs"><span class="text-neutral-400"><i class="fa-regular fa-clock mr-1"></i>' + when(o.pickup) + '</span><span class="font-semibold text-caramel">' + money(o.total) + '</span></div>'
+                    + '<div class="mt-2 flex items-center justify-between gap-2">' + payChip(o)
+                    + (nx ? '<button type="button" data-adv="' + o.id + '" data-st="' + nx + '" class="rounded-full bg-caramel px-3 py-1 text-[11px] font-semibold text-espresso transition hover:bg-cream">' + ACT[nx] + ' <i class="fa-solid fa-arrow-right ml-0.5"></i></button>' : '')
+                    + '</div></article>';
+            }
+            function mini(o) {
+                return '<div tabindex="0" data-id="' + o.id + '" class="cursor-pointer rounded-lg border border-white/10 bg-espresso/60 px-3 py-2 text-xs transition hover:border-caramel/50">'
+                    + '<div class="flex justify-between"><b class="text-cream">#' + o.id + '</b><span class="text-caramel">' + money(o.total) + '</span></div>'
+                    + '<div class="truncate text-neutral-400">' + esc(o.name) + ' - ' + ago(o.created) + '</div></div>';
+            }
+            function kanban(all) {
+                var cols = ['Placed', 'Preparing', 'Ready'].filter(function(s) { return S.tab === 'All' || S.tab === s; });
+                var html = '';
+                if (cols.length) {
+                    html += '<div class="grid gap-4 ' + (cols.length === 3 ? 'lg:grid-cols-3' : '') + '">' + cols.map(function(s) {
+                        var l = all.filter(isStatus(s)).sort(by('pickup', 1));
+                        return '<section class="flex min-h-0 flex-col rounded-2xl border border-white/10 bg-card"><header class="flex items-center justify-between border-b border-white/10 px-4 py-3">'
+                            + '<h2 class="flex items-center gap-2 font-serif text-sm font-semibold"><span class="size-2 rounded-full ' + TONE[s].dot + '"></span>' + s + '</h2>'
+                            + '<span class="rounded-full bg-white/10 px-2 py-0.5 text-xs text-neutral-300">' + l.length + '</span></header>'
+                            + '<div class="max-h-[calc(100vh-24rem)] min-h-[10rem] space-y-2.5 overflow-y-auto p-3">'
+                            + (l.map(function(o) { return card(o); }).join('') || '<p class="py-8 text-center text-xs text-neutral-500">No orders</p>') + '</div></section>';
+                    }).join('') + '</div>';
+                }
+                if (S.tab === 'All' || S.tab === 'Claimed' || S.tab === 'Cancelled') {
+                    var open = S.closedOpen || S.tab === 'Claimed' || S.tab === 'Cancelled';
+                    var done = all.filter(isStatus('Claimed')), canc = all.filter(isStatus('Cancelled'));
+                    var l = (S.closed === 'Claimed' ? done : canc).sort(by('created', -1));
+                    html += '<section class="mt-4 rounded-2xl border border-white/10 bg-card"><button type="button" id="closed-toggle" aria-expanded="' + open + '" class="flex w-full items-center justify-between px-4 py-3 text-left">'
+                        + '<span class="font-serif text-sm font-semibold">Completed &amp; Cancelled <span class="ml-1 text-xs font-normal text-neutral-400">(' + done.length + ' / ' + canc.length + ')</span></span>'
+                        + '<i class="fa-solid fa-chevron-' + (open ? 'up' : 'down') + ' text-xs text-caramel"></i></button>'
+                        + (open ? '<div class="border-t border-white/10 p-3"><div class="mb-3 flex gap-1.5">'
+                            + [['Claimed', 'Completed'], ['Cancelled', 'Cancelled']].map(function(t) { return '<button type="button" data-closed="' + t[0] + '" class="' + PILL + (S.closed === t[0] ? PILL_ON : PILL_OFF) + '">' + t[1] + '</button>'; }).join('')
+                            + '</div><div class="grid max-h-72 gap-2 overflow-y-auto sm:grid-cols-2 xl:grid-cols-3">'
+                            + (l.slice(0, 60).map(function(o) { return mini(o); }).join('') || '<p class="col-span-full py-6 text-center text-xs text-neutral-500">No orders</p>')
+                            + '</div>' + (l.length > 60 ? '<p class="mt-2 text-center text-[11px] text-neutral-500">Showing 60 of ' + l.length + ' - use Table view for the full list.</p>' : '') + '</div>' : '')
+                        + '</section>';
+                }
+                return html;
+            }
+
+            // ---------- Table ----------
+            function table(rows) {
+                var list = rows.slice().sort(by('created', -1));
+                var pages = Math.max(1, Math.ceil(list.length / PAGE)); S.page = Math.min(S.page, pages);
+                var from = (S.page - 1) * PAGE, slice = list.slice(from, from + PAGE);
+                var start = Math.max(1, Math.min(S.page - 2, pages - 4)), end = Math.min(pages, start + 4), nums = '';
+                for (var p = start; p <= end; p++) nums += '<button type="button" data-page="' + p + '" class="size-8 rounded-full text-xs font-semibold ' + (p === S.page ? 'bg-caramel text-espresso' : 'text-neutral-300 hover:bg-white/10') + '">' + p + '</button>';
+                var nav = function(to, ico, off) { return '<button type="button" data-page="' + to + '" ' + (off ? 'disabled' : '') + ' class="size-8 rounded-full text-xs text-neutral-300 hover:bg-white/10 disabled:opacity-30"><i class="fa-solid ' + ico + '"></i></button>'; };
+                return '<div class="overflow-x-auto rounded-2xl border border-white/10 bg-card"><table class="min-w-full text-left text-sm"><thead class="bg-black/30 text-xs uppercase tracking-wider text-caramel"><tr>'
+                    + ['Order', 'Customer', 'Pickup', 'Payment', 'Total', 'Status', ''].map(function(h) { return '<th class="px-4 py-3">' + h + '</th>'; }).join('') + '</tr></thead><tbody class="divide-y divide-white/5">'
+                    + (slice.map(function(o) {
+                        return '<tr tabindex="0" data-id="' + o.id + '" class="cursor-pointer transition hover:bg-white/5 ' + (S.fresh[o.id] ? 'animate-pulse bg-caramel/10' : '') + '">'
+                            + '<td class="px-4 py-3"><b>#' + o.id + '</b><div class="text-xs text-neutral-400">' + when(o.created) + '</div></td>'
+                            + '<td class="px-4 py-3">' + esc(o.name) + '<div class="text-xs text-neutral-400">' + esc(o.campus) + '</div></td>'
+                            + '<td class="px-4 py-3">' + when(o.pickup) + '</td><td class="px-4 py-3">' + payChip(o) + '</td>'
+                            + '<td class="px-4 py-3 font-semibold text-caramel">' + money(o.total) + '</td><td class="px-4 py-3">' + chip(o.status) + '</td>'
+                            + '<td class="px-4 py-3 text-right text-neutral-500"><i class="fa-solid fa-chevron-right text-xs"></i></td></tr>';
+                    }).join('') || '<tr><td colspan="7" class="px-4 py-10 text-center text-neutral-400">No orders match your filters.</td></tr>')
+                    + '</tbody></table></div>'
+                    + '<div class="mt-3 flex flex-wrap items-center justify-between gap-2 text-xs text-neutral-400"><span>' + (list.length ? 'Showing ' + (from + 1) + '-' + (from + slice.length) + ' of ' + list.length : '0 orders') + '</span>'
+                    + '<div class="flex items-center gap-1">' + nav(S.page - 1, 'fa-chevron-left', S.page === 1) + nums + nav(S.page + 1, 'fa-chevron-right', S.page === pages) + '</div></div>';
+            }
+
+            // ---------- Drawer ----------
+            function drawer(o) {
+                var items = o.items.map(function(i) {
+                    return '<li class="flex justify-between gap-3 py-3"><div class="min-w-0"><p class="text-sm font-semibold text-cream">' + i.qty + 'x ' + esc(i.name) + (i.size ? ' <span class="font-normal text-neutral-400">(' + esc(i.size) + ')</span>' : '') + '</p>'
+                        + (i.addOns.length ? '<p class="mt-0.5 text-xs text-neutral-400">' + i.addOns.map(function(a) { return '+ ' + esc(a.name) + ' (' + money(a.price) + ')'; }).join(', ') + '</p>' : '')
+                        + '</div><span class="shrink-0 text-sm text-neutral-200">' + money(i.price * i.qty) + '</span></li>';
+                }).join('');
+                var field = function(k, v) { return '<div><p class="text-[11px] uppercase tracking-wider text-neutral-500">' + k + '</p><p class="mt-0.5 text-sm text-cream">' + v + '</p></div>'; };
+                var btns = o.next.map(function(s, i) {
+                    var cancel = s === 'Cancelled';
+                    return '<button type="button" data-adv="' + o.id + '" data-st="' + s + '" class="flex-1 rounded-xl px-4 py-2.5 text-sm font-semibold transition ' + (cancel ? 'border border-red-500/40 text-red-300 hover:bg-red-500/10' : 'bg-caramel text-espresso hover:bg-cream') + '">' + ACT[s] + '</button>';
+                }).join('');
+                return '<header class="flex items-start justify-between gap-3 border-b border-white/10 px-5 py-4"><div><p class="text-[11px] uppercase tracking-wider text-neutral-500">Order</p>'
+                    + '<h2 class="font-serif text-2xl font-bold text-cream">#' + o.id + '</h2><div class="mt-1.5 flex flex-wrap items-center gap-2">' + chip(o.status) + payChip(o) + '</div></div>'
+                    + '<button type="button" data-close aria-label="Close" class="grid size-9 place-items-center rounded-full bg-white/5 text-cream transition hover:bg-white/10"><i class="fa-solid fa-xmark"></i></button></header>'
+                    + '<div class="min-h-0 flex-1 space-y-5 overflow-y-auto px-5 py-4">'
+                    + '<div class="grid grid-cols-2 gap-4">' + field('Customer', esc(o.name)) + field('Campus ID', esc(o.campus)) + field('Placed', when(o.created)) + field('Pickup slot', when(o.pickup))
+                    + (o.reference ? field('Payment ref', esc(o.reference)) : '') + '</div>'
+                    + '<div><p class="text-[11px] uppercase tracking-wider text-neutral-500">Customer note</p><p class="mt-1 rounded-xl border border-white/10 bg-espresso/60 p-3 text-sm ' + (o.note ? 'text-cream' : 'text-neutral-500') + '">' + (o.note ? esc(o.note) : 'No note') + '</p></div>'
+                    + '<div><p class="text-[11px] uppercase tracking-wider text-neutral-500">Items</p><ul class="divide-y divide-white/5">' + items + '</ul>'
+                    + '<div class="mt-2 space-y-1 border-t border-white/10 pt-3 text-sm">'
+                    + (o.discount > 0 ? '<div class="flex justify-between text-neutral-400"><span>Discount' + (o.promo ? ' (' + esc(o.promo) + ')' : '') + '</span><span>-' + money(o.discount) + '</span></div>' : '')
+                    + '<div class="flex justify-between font-semibold"><span>Total</span><span class="font-serif text-lg text-caramel">' + money(o.total) + '</span></div></div></div></div>'
+                    + '<footer class="space-y-3 border-t border-white/10 bg-espresso/60 px-5 py-4">'
+                    + (btns ? '<div class="flex gap-2">' + btns + '</div>' : '<p class="text-center text-xs text-neutral-500">No further actions for this order.</p>')
+                    + '<a href="/Admin/OrderDetails/' + o.id + '" class="block text-center text-xs font-semibold text-caramel no-underline hover:text-cream">Open full order details <i class="fa-solid fa-arrow-up-right-from-square ml-1"></i></a></footer>';
+            }
+            function paintDrawer() {
+                var o = find(S.open); if (!o) return closeDrawer();
+                $('#od-body').innerHTML = drawer(o);
+            }
+            function openDrawer(id) {
+                S.open = id; paintDrawer();
+                $('#od-overlay').classList.remove('hidden');
+                var d = $('#od'); d.classList.remove('translate-x-full'); d.setAttribute('aria-hidden', 'false');
+                var c = d.querySelector('[data-close]'); if (c) c.focus();
+            }
+            function closeDrawer() {
+                S.open = null;
+                $('#od-overlay').classList.add('hidden');
+                var d = $('#od'); d.classList.add('translate-x-full'); d.setAttribute('aria-hidden', 'true');
+            }
+
+            // ---------- Render / data ----------
+            function render() {
+                var all = scoped();
+                paintKpis(); paintFilters(all);
+                $('#view-kanban').classList.toggle('hidden', S.view !== 'kanban');
+                $('#view-table').classList.toggle('hidden', S.view !== 'table');
+                if (S.view === 'kanban') $('#view-kanban').innerHTML = kanban(all);
+                else $('#view-table').innerHTML = table(S.tab === 'All' ? all : all.filter(isStatus(S.tab)));
+            }
+
+            var seen = null;
+            function track() {
+                var ids = {};
+                D.forEach(function(o) {
+                    ids[o.id] = 1;
+                    if (seen && !seen[o.id]) { S.fresh[o.id] = 1; setTimeout(function() { delete S.fresh[o.id]; render(); }, 6000); }
+                });
+                seen = ids;
+            }
+            function refresh() {
+                return fetch('/Admin/Orders', { credentials: 'same-origin', headers: { Accept: 'text/html' } })
+                    .then(function(r) { return r.ok ? r.text() : Promise.reject(); })
+                    .then(function(t) {
+                        var el = new DOMParser().parseFromString(t, 'text/html').getElementById('orders-data');
+                        if (!el) return;
+                        D = JSON.parse(el.textContent); track(); render();
+                        if (S.open != null) paintDrawer();
+                    });
+            }
+
+            function toast(msg, bad) {
+                var t = $('#toast'); t.textContent = msg;
+                t.className = 'fixed bottom-5 right-5 z-[1200] rounded-xl border px-4 py-2.5 text-sm shadow-2xl ' + (bad ? 'border-red-500/40 bg-red-950 text-red-200' : 'border-green-500/30 bg-card text-green-300');
+                clearTimeout(toast.t); toast.t = setTimeout(function() { t.className = 'hidden'; }, 3500);
+            }
+            function setStatus(id, status) {
+                if (S.busy) return;
+                if (status === 'Cancelled' && !confirm('Cancel order #' + id + '? Stock will be restored.')) return;
+                S.busy = true;
+                var token = (root.querySelector('input[name="__RequestVerificationToken"]') || {}).value || '';
+                fetch('/Admin/UpdateOrderStatus', {
+                    method: 'POST', credentials: 'same-origin',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'RequestVerificationToken': token },
+                    body: new URLSearchParams({ id: id, status: status, __RequestVerificationToken: token })
+                })
+                    .then(function(r) { if (!r.ok) throw 0; return refresh(); })
+                    .then(function() { var o = find(id); o && o.status === status ? toast('Order #' + id + ' is now ' + lbl(status) + '.') : toast('Order #' + id + ' changed in the meantime.', true); })
+                    .catch(function() { toast('Could not update order #' + id + '.', true); })
+                    .then(function() { S.busy = false; });
+            }
+
+            // ---------- Events ----------
+            root.addEventListener('click', function(e) {
+                var g = function(s) { return e.target.closest(s); }, el;
+                if ((el = g('[data-adv]'))) { e.stopPropagation(); return setStatus(el.dataset.adv, el.dataset.st); }
+                if ((el = g('[data-close]')) || g('#od-overlay')) return closeDrawer();
+                if ((el = g('[data-id]'))) return openDrawer(el.dataset.id);
+                if ((el = g('[data-tab]'))) { S.tab = el.dataset.tab; S.page = 1; if (S.tab === 'Claimed' || S.tab === 'Cancelled') { S.closed = S.tab; S.closedOpen = true; } }
+                else if ((el = g('[data-pay]'))) { S.pay = el.dataset.pay; S.page = 1; }
+                else if ((el = g('[data-view]'))) { S.view = el.dataset.view; store('bs.orders.view', S.view); }
+                else if ((el = g('[data-page]'))) { S.page = +el.dataset.page; }
+                else if ((el = g('[data-closed]'))) { S.closed = el.dataset.closed; }
+                else if (g('#closed-toggle')) { S.closedOpen = !(S.closedOpen || S.tab === 'Claimed' || S.tab === 'Cancelled'); if (!S.closedOpen && (S.tab === 'Claimed' || S.tab === 'Cancelled')) S.tab = 'All'; }
+                else return;
+                render();
+            });
+            root.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter' && e.target.matches('[data-id]')) openDrawer(e.target.dataset.id);
+            });
+            $('#q').addEventListener('input', function(e) { S.q = e.target.value; S.page = 1; render(); });
+            document.addEventListener('keydown', function(e) { if (e.key === 'Escape' && S.open != null) closeDrawer(); });
+
+            // ---------- Live updates ----------
+            function live(on) {
+                $('#live-dot').className = 'size-2 rounded-full ' + (on ? 'bg-emerald-400' : 'bg-neutral-500');
+                $('#live-txt').textContent = on ? 'Live' : 'Offline';
+            }
+            if (window.signalR) {
+                var timer, conn = new signalR.HubConnectionBuilder().withUrl('/hubs/orders').withAutomaticReconnect().build();
+                conn.on('QueueChanged', function() { clearTimeout(timer); timer = setTimeout(function() { refresh().catch(function() { }); }, 300); });
+                conn.onreconnecting(function() { live(false); });
+                conn.onreconnected(function() { live(true); refresh().catch(function() { }); });
+                conn.onclose(function() { live(false); });
+                conn.start().then(function() { live(true); }).catch(function() { live(false); });
+            } else live(false);
+            setInterval(function() { if (!document.hidden) refresh().catch(function() { }); }, 30000);
+            document.addEventListener('visibilitychange', function() { if (!document.hidden) refresh().catch(function() { }); });
+
+            track(); render();
+        })();
+    </script>
+}

@@ -23,8 +23,9 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 
 builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
 {
-    options.SignIn.RequireConfirmedEmail = true;          // SRS-FR-01
-    options.User.RequireUniqueEmail = true;
+    options.SignIn.RequireConfirmedAccount = false;
+    options.SignIn.RequireConfirmedEmail = false;
+    options.User.RequireUniqueEmail = false;              // email is optional; uniqueness is enforced in AccountController
 
     options.Lockout.AllowedForNewUsers = true;            // SRS-FR-02
     options.Lockout.MaxFailedAccessAttempts = 5;
@@ -150,7 +151,7 @@ builder.Services.AddRateLimiter(o =>
                 : RateLimitPartition.GetNoLimiter("none")));
 });
 
-builder.Services.AddScoped<IEmailService, LoggingEmailService>();
+builder.Services.AddSingleton<IEmailService, LoggingEmailService>();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddSingleton<IImageResolver, ImageResolver>();
 builder.Services.AddDistributedMemoryCache();
@@ -172,6 +173,7 @@ builder.Services.AddScoped<IPickupSlotService, PickupSlotService>();
 builder.Services.AddScoped<IInventoryService, InventoryService>();
 builder.Services.AddScoped<IAuditService, AuditService>();
 builder.Services.AddScoped<IPromotionService, PromotionService>();
+builder.Services.AddScoped<ICustomerNotifier, CustomerNotifier>();
 builder.Services.AddMemoryCache();
 builder.Services.Configure<CaptchaOptions>(builder.Configuration.GetSection("Captcha"));
 builder.Services.AddScoped<ICaptchaService, CaptchaService>();

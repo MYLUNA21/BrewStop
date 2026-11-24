@@ -7,10 +7,13 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Options;
 using System.Net;
-using System.Text.RegularExpressions;
 using System.Security.Claims;
+using System.Security.Cryptography;
+using System.Text;
+using System.Text.RegularExpressions;
 
 namespace BrewStop.Controllers;
 
@@ -24,6 +27,7 @@ public class AccountController(
     ApplicationDbContext db,
     IWebHostEnvironment env,
     IOptions<IdentityOptions> identityOptions,
+    IMemoryCache cache,
     ILogger<AccountController> log) : Controller
 {
     // Register
@@ -41,25 +45,32 @@ public class AccountController(
             return View(m);
         }
 
+        var userName = m.UserName.Trim();
+        var emailAddress = string.IsNullOrWhiteSpace(m.Email) ? null : m.Email.Trim();
+
         var domain = config["Campus:AllowedEmailDomain"];
-        if (!string.IsNullOrWhiteSpace(domain) &&
-            !m.Email.EndsWith("@" + domain, StringComparison.OrdinalIgnoreCase))
+        if (emailAddress is not null && !string.IsNullOrWhiteSpace(domain) &&
+            !emailAddress.EndsWith("@" + domain, StringComparison.OrdinalIgnoreCase))
             ModelState.AddModelError(nameof(m.Email), $"Use your campus email (@{domain}).");
 
         if (m.Role is not (AppRoles.Student or AppRoles.Faculty))
             ModelState.AddModelError(nameof(m.Role), "Invalid role.");
 
-        if (await users.Users.AnyAsync(u => u.CampusId == m.CampusId.Trim()))
-            ModelState.AddModelError(nameof(m.CampusId), "Campus ID is already registered.");
+        if (await users.FindByNameAsync(userName) is not null)
+            ModelState.AddModelError(nameof(m.UserName), "Username is already taken.");
+
+        if (emailAddress is not null && await users.FindByEmailAsync(emailAddress) is not null)
+            ModelState.AddModelError(nameof(m.Email), "Email is already registered.");
 
         if (!ModelState.IsValid) return View(m);
 
         var user = new ApplicationUser
         {
-            UserName = m.Email,
-            Email = m.Email,
+            UserName = userName,
+            Email = emailAddress,
+            EmailConfirmed = true,
             FullName = m.FullName.Trim(),
-            CampusId = m.CampusId.Trim()
+            CampusId = await NewCampusIdAsync()
         };
 
         var result = await users.CreateAsync(user, m.Password);
@@ -70,14 +81,22 @@ public class AccountController(
         }
 
         await users.AddToRoleAsync(user, m.Role);
-
         await audit.LogAsync(user.Id, "RoleAssigned", $"Role={m.Role}; Source=Registration");
-
-        await SendConfirmationAsync(user);
         log.LogInformation("User registered {UserId} as {Role}", user.Id, m.Role);
 
-        return View("Info", new InfoViewModel("Check your email",
-            "We sent a verification link. Verify your email before signing in."));
+        await signIn.SignInAsync(user, isPersistent: false);
+        TempData["Success"] = "Welcome to BrewStop! Your account is ready.";
+        return LocalRedirect("/");
+    }
+
+    private async Task<string> NewCampusIdAsync()
+    {
+        for (var i = 0; i < 10; i++)
+        {
+            var id = $"BS-{Random.Shared.Next(100000, 999999)}";
+            if (!await users.Users.AnyAsync(u => u.CampusId == id)) return id;
+        }
+        return $"BS-{Guid.NewGuid().ToString("N")[..8].ToUpperInvariant()}";
     }
 
     [HttpGet, AllowAnonymous]
@@ -106,37 +125,40 @@ public class AccountController(
             return View(m);
         }
 
-        // Soft-deleted accounts can never sign in
-        var existing = await users.FindByEmailAsync(m.Email);
-        if (existing is { IsDeleted: true })
+        var login = m.UserNameOrEmail.Trim();
+        var existing = login.Contains('@')
+            ? await users.FindByEmailAsync(login) ?? await users.FindByNameAsync(login)
+            : await users.FindByNameAsync(login);
+
+        // Unknown or soft-deleted accounts can never sign in
+        if (existing is null or { IsDeleted: true })
         {
-            ModelState.AddModelError("", "Invalid email or password.");
+            ModelState.AddModelError("", "Invalid username/email or password.");
             return View(m);
         }
 
-        var result = await signIn.PasswordSignInAsync(m.Email, m.Password,
+        var result = await signIn.PasswordSignInAsync(existing, m.Password,
             isPersistent: false, lockoutOnFailure: true);
 
         if (result.Succeeded)
         {
-            log.LogInformation("Login success for {Email}", m.Email);
+            log.LogInformation("Login success for {UserName}", existing.UserName);
             return LocalRedirect(Url.IsLocalUrl(m.ReturnUrl) ? m.ReturnUrl! : "/");
         }
 
         if (result.IsLockedOut)
         {
-            log.LogWarning("Account locked out: {Email}", m.Email);
+            log.LogWarning("Account locked out: {UserName}", existing.UserName);
             ModelState.AddModelError("", "Account locked for 15 minutes after 5 failed attempts.");
         }
         else if (result.IsNotAllowed)
         {
-            ModelState.AddModelError("", "Verify your email before signing in.");
-            ViewBag.NeedsVerification = true;
+            ModelState.AddModelError("", "This account is not allowed to sign in.");
         }
         else
         {
-            log.LogWarning("Failed login for {Email}", m.Email);
-            ModelState.AddModelError("", "Invalid email or password.");
+            log.LogWarning("Failed login for {UserName}", existing.UserName);
+            ModelState.AddModelError("", "Invalid username/email or password.");
         }
 
         return View(m);
@@ -353,40 +375,50 @@ public class AccountController(
     [HttpGet, AllowAnonymous]
     public IActionResult ForgotPassword() => View(new ForgotPasswordViewModel());
 
-    // Password reset
+    private const int MaxResetAttempts = 5;
+    private static readonly TimeSpan ResetCodeLifetime = TimeSpan.FromMinutes(10);
+
+    private sealed class ResetCodeEntry
+    {
+        public string Code { get; init; } = "";
+        public int Attempts { get; set; }
+    }
+
+    private string ResetKey(string emailAddress) => "pwreset:" + (users.NormalizeEmail(emailAddress.Trim()) ?? "");
+
+    // Password reset - step 1: email a 6-digit code
     [HttpPost, AllowAnonymous]
     public async Task<IActionResult> ForgotPassword(ForgotPasswordViewModel m)
     {
         if (!ModelState.IsValid) return View(m);
 
-        var user = await users.FindByEmailAsync(m.Email);
+        var emailAddress = m.Email.Trim();
+        var user = await users.FindByEmailAsync(emailAddress);
 
-        if (user is null)
+        if (user is null || user.IsDeleted || string.IsNullOrWhiteSpace(user.Email))
         {
-            log.LogWarning("Password reset requested for unknown email {Email}", m.Email);
-        }
-        else if (!await users.IsEmailConfirmedAsync(user))
-        {
-            log.LogWarning("Password reset skipped: email {Email} is not confirmed yet", m.Email);
+            log.LogWarning("Password reset requested for unknown email {Email}", emailAddress);
         }
         else
         {
-            var token = await users.GeneratePasswordResetTokenAsync(user);
-            var link = Url.Action(nameof(ResetPassword), "Account",
-                new { email = user.Email, token }, Request.Scheme)!;
-            await email.SendAsync(user.Email!, "Reset your BrewStop password",
-                $"<p>Reset your password: <a href=\"{link}\">click here</a>.</p>");
+            var code = Random.Shared.Next(100000, 999999).ToString();
+            cache.Set(ResetKey(emailAddress), new ResetCodeEntry { Code = code }, ResetCodeLifetime);
+
+            await email.SendAsync(user.Email, "Your BrewStop password reset code",
+                $"<p>Your BrewStop password reset code is: <b>{code}</b></p>" +
+                "<p>It expires in 10 minutes. If you didn't request this, you can ignore this email.</p>");
         }
 
-        return View("Info", new InfoViewModel("Check your email",
-            "If that account exists, a reset link has been sent."));
+        // Same response whether or not the account exists
+        return RedirectToAction(nameof(ResetPassword), new { email = emailAddress });
     }
 
+    // Password reset - step 2: verify code + set new password
     [HttpGet, AllowAnonymous]
-    public IActionResult ResetPassword(string? email, string? token)
+    public IActionResult ResetPassword(string? email)
     {
-        if (email is null || token is null) return BadRequest();
-        return View(new ResetPasswordViewModel { Email = email, Token = token });
+        if (string.IsNullOrWhiteSpace(email)) return RedirectToAction(nameof(ForgotPassword));
+        return View(new ResetPasswordViewModel { Email = email });
     }
 
     [HttpPost, AllowAnonymous]
@@ -394,18 +426,55 @@ public class AccountController(
     {
         if (!ModelState.IsValid) return View(m);
 
-        var user = await users.FindByEmailAsync(m.Email);
-        if (user is not null)
+        var key = ResetKey(m.Email);
+        if (!cache.TryGetValue(key, out ResetCodeEntry? entry) || entry is null)
         {
-            var result = await users.ResetPasswordAsync(user, m.Token, m.Password);
-            if (!result.Succeeded)
-            {
-                foreach (var e in result.Errors) ModelState.AddModelError("", e.Description);
-                return View(m);
-            }
+            ModelState.AddModelError(nameof(m.Code), "This code has expired. Request a new one.");
+            return View(m);
         }
 
-        return View("Info", new InfoViewModel("Password updated", "You can now sign in with your new password."));
+        bool ok;
+        int attempts;
+        lock (entry)
+        {
+            ok = entry.Attempts < MaxResetAttempts &&
+                 CryptographicOperations.FixedTimeEquals(
+                     Encoding.UTF8.GetBytes(entry.Code), Encoding.UTF8.GetBytes(m.Code.Trim()));
+            if (!ok) entry.Attempts++;
+            attempts = entry.Attempts;
+        }
+
+        if (!ok)
+        {
+            if (attempts >= MaxResetAttempts)
+            {
+                cache.Remove(key);
+                ModelState.AddModelError(nameof(m.Code), "Too many incorrect attempts. Request a new code.");
+            }
+            else
+                ModelState.AddModelError(nameof(m.Code), $"Incorrect code. {MaxResetAttempts - attempts} attempt(s) left.");
+            return View(m);
+        }
+
+        var user = await users.FindByEmailAsync(m.Email.Trim());
+        if (user is null || user.IsDeleted)
+        {
+            cache.Remove(key);
+            ModelState.AddModelError(nameof(m.Code), "This code has expired. Request a new one.");
+            return View(m);
+        }
+
+        var token = await users.GeneratePasswordResetTokenAsync(user);
+        var result = await users.ResetPasswordAsync(user, token, m.Password);
+        if (!result.Succeeded)
+        {
+            foreach (var e in result.Errors) ModelState.AddModelError("", e.Description);
+            return View(m);
+        }
+
+        cache.Remove(key);
+        TempData["Success"] = "Password updated. You can now sign in.";
+        return RedirectToAction(nameof(Login));
     }
 
     [HttpGet, AllowAnonymous]

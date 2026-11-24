@@ -23,6 +23,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<ProductReview> ProductReviews => Set<ProductReview>();
     public DbSet<LoyaltyTransaction> LoyaltyTransactions => Set<LoyaltyTransaction>();
     public DbSet<BaristaShift> BaristaShifts => Set<BaristaShift>();
+    public DbSet<CustomerNotification> CustomerNotifications => Set<CustomerNotification>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -114,6 +115,13 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
             e.HasIndex(f => new { f.UserId, f.MenuItemId }).IsUnique();
             e.HasOne(f => f.User).WithMany().HasForeignKey(f => f.UserId).OnDelete(DeleteBehavior.Cascade);
             e.HasOne(f => f.MenuItem).WithMany().HasForeignKey(f => f.MenuItemId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<CustomerNotification>(e =>
+        {
+            e.Property(n => n.Type).HasConversion<string>().HasMaxLength(30);
+            e.HasIndex(n => new { n.UserId, n.IsRead, n.CreatedAtUtc });
+            e.HasOne<ApplicationUser>().WithMany().HasForeignKey(n => n.UserId).OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<ProductReview>(e =>

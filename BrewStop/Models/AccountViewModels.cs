@@ -10,11 +10,16 @@ public class RegisterViewModel
     [Required, StringLength(150), Display(Name = "Full name")]
     public string FullName { get; set; } = string.Empty;
 
-    [Required, StringLength(30), Display(Name = "Campus ID")]
-    public string CampusId { get; set; } = string.Empty;
+    [Required, StringLength(30, MinimumLength = 3), Display(Name = "Username")]
+    [RegularExpression(@"^[A-Za-z0-9._-]+$", ErrorMessage = "Use letters, numbers, dots, dashes or underscores only.")]
+    public string UserName { get; set; } = string.Empty;
 
-    [Required, EmailAddress, StringLength(256), Display(Name = "Campus email")]
-    public string Email { get; set; } = string.Empty;
+    // Auto-generated server-side; no longer posted by the form.
+    [StringLength(30), Display(Name = "Campus ID")]
+    public string? CampusId { get; set; }
+
+    [EmailAddress, StringLength(256), Display(Name = "Email")]
+    public string? Email { get; set; }
 
     [Required]
     public string Role { get; set; } = AppRoles.Student;
@@ -28,8 +33,8 @@ public class RegisterViewModel
 
 public class LoginViewModel
 {
-    [Required, EmailAddress]
-    public string Email { get; set; } = string.Empty;
+    [Required, StringLength(256), Display(Name = "Username or email")]
+    public string UserNameOrEmail { get; set; } = string.Empty;
 
     [Required, DataType(DataType.Password)]
     public string Password { get; set; } = string.Empty;
@@ -48,8 +53,8 @@ public class ResetPasswordViewModel
     [Required, EmailAddress]
     public string Email { get; set; } = string.Empty;
 
-    [Required]
-    public string Token { get; set; } = string.Empty;
+    [Required, RegularExpression(@"^\d{6}$", ErrorMessage = "Enter the 6-digit code."), Display(Name = "6-digit code")]
+    public string Code { get; set; } = string.Empty;
 
     [Required, StringLength(100, MinimumLength = 8), DataType(DataType.Password), Display(Name = "New password")]
     public string Password { get; set; } = string.Empty;

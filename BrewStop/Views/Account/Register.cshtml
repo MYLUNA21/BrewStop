@@ -8,17 +8,17 @@
     <div asp-validation-summary="ModelOnly" class="text-sm text-red-400"></div>
     <div>
         <label asp-for="FullName" class="block text-sm mb-1"></label>
-        <input asp-for="FullName" class="@ViewData["Input"]" />
+        <input asp-for="FullName" class="@ViewData["Input"]" autocomplete="name" />
         <span asp-validation-for="FullName" class="text-xs text-red-400"></span>
     </div>
     <div>
-        <label asp-for="CampusId" class="block text-sm mb-1"></label>
-        <input asp-for="CampusId" class="@ViewData["Input"]" />
-        <span asp-validation-for="CampusId" class="text-xs text-red-400"></span>
+        <label asp-for="UserName" class="block text-sm mb-1"></label>
+        <input asp-for="UserName" class="@ViewData["Input"]" autocomplete="username" />
+        <span asp-validation-for="UserName" class="text-xs text-red-400"></span>
     </div>
     <div>
         <label asp-for="Email" class="block text-sm mb-1"></label>
-        <input asp-for="Email" class="@ViewData["Input"]" autocomplete="username" />
+        <input asp-for="Email" class="@ViewData["Input"]" autocomplete="email" />
         <span asp-validation-for="Email" class="text-xs text-red-400"></span>
     </div>
     <div>

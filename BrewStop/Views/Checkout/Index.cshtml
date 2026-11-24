@@ -1,127 +1,286 @@
 ﻿@model BrewStop.Models.CheckoutViewModel
+@inject BrewStop.Services.IPickupSlotService PickupSlots
 @{
     ViewData["Title"] = "Checkout";
-    var isGcash = Model.Input.PaymentMethod == PaymentMethod.GCash;
-    const string label = "mb-2 block text-sm font-semibold uppercase tracking-wider text-cream";
-    const string field = "w-full rounded-xl border border-white/15 bg-transparent px-3 py-3 text-cream placeholder:text-neutral-500 focus:border-caramel focus:outline-none";
-    const string chip = "block rounded-xl border border-white/15 py-2 text-center text-sm text-cream transition hover:border-caramel peer-checked:border-caramel peer-checked:bg-caramel peer-checked:font-semibold peer-checked:text-black peer-focus-visible:ring-2 peer-focus-visible:ring-caramel";
-    const string payCard = "flex items-center gap-3 rounded-2xl border border-white/15 p-4 transition hover:border-caramel peer-checked:border-caramel peer-checked:bg-caramel/10 peer-focus-visible:ring-2 peer-focus-visible:ring-caramel";
+
+    var methods = (ViewData["Methods"] as IReadOnlyList<string>) ?? Array.Empty<string>();
+    var chosen = ViewData["MethodChosen"] is true;
+    var accepted = ViewData["AcceptTerms"] is true;
+    var contact = ViewData["Contact"] as BrewStop.Controllers.CheckoutContact ?? new BrewStop.Controllers.CheckoutContact();
+
+    string Norm(string s) => new string(s.Where(char.IsLetterOrDigit).ToArray()).ToLowerInvariant();
+
+    var catalog = new Dictionary<string, (string Label, string Icon, string Hint, string Info)>
+    {
+        ["cash"] = ("Cash", "fa-solid fa-money-bill-wave", "Pay at the counter",
+            "Pay the exact total at the counter when you pick up your order."),
+        ["gcash"] = ("GCash", "fa-solid fa-mobile-screen-button", "Digital wallet",
+            "Pay with your GCash wallet and enter your reference number below (optional). The barista verifies it at pickup."),
+        ["maya"] = ("Maya", "fa-solid fa-wallet", "Digital wallet",
+            "Pay with your Maya wallet and show the confirmation to the barista at pickup."),
+        ["qrph"] = ("QR Ph", "fa-solid fa-qrcode", "Scan with any bank or e-wallet app",
+            "Scan the QR Ph code at the counter using any participating bank or e-wallet app."),
+        ["visa"] = ("Visa", "fa-brands fa-cc-visa", "Secure card payment",
+            "You will complete payment on our secure payment gateway. BrewStop never collects or stores your card number."),
+        ["mastercard"] = ("Mastercard", "fa-brands fa-cc-mastercard", "Secure card payment",
+            "You will complete payment on our secure payment gateway. BrewStop never collects or stores your card number.")
+    };
+
+    var offered = methods
+        .Select(m => (Name: m, Key: Norm(m)))
+        .Where(m => catalog.ContainsKey(m.Key))
+        .ToList();
+    var selectedKey = chosen ? Norm(Model.Input.PaymentMethod.ToString()) : "";
+    var isGcashSelected = selectedKey == "gcash";
+
+    var slotGroups = Model.Slots.GroupBy(s => PickupSlots.ToLocal(s.Utc).Date).OrderBy(g => g.Key).ToList();
+    var selectedSlot = Model.Slots.FirstOrDefault(s => s.Value == Model.Input.PickupSlot);
+    DateTime? activeDate = selectedSlot is not null ? PickupSlots.ToLocal(selectedSlot.Utc).Date : slotGroups.FirstOrDefault()?.Key;
+    var slotIndex = 0;
+
+    const string cardCls = "rounded-2xl border border-white/10 bg-card p-5 sm:p-6";
+    const string h2 = "font-serif text-xl font-bold text-cream";
+    const string label = "mb-2 block text-xs font-semibold uppercase tracking-wider text-cream/80";
+    const string field = "w-full rounded-xl border border-white/10 bg-espresso px-3 py-3 text-cream placeholder:text-neutral-500 focus:border-caramel focus:outline-none";
+    const string chip = "block rounded-xl border border-white/10 bg-espresso py-2.5 text-center text-sm text-cream transition hover:border-caramel peer-checked:border-caramel peer-checked:bg-caramel peer-checked:font-semibold peer-checked:text-espresso peer-focus-visible:ring-2 peer-focus-visible:ring-caramel";
+    const string err = "mt-1 block text-sm text-red-300";
 }
 
 <div class="tw">
-    <div class="mx-auto max-w-3xl px-4 pt-24 pb-12">
-        <a asp-controller="Cart" asp-action="Index" class="text-sm font-semibold text-caramel hover:text-cream">&larr; Back to cart</a>
-        <h1 class="mt-2 font-serif text-3xl font-bold text-cream">Checkout</h1>
+    <div class="mx-auto max-w-6xl px-4 pt-24 pb-12">
+        <div class="border-b border-white/10 pb-6">
+            <partial name="~/Views/Checkout/_CheckoutSteps.cshtml" model="1" />
+        </div>
 
-        <section class="mt-6 rounded-3xl border border-white/10 bg-card p-5 sm:p-6">
-            <h2 class="text-sm font-semibold uppercase tracking-wider text-cream">Order summary</h2>
-            <ul class="mt-3 divide-y divide-white/10">
-                @foreach (var l in Model.Cart.Lines)
-                {
-                    <li class="flex items-start justify-between gap-4 py-3 text-sm">
-                        <div class="flex min-w-0 items-start gap-3">
-                            <img src="@l.ImageUrl" alt="@l.Name" class="size-14 shrink-0 rounded-lg object-cover" />
-                            <div class="min-w-0">
-                                <p class="text-cream">@l.Quantity &times; @l.Name</p>
-                                <p class="text-xs text-neutral-400">
-                                    @(l.SizeName ?? "")@(l.SizeName is not null && l.AddOns.Count > 0 ? " · " : "")@string.Join(", ", l.AddOns.Select(a => a.Name))
-                                </p>
+        <div class="mt-8">
+            <h1 class="font-serif text-3xl font-bold text-cream">Checkout</h1>
+            <p class="mt-1 text-sm text-neutral-400">Confirm your details and choose how you'd like to pay at pickup.</p>
+        </div>
+
+        <form id="checkout-form" asp-controller="Checkout" asp-action="Place" method="post" novalidate
+              class="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_380px] lg:items-start">
+
+            <!-- LEFT COLUMN -->
+            <div class="space-y-6">
+                <div asp-validation-summary="ModelOnly" class="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300 empty:hidden"></div>
+
+                <!-- Customer information -->
+                <section class="@cardCls">
+                    <h2 class="@h2">Customer Information</h2>
+                    <div class="mt-5 grid gap-4 sm:grid-cols-2">
+                        <div class="sm:col-span-2">
+                            <label for="contact-name" class="@label">Full name</label>
+                            <input id="contact-name" name="Contact.FullName" value="@contact.FullName" maxlength="100" autocomplete="name" class="@field" />
+                            @Html.ValidationMessage("Contact.FullName", new { @class = err })
+                        </div>
+                        <div>
+                            <label for="contact-email" class="@label">Email</label>
+                            <input id="contact-email" name="Contact.Email" type="email" value="@contact.Email" maxlength="100" autocomplete="email" class="@field" />
+                            @Html.ValidationMessage("Contact.Email", new { @class = err })
+                        </div>
+                        <div>
+                            <label for="contact-phone" class="@label">Phone number</label>
+                            <input id="contact-phone" name="Contact.Phone" type="tel" value="@contact.Phone" maxlength="20" autocomplete="tel" placeholder="+63 9XX XXX XXXX" class="@field" />
+                            @Html.ValidationMessage("Contact.Phone", new { @class = err })
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Pickup date & time -->
+                <section class="@cardCls">
+                    <h2 class="@h2">Pickup Date &amp; Time</h2>
+                    @if (Model.Slots.Count == 0)
+                    {
+                        <p class="mt-4 rounded-lg border border-yellow-500/40 bg-yellow-500/10 px-4 py-3 text-sm text-yellow-200">
+                            No pickup times are available right now. The shop may be closed &mdash; please try again during opening hours.
+                        </p>
+                    }
+                    else
+                    {
+                        <div class="mt-5 max-w-xs">
+                            <label for="pickup-date" class="@label">Date</label>
+                            <input id="pickup-date" type="date" class="@field [color-scheme:dark]"
+                                   min="@slotGroups.First().Key.ToString("yyyy-MM-dd")"
+                                   max="@slotGroups.Last().Key.ToString("yyyy-MM-dd")"
+                                   value="@activeDate?.ToString("yyyy-MM-dd")" />
+                        </div>
+
+                        <div class="mt-5">
+                            <span class="@label">Time <span class="font-normal normal-case text-neutral-400">(10-minute slots)</span></span>
+                            @foreach (var g in slotGroups)
+                            {
+                                <div data-slot-date="@g.Key.ToString("yyyy-MM-dd")"
+                                     class="grid max-h-60 grid-cols-3 gap-2 overflow-y-auto pr-1 sm:grid-cols-4 @(g.Key == activeDate ? "" : "hidden")">
+                                    @foreach (var s in g)
+                                    {
+                                        <label class="cursor-pointer">
+                                            <input asp-for="Input.PickupSlot" id="slot-@(slotIndex++)" type="radio" value="@s.Value" class="peer sr-only" />
+                                            <span class="@chip">@s.Label</span>
+                                        </label>
+                                    }
+                                </div>
+                            }
+                            <p id="slot-empty" class="hidden rounded-lg border border-white/10 px-4 py-3 text-sm text-neutral-400">No pickup times on this date. Please pick another date.</p>
+                        </div>
+                    }
+                    <span asp-validation-for="Input.PickupSlot" class="@err"></span>
+                </section>
+
+                <!-- Collapsible payment method -->
+                <section class="@cardCls !p-0 overflow-hidden">
+                    <button type="button" id="pay-toggle" aria-expanded="false" aria-controls="pay-panel"
+                            class="flex w-full items-center gap-4 p-5 text-left transition hover:bg-white/[0.02] sm:p-6">
+                        <span id="pay-icon" class="grid size-11 shrink-0 place-items-center rounded-xl border border-white/10 bg-espresso text-lg text-caramel">
+                            <i class="fa-solid fa-wallet"></i>
+                        </span>
+                        <span class="min-w-0 flex-1">
+                            <span id="pay-title" class="block font-serif text-xl font-bold text-cream">Select Payment Method</span>
+                            <span id="pay-sub" class="mt-0.5 block text-sm text-neutral-400">Choose your preferred payment option</span>
+                        </span>
+                        <span id="pay-change" class="hidden text-xs font-semibold uppercase tracking-wider text-caramel">Change</span>
+                        <i id="pay-chevron" class="fa-solid fa-chevron-down text-sm text-caramel transition-transform duration-300"></i>
+                    </button>
+
+                    <div id="pay-panel" style="display:grid;grid-template-rows:0fr;transition:grid-template-rows .3s ease" inert>
+                        <div class="overflow-hidden">
+                            <div class="grid gap-3 border-t border-white/10 p-5 sm:grid-cols-2 sm:p-6">
+                                @foreach (var m in offered)
+                                {
+                                    var info = catalog[m.Key];
+                                    <label class="cursor-pointer">
+                                        <input asp-for="Input.PaymentMethod" id="pay-@m.Key" type="radio" value="@m.Name"
+                                               data-method="@m.Key" data-label="@info.Label" data-icon="@info.Icon" class="peer sr-only" />
+                                        <span class="relative flex items-center gap-3 rounded-xl border border-white/10 bg-espresso p-4 transition hover:border-caramel peer-checked:border-caramel peer-checked:bg-caramel/10 peer-focus-visible:ring-2 peer-focus-visible:ring-caramel">
+                                            <i class="@info.Icon text-xl text-caramel"></i>
+                                            <span>
+                                                <span class="block text-sm font-semibold text-cream">@info.Label</span>
+                                                <span class="block text-xs text-neutral-400">@info.Hint</span>
+                                            </span>
+                                            <span data-dot class="absolute right-3 top-3 hidden size-2 rounded-full bg-caramel"></span>
+                                        </span>
+                                    </label>
+                                }
                             </div>
                         </div>
-                        <span class="shrink-0 text-cream">&#8369;@l.LineTotal.ToString("N2")</span>
-                    </li>
-                }
-            </ul>
-            <dl class="mt-3 space-y-1 border-t border-white/10 pt-3 text-sm">
-                <div class="flex justify-between text-neutral-300"><dt>Subtotal</dt><dd>&#8369;@Model.Cart.Total.ToString("N2")</dd></div>
-                <div class="flex justify-between text-neutral-400"><dt>Promo discount</dt><dd>Calculated on order</dd></div>
-                <div class="flex items-baseline justify-between pt-2">
-                    <dt class="text-neutral-300">Grand total</dt>
-                    <dd class="text-xl font-bold text-caramel">&#8369;@Model.Cart.Total.ToString("N2")</dd>
-                </div>
-            </dl>
-        </section>
-
-        <form asp-controller="Checkout" asp-action="Place" method="post"
-              class="mt-6 space-y-7 rounded-3xl border border-white/10 bg-card p-5 sm:p-6">
-            <div asp-validation-summary="ModelOnly" class="text-sm text-red-300"></div>
-
-            <!-- Pickup slot -->
-            <fieldset>
-                <legend class="@label">Pickup time <span class="font-normal normal-case text-neutral-400">(10-minute slots)</span></legend>
-                @if (Model.Slots.Count == 0)
-                {
-                    <p class="rounded-lg border border-yellow-500/40 bg-yellow-500/10 px-4 py-3 text-sm text-yellow-200">
-                        No pickup times are available right now. The shop may be closed &mdash; please try again during opening hours.
-                    </p>
-                }
-                else
-                {
-                    <div class="grid max-h-56 grid-cols-3 gap-2 overflow-y-auto pr-1 sm:grid-cols-4">
-                        @for (var i = 0; i < Model.Slots.Count; i++)
-                        {
-                            var s = Model.Slots[i];
-                            <label class="cursor-pointer">
-                                <input asp-for="Input.PickupSlot" id="slot-@i" type="radio" value="@s.Value" class="peer sr-only" />
-                                <span class="@chip">@s.Label</span>
-                            </label>
-                        }
                     </div>
-                }
-                <span asp-validation-for="Input.PickupSlot" class="mt-2 block text-sm text-red-300"></span>
-            </fieldset>
 
-            <!-- Payment -->
-            <fieldset>
-                <legend class="@label">Payment method</legend>
-                <div class="grid gap-3 sm:grid-cols-2">
-                    <label class="cursor-pointer">
-                        <input asp-for="Input.PaymentMethod" id="pay-cash" type="radio" value="@PaymentMethod.Cash" class="peer sr-only" />
-                        <span class="@payCard">
-                            <i class="fa-solid fa-money-bill-wave text-lg text-caramel"></i>
-                            <span><span class="block text-sm font-semibold text-cream">Cash</span><span class="block text-xs text-neutral-400">Pay at the counter</span></span>
-                        </span>
-                    </label>
-                    <label class="cursor-pointer">
-                        <input asp-for="Input.PaymentMethod" id="pay-gcash" type="radio" value="@PaymentMethod.GCash" class="peer sr-only" />
-                        <span class="@payCard">
-                            <i class="fa-solid fa-mobile-screen-button text-lg text-caramel"></i>
-                            <span><span class="block text-sm font-semibold text-cream">GCash</span><span class="block text-xs text-neutral-400">Verified by barista at pickup</span></span>
-                        </span>
-                    </label>
-                </div>
-                <span asp-validation-for="Input.PaymentMethod" class="mt-2 block text-sm text-red-300"></span>
+                    @foreach (var m in offered)
+                    {
+                        var info = catalog[m.Key];
+                        <div data-pay-info="@m.Key" class="hidden border-t border-white/10 bg-espresso/40 px-5 py-4 text-sm text-neutral-300 sm:px-6">
+                            <p><i class="fa-solid fa-circle-info mr-2 text-caramel"></i>@info.Info</p>
+                            @if (m.Key == "gcash")
+                            {
+                                <div class="mt-4">
+                                    <label asp-for="Input.PaymentReference" class="@label">GCash reference no. <span class="font-normal normal-case text-neutral-400">(optional)</span></label>
+                                    <input asp-for="Input.PaymentReference" maxlength="40" autocomplete="off" placeholder="e.g. GC-908172635" class="@field uppercase" />
+                                    <span asp-validation-for="Input.PaymentReference" class="@err"></span>
+                                </div>
+                            }
+                        </div>
+                    }
+                    <span asp-validation-for="Input.PaymentMethod" class="@err px-5 pb-4 sm:px-6"></span>
+                </section>
 
-                <div id="gcash-ref-wrap" class="mt-4 @(isGcash ? "" : "hidden")">
-                    <label asp-for="Input.PaymentReference" class="@label">GCash reference no. <span class="font-normal normal-case text-neutral-400">(optional)</span></label>
-                    <input asp-for="Input.PaymentReference" maxlength="40" autocomplete="off" placeholder="e.g. GC-908172635" class="@field uppercase" />
-                    <span asp-validation-for="Input.PaymentReference" class="mt-1 block text-sm text-red-300"></span>
-                </div>
-            </fieldset>
+                <!-- Promo code -->
+                <section class="@cardCls">
+                    <h2 class="@h2">Promo Code</h2>
+                    <div class="mt-5 flex gap-2">
+                        <input asp-for="Input.PromoCode" maxlength="30" autocomplete="off" placeholder="e.g. BREW10" class="@field uppercase" />
+                        <button type="button" id="promo-apply"
+                                class="shrink-0 rounded-xl border border-caramel px-5 text-sm font-semibold text-caramel transition hover:bg-caramel hover:text-espresso disabled:opacity-50">
+                            Apply
+                        </button>
+                    </div>
+                    <p id="promo-msg" class="mt-2 hidden text-sm" role="status"></p>
+                    <span asp-validation-for="Input.PromoCode" class="@err"></span>
+                </section>
 
-            <!-- Promo -->
-            <div>
-                <label asp-for="Input.PromoCode" class="@label">Promo code <span class="font-normal normal-case text-neutral-400">(optional)</span></label>
-                <input asp-for="Input.PromoCode" maxlength="30" autocomplete="off" placeholder="e.g. BREW10" class="@field uppercase" />
-                <span asp-validation-for="Input.PromoCode" class="mt-1 block text-sm text-red-300"></span>
+                <!-- Special instructions -->
+                <section class="@cardCls">
+                    <h2 class="@h2">Special Instructions</h2>
+                    <label asp-for="Input.Note" class="sr-only">Note for the barista</label>
+                    <textarea asp-for="Input.Note" rows="3" maxlength="200" placeholder="Optional note for the barista, e.g. less ice, please" class="@field mt-4"></textarea>
+                    <div class="mt-1 flex items-start justify-between gap-3">
+                        <span asp-validation-for="Input.Note" class="block text-sm text-red-300"></span>
+                        <span class="ml-auto shrink-0 text-xs text-neutral-400"><span id="note-count">0</span>/200</span>
+                    </div>
+                </section>
+
+                <a asp-controller="Cart" asp-action="Index" class="inline-flex items-center gap-2 text-sm text-neutral-400 no-underline hover:text-cream">
+                    <i class="fa-solid fa-arrow-left text-xs"></i> Back to Cart
+                </a>
             </div>
 
-            <!-- Note -->
-            <div>
-                <label asp-for="Input.Note" class="@label">Note <span class="font-normal normal-case text-neutral-400">(optional)</span></label>
-                <textarea asp-for="Input.Note" rows="3" maxlength="200" placeholder="e.g. Less ice, please" class="@field"></textarea>
-                <div class="mt-1 flex items-start justify-between gap-3">
-                    <span asp-validation-for="Input.Note" class="block text-sm text-red-300"></span>
-                    <span class="ml-auto shrink-0 text-xs text-neutral-400"><span id="note-count">0</span>/200</span>
+            <!-- RIGHT COLUMN -->
+            <aside class="space-y-4 lg:sticky lg:top-24">
+                <div class="@cardCls">
+                    <div class="flex items-baseline justify-between border-b border-white/10 pb-4">
+                        <h2 class="@h2">Order Summary</h2>
+                        <a asp-controller="Cart" asp-action="Index" class="text-xs font-semibold text-caramel no-underline hover:text-cream">Edit Cart</a>
+                    </div>
+
+                    <ul class="divide-y divide-white/10">
+                        @foreach (var l in Model.Cart.Lines)
+                        {
+                            <li class="flex items-start justify-between gap-3 py-4 text-sm">
+                                <div class="flex min-w-0 items-start gap-3">
+                                    <img src="@l.ImageUrl" alt="@l.Name" class="size-16 shrink-0 rounded-lg object-cover" />
+                                    <div class="min-w-0">
+                                        <p class="font-medium text-cream">@l.Name</p>
+                                        @if (l.SizeName is not null || l.AddOns.Count > 0)
+                                        {
+                                            <p class="text-xs text-neutral-400">
+                                                @(l.SizeName ?? "")@(l.SizeName is not null && l.AddOns.Count > 0 ? " · " : "")@string.Join(", ", l.AddOns.Select(a => a.Name))
+                                            </p>
+                                        }
+                                        <p class="text-xs text-neutral-400">Qty: @l.Quantity</p>
+                                    </div>
+                                </div>
+                                <span class="shrink-0 text-cream">&#8369;@l.LineTotal.ToString("N2")</span>
+                            </li>
+                        }
+                    </ul>
+
+                    <dl class="space-y-2 border-t border-white/10 pt-4 text-sm">
+                        <div class="flex justify-between text-neutral-300"><dt>Subtotal</dt><dd>&#8369;@Model.Cart.Total.ToString("N2")</dd></div>
+                        <div id="promo-row" class="hidden justify-between text-emerald-300">
+                            <dt id="promo-row-label">Promo</dt><dd id="promo-row-value"></dd>
+                        </div>
+                        <div class="flex items-end justify-between border-t border-white/10 pt-4">
+                            <dt class="font-serif text-lg font-bold text-cream">Total</dt>
+                            <dd class="text-2xl font-bold text-caramel">&#8369;<span id="total-value">@Model.Cart.Total.ToString("N2")</span></dd>
+                        </div>
+                    </dl>
+
+                    <div class="mt-5">
+                        <partial name="_Captcha" model="@("checkout")" />
+                    </div>
+
+                    <div class="mt-4">
+                        <label class="flex cursor-pointer items-start gap-3 text-sm text-neutral-300">
+                            <input id="terms" type="checkbox" name="AcceptTerms" value="true" checked="@accepted"
+                                   class="mt-0.5 size-4 shrink-0 accent-[#d4a373]" />
+                            <span>I agree to the ordering terms and understand my order is prepared for pickup at the selected time.</span>
+                        </label>
+                        @Html.ValidationMessage("AcceptTerms", new { @class = err })
+                    </div>
+
+                    <button id="place-btn" type="submit" disabled
+                            class="mt-5 flex w-full items-center justify-center gap-2 rounded-xl bg-cream px-6 py-3.5 text-sm font-semibold text-espresso shadow-lg shadow-black/30 transition hover:bg-caramel disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-cream">
+                        <span id="place-spin" class="hidden size-4 animate-spin rounded-full border-2 border-espresso/30 border-t-espresso"></span>
+                        <span id="place-label">Place Order &mdash; &#8369;<span id="place-total">@Model.Cart.Total.ToString("N2")</span></span>
+                    </button>
+                    <p class="mt-3 text-center text-[11px] uppercase tracking-wider text-neutral-500">
+                        <i class="fa-solid fa-lock mr-1"></i> Card numbers are never collected or stored by BrewStop
+                    </p>
                 </div>
-            </div>
 
-            <partial name="_Captcha" model="@("checkout")" />
-
-            <button type="submit" disabled="@(Model.Slots.Count == 0)"
-                    class="w-full rounded-full bg-caramel px-6 py-3.5 text-sm font-semibold text-black transition hover:bg-cream disabled:cursor-not-allowed disabled:opacity-50">
-                Place order &middot; &#8369;@Model.Cart.Total.ToString("N2")
-            </button>
+                <div class="rounded-2xl border border-white/10 bg-card/60 p-5 text-sm text-neutral-300">
+                    <p class="flex items-center gap-2 font-semibold text-cream"><i class="fa-solid fa-mug-hot text-caramel"></i> Ready when you are</p>
+                    <p class="mt-2 text-xs leading-relaxed text-neutral-400">Your order goes straight to our baristas. Show your QR code at the counter when it's ready.</p>
+                </div>
+            </aside>
         </form>
     </div>
 </div>
@@ -129,22 +288,177 @@
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
     <script>
-        (function() {
-            var wrap = document.getElementById('gcash-ref-wrap');
-            var ref = document.getElementById('Input_PaymentReference');
-            document.querySelectorAll('input[name="Input.PaymentMethod"]').forEach(function(r) {
-                r.addEventListener('change', function() {
-                    if (!r.checked) return;
-                    var g = r.value === 'GCash';
-                    wrap.classList.toggle('hidden', !g);
-                    if (!g) ref.value = '';
+        (function () {
+            var form = document.getElementById('checkout-form');
+            var btn = document.getElementById('place-btn');
+            var spin = document.getElementById('place-spin');
+            var terms = document.getElementById('terms');
+            var subtotal = @Model.Cart.Total.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture);
+            var CHOSEN = @(chosen ? "true" : "false");
+            var locked = false;
+
+            function fmt(n) { return Number(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+
+            /* ---------- Payment collapsible ---------- */
+            var radios = [].slice.call(document.querySelectorAll('input[name="Input.PaymentMethod"]'));
+            var infos = [].slice.call(document.querySelectorAll('[data-pay-info]'));
+            var toggle = document.getElementById('pay-toggle');
+            var panel = document.getElementById('pay-panel');
+            var chev = document.getElementById('pay-chevron');
+            var ptitle = document.getElementById('pay-title');
+            var psub = document.getElementById('pay-sub');
+            var pchange = document.getElementById('pay-change');
+            var picon = document.getElementById('pay-icon');
+
+            if (!CHOSEN) radios.forEach(function (r) { r.checked = false; });
+
+            function selected() { return radios.filter(function (r) { return r.checked; })[0] || null; }
+
+            function setOpen(open) {
+                panel.style.gridTemplateRows = open ? '1fr' : '0fr';
+                panel.inert = !open;
+                toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+                chev.style.transform = open ? 'rotate(180deg)' : '';
+            }
+
+            function renderMethod() {
+                var r = selected();
+                radios.forEach(function (x) {
+                    var dot = x.parentElement.querySelector('[data-dot]');
+                    if (dot) dot.classList.toggle('hidden', !x.checked);
+                });
+                infos.forEach(function (i) { i.classList.toggle('hidden', !r || i.dataset.payInfo !== r.dataset.method); });
+                if (r) {
+                    ptitle.textContent = 'Payment Method';
+                    psub.textContent = r.dataset.label;
+                    picon.innerHTML = '<i class="' + r.dataset.icon + '"></i>';
+                    pchange.classList.remove('hidden');
+                } else {
+                    ptitle.textContent = 'Select Payment Method';
+                    psub.textContent = 'Choose your preferred payment option';
+                    picon.innerHTML = '<i class="fa-solid fa-wallet"></i>';
+                    pchange.classList.add('hidden');
+                }
+            }
+
+            toggle.addEventListener('click', function () { setOpen(toggle.getAttribute('aria-expanded') !== 'true'); });
+            radios.forEach(function (r) {
+                r.addEventListener('change', function () {
+                    renderMethod();
+                    setTimeout(function () { setOpen(false); }, 250);
+                    refresh();
                 });
             });
+            renderMethod();
+            setOpen(false);
+
+            /* ---------- Pickup date -> slot groups ---------- */
+            var dateInput = document.getElementById('pickup-date');
+            var groups = [].slice.call(document.querySelectorAll('[data-slot-date]'));
+            var empty = document.getElementById('slot-empty');
+            if (dateInput) {
+                dateInput.addEventListener('change', function () {
+                    var any = false;
+                    groups.forEach(function (g) {
+                        var show = g.dataset.slotDate === dateInput.value;
+                        g.classList.toggle('hidden', !show);
+                        if (show) any = true;
+                        else g.querySelectorAll('input').forEach(function (i) { i.checked = false; });
+                    });
+                    empty.classList.toggle('hidden', any);
+                    refresh();
+                });
+            }
+            form.querySelectorAll('input[name="Input.PickupSlot"]').forEach(function (r) { r.addEventListener('change', refresh); });
+
+            /* ---------- Promo (read-only preview; server re-validates on submit) ---------- */
+            var promo = document.getElementById('Input_PromoCode');
+            var applyBtn = document.getElementById('promo-apply');
+            var msg = document.getElementById('promo-msg');
+            var row = document.getElementById('promo-row');
+            var rowLabel = document.getElementById('promo-row-label');
+            var rowValue = document.getElementById('promo-row-value');
+            var totalEl = document.getElementById('total-value');
+            var placeTotal = document.getElementById('place-total');
+
+            function setTotal(t) { totalEl.textContent = fmt(t); placeTotal.textContent = fmt(t); }
+            function showMsg(text, ok) {
+                msg.textContent = text;
+                msg.className = 'mt-2 text-sm ' + (ok ? 'text-emerald-300' : 'text-red-300');
+            }
+            function clearPromo() {
+                row.classList.add('hidden'); row.classList.remove('flex');
+                msg.className = 'mt-2 hidden text-sm';
+                setTotal(subtotal);
+            }
+
+            promo.addEventListener('input', clearPromo);
+            applyBtn.addEventListener('click', function () {
+                var code = promo.value.trim();
+                if (!code) { clearPromo(); showMsg('Enter a promo code.', false); return; }
+                var token = form.querySelector('input[name="__RequestVerificationToken"]');
+                applyBtn.disabled = true;
+                fetch('@Url.Action("PreviewPromo", "Checkout")', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                        'RequestVerificationToken': token ? token.value : ''
+                    },
+                    body: 'code=' + encodeURIComponent(code)
+                })
+                    .then(function (res) { if (!res.ok) throw new Error(); return res.json(); })
+                    .then(function (d) {
+                        if (d.ok) {
+                            rowLabel.textContent = 'Promo ' + d.code;
+                            rowValue.textContent = '\u2212\u20B1' + fmt(d.discount);
+                            row.classList.remove('hidden'); row.classList.add('flex');
+                            setTotal(d.total);
+                            showMsg(d.message, true);
+                        } else {
+                            clearPromo();
+                            showMsg(d.message, false);
+                        }
+                    })
+                    .catch(function () { clearPromo(); showMsg('Could not check the promo code. Please try again.', false); })
+                    .then(function () { applyBtn.disabled = false; });
+            });
+
+            /* ---------- Note counter ---------- */
             var note = document.getElementById('Input_Note');
             var cnt = document.getElementById('note-count');
             function count() { cnt.textContent = note.value.length; }
             note.addEventListener('input', count);
             count();
+
+            /* ---------- Submit state ---------- */
+            function valid() {
+                return !locked
+                    && !!form.querySelector('input[name="Input.PickupSlot"]:checked')
+                    && !!selected()
+                    && terms.checked;
+            }
+            function refresh() { btn.disabled = !valid(); }
+            terms.addEventListener('change', refresh);
+            refresh();
+
+            form.addEventListener('submit', function (e) {
+                if (locked || !valid()) { e.preventDefault(); return; }
+                if (window.jQuery && jQuery.fn.valid && !jQuery(form).valid()) return;
+                locked = true;
+                btn.disabled = true;
+                spin.classList.remove('hidden');
+                document.getElementById('place-label').textContent = 'Placing order\u2026';
+            });
+
+            window.addEventListener('pageshow', function (e) {
+                if (e.persisted) {
+                    locked = false;
+                    spin.classList.add('hidden');
+                    document.getElementById('place-label').innerHTML = 'Place Order &mdash; &#8369;<span id="place-total">' + fmt(subtotal) + '</span>';
+                    placeTotal = document.getElementById('place-total');
+                    refresh();
+                }
+            });
         })();
     </script>
 }

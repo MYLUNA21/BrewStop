@@ -1,0 +1,28 @@
+﻿@model int
+@{
+    var steps = new[] { "Cart", "Checkout", "Confirmation" };
+}
+<ol class="mx-auto flex max-w-xl items-start" aria-label="Checkout progress">
+    @for (var i = 0; i < steps.Length; i++)
+    {
+        var state = i < Model ? "done" : i == Model ? "active" : "todo";
+        <li data-state="@state" class="group relative flex flex-1 flex-col items-center text-center">
+            @if (i > 0)
+            {
+                <span class="absolute right-1/2 top-4 h-px w-full bg-white/15 group-data-[state=done]:bg-caramel group-data-[state=active]:bg-caramel"></span>
+            }
+            <span class="relative z-10 grid size-8 place-items-center rounded-full border border-white/20 bg-espresso text-xs font-bold text-neutral-500 group-data-[state=active]:border-caramel group-data-[state=active]:bg-caramel group-data-[state=active]:text-espresso group-data-[state=done]:border-caramel group-data-[state=done]:text-caramel">
+                <i class="fa-solid fa-check hidden group-data-[state=done]:inline"></i>
+                <span class="group-data-[state=done]:hidden">@(i + 1)</span>
+            </span>
+            @if (i == 0)
+            {
+                <a href="@Url.Action("Index", "Cart")" class="mt-2 text-[11px] font-semibold uppercase tracking-wider text-neutral-500 no-underline group-data-[state=done]:text-caramel hover:text-cream sm:text-xs">@steps[i]</a>
+            }
+            else
+            {
+                <span class="mt-2 text-[11px] font-semibold uppercase tracking-wider text-neutral-500 group-data-[state=active]:text-cream group-data-[state=done]:text-caramel sm:text-xs">@steps[i]</span>
+            }
+        </li>
+    }
+</ol>

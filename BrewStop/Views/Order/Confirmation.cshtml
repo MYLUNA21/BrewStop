@@ -7,90 +7,139 @@
     ViewData["LiveReload"] = false;
     var pickupLocal = Slots.ToLocal(Model.PickupAtUtc);
     var subtotal = Model.Items.Sum(i => i.UnitPrice * i.Quantity);
+    var payHint = Model.PaymentMethod switch
+    {
+        PaymentMethod.Cash => "Pay the total at the counter when you pick up.",
+        PaymentMethod.GCash => "The barista verifies your GCash payment at pickup.",
+        _ => "Complete your payment at pickup."
+    };
+    const string cardCls = "rounded-2xl border border-white/10 bg-card p-5 sm:p-6";
+    const string h2 = "font-serif text-xl font-bold text-cream";
 }
 
 <div class="tw">
-    <div class="mx-auto max-w-3xl px-4 pt-24 pb-12">
-        <div class="rounded-3xl border border-white/10 bg-card p-5 sm:p-6">
-            <div class="flex items-center gap-3">
-                <span class="grid size-11 place-items-center rounded-full bg-emerald-500/15 text-emerald-300"><i class="fa-solid fa-check"></i></span>
-                <div>
-                    <p class="text-xs font-semibold uppercase tracking-wider text-caramel">Order placed</p>
-                    <h1 class="font-serif text-2xl font-bold text-cream sm:text-3xl">Order #@Model.Id</h1>
-                </div>
+    <div class="mx-auto max-w-6xl px-4 pt-24 pb-12">
+        <div class="border-b border-white/10 pb-6">
+            <partial name="~/Views/Checkout/_CheckoutSteps.cshtml" model="3" />
+        </div>
+
+        <div class="mt-8 flex items-center gap-3">
+            <span class="grid size-12 place-items-center rounded-full bg-emerald-500/15 text-emerald-300"><i class="fa-solid fa-check text-lg"></i></span>
+            <div>
+                <p class="text-xs font-semibold uppercase tracking-wider text-caramel">Order placed</p>
+                <h1 class="font-serif text-3xl font-bold text-cream">Order #@Model.Id</h1>
             </div>
+        </div>
 
-            <div class="mt-6"><partial name="_Progress" model="Model" /></div>
+        <div class="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_380px] lg:items-start">
 
-            <dl class="mt-6 grid grid-cols-2 gap-4 border-t border-white/10 pt-5 text-sm">
-                <div>
-                    <dt class="text-neutral-400">Pickup time</dt>
-                    <dd class="text-cream">@pickupLocal.ToString("ddd, MMM d · h:mm tt")</dd>
-                </div>
-                <div>
-                    <dt class="text-neutral-400">Status</dt>
-                    <dd class="mt-0.5"><partial name="_StatusBadge" model="Model" /></dd>
-                </div>
-                <div>
-                    <dt class="text-neutral-400">Payment method</dt>
-                    <dd class="text-cream">@Model.PaymentMethod</dd>
-                </div>
-                <div>
-                    <dt class="text-neutral-400">Payment status</dt>
-                    <dd class="text-cream">@Model.PaymentStatus.Label()</dd>
-                </div>
-                @if (!string.IsNullOrWhiteSpace(Model.PaymentReference))
-                {
-                    <div class="col-span-2">
-                        <dt class="text-neutral-400">GCash reference</dt>
-                        <dd class="font-mono text-cream">@Model.PaymentReference</dd>
-                    </div>
-                }
-            </dl>
+            <!-- LEFT -->
+            <div class="space-y-6">
+                <section class="@cardCls">
+                    <h2 class="@h2">Order Status</h2>
+                    <div class="mt-5"><partial name="_Progress" model="Model" /></div>
 
-            <ul class="mt-5 divide-y divide-white/10 border-t border-white/10">
-                @foreach (var i in Model.Items)
-                {
-                    <li class="flex items-start justify-between gap-4 py-3 text-sm">
-                        <div class="flex min-w-0 items-start gap-3">
-                            <img src="@Images.Resolve(i.MenuItem?.ImageUrl, i.ItemName)" alt="@i.ItemName" class="size-14 shrink-0 rounded-lg object-cover" />
-                            <div class="min-w-0">
-                                <p class="text-cream">@i.Quantity &times; @i.ItemName</p>
-                                <p class="text-xs text-neutral-400">
-                                    @(i.SizeName ?? "")@(i.SizeName is not null && i.AddOns.Count > 0 ? " · " : "")@string.Join(", ", i.AddOns.Select(a => a.Name))
-                                </p>
-                            </div>
+                    <dl class="mt-6 grid gap-4 border-t border-white/10 pt-5 text-sm sm:grid-cols-2">
+                        <div>
+                            <dt class="text-neutral-400">Order number</dt>
+                            <dd class="font-semibold text-cream">#@Model.Id</dd>
                         </div>
-                        <span class="shrink-0 text-cream">&#8369;@((i.UnitPrice * i.Quantity).ToString("N2"))</span>
-                    </li>
-                }
-            </ul>
+                        <div>
+                            <dt class="text-neutral-400">Live status</dt>
+                            <dd class="mt-0.5"><partial name="_StatusBadge" model="Model" /></dd>
+                        </div>
+                        <div>
+                            <dt class="text-neutral-400">Pickup date</dt>
+                            <dd class="text-cream">@pickupLocal.ToString("dddd, MMM d, yyyy")</dd>
+                        </div>
+                        <div>
+                            <dt class="text-neutral-400">Pickup time</dt>
+                            <dd class="text-cream">@pickupLocal.ToString("h:mm tt")</dd>
+                        </div>
+                    </dl>
+                </section>
 
-            @if (!string.IsNullOrWhiteSpace(Model.Note))
-            {
-                <p class="text-sm text-neutral-300"><span class="text-neutral-400">Note:</span> @Model.Note</p>
-            }
+                <section class="@cardCls">
+                    <h2 class="@h2">Payment</h2>
+                    <dl class="mt-5 grid gap-4 text-sm sm:grid-cols-2">
+                        <div>
+                            <dt class="text-neutral-400">Payment method</dt>
+                            <dd class="text-cream">@Model.PaymentMethod</dd>
+                        </div>
+                        <div>
+                            <dt class="text-neutral-400">Payment status</dt>
+                            <dd class="text-cream">@Model.PaymentStatus.Label()</dd>
+                        </div>
+                        @if (!string.IsNullOrWhiteSpace(Model.PaymentReference))
+                        {
+                            <div class="sm:col-span-2">
+                                <dt class="text-neutral-400">GCash reference</dt>
+                                <dd class="font-mono text-cream">@Model.PaymentReference</dd>
+                            </div>
+                        }
+                    </dl>
+                    <p class="mt-4 rounded-xl border border-white/10 bg-espresso/60 px-4 py-3 text-sm text-neutral-300">
+                        <i class="fa-solid fa-circle-info mr-2 text-caramel"></i>@payHint
+                    </p>
+                </section>
 
-            <dl class="mt-3 space-y-1 border-t border-white/10 pt-4 text-sm">
-                <div class="flex justify-between text-neutral-300"><dt>Subtotal</dt><dd>&#8369;@subtotal.ToString("N2")</dd></div>
-                @if (Model.DiscountAmount > 0)
-                {
-                    <div class="flex justify-between text-emerald-300"><dt>Promo @Model.PromoCode</dt><dd>&minus;&#8369;@Model.DiscountAmount.ToString("N2")</dd></div>
-                }
-                <div class="flex items-baseline justify-between pt-1">
-                    <dt class="text-neutral-300">Total (pay at pickup)</dt>
-                    <dd class="text-2xl font-bold text-caramel">&#8369;@Model.Total.ToString("N2")</dd>
-                </div>
-            </dl>
-
-            <partial name="_Qr" />
-
-            <div class="mt-6 flex flex-wrap gap-3">
-                <a asp-action="Details" asp-route-id="@Model.Id"
-                   class="rounded-full bg-caramel px-5 py-2 text-sm font-semibold text-black hover:bg-cream">Track order</a>
-                <a asp-controller="Menu" asp-action="Index"
-                   class="rounded-full border border-white/20 px-5 py-2 text-sm text-cream hover:border-caramel">Back to menu</a>
+                <partial name="_Qr" />
             </div>
+
+            <!-- RIGHT -->
+            <aside class="space-y-4 lg:sticky lg:top-24">
+                <div class="@cardCls">
+                    <h2 class="@h2 border-b border-white/10 pb-4">Order Summary</h2>
+
+                    <ul class="divide-y divide-white/10">
+                        @foreach (var i in Model.Items)
+                        {
+                            <li class="flex items-start justify-between gap-3 py-4 text-sm">
+                                <div class="flex min-w-0 items-start gap-3">
+                                    <img src="@Images.Resolve(i.MenuItem?.ImageUrl, i.ItemName)" alt="@i.ItemName" class="size-16 shrink-0 rounded-lg object-cover" />
+                                    <div class="min-w-0">
+                                        <p class="font-medium text-cream">@i.ItemName</p>
+                                        @if (i.SizeName is not null || i.AddOns.Count > 0)
+                                        {
+                                            <p class="text-xs text-neutral-400">
+                                                @(i.SizeName ?? "")@(i.SizeName is not null && i.AddOns.Count > 0 ? " · " : "")@string.Join(", ", i.AddOns.Select(a => a.Name))
+                                            </p>
+                                        }
+                                        <p class="text-xs text-neutral-400">Qty: @i.Quantity</p>
+                                    </div>
+                                </div>
+                                <span class="shrink-0 text-cream">&#8369;@((i.UnitPrice * i.Quantity).ToString("N2"))</span>
+                            </li>
+                        }
+                    </ul>
+
+                    @if (!string.IsNullOrWhiteSpace(Model.Note))
+                    {
+                        <p class="border-t border-white/10 pt-3 text-sm text-neutral-300 whitespace-pre-line"><span class="text-neutral-400">Note:</span> @Model.Note</p>
+                    }
+
+                    <dl class="mt-3 space-y-2 border-t border-white/10 pt-4 text-sm">
+                        <div class="flex justify-between text-neutral-300"><dt>Subtotal</dt><dd>&#8369;@subtotal.ToString("N2")</dd></div>
+                        @if (Model.DiscountAmount > 0)
+                        {
+                            <div class="flex justify-between text-emerald-300"><dt>Promo @Model.PromoCode</dt><dd>&minus;&#8369;@Model.DiscountAmount.ToString("N2")</dd></div>
+                        }
+                        <div class="flex items-end justify-between border-t border-white/10 pt-4">
+                            <dt class="font-serif text-lg font-bold text-cream">Total</dt>
+                            <dd class="text-2xl font-bold text-caramel">&#8369;@Model.Total.ToString("N2")</dd>
+                        </div>
+                    </dl>
+
+                    <div class="mt-6 grid gap-3">
+                        <a asp-controller="Order" asp-action="Index"
+                           class="rounded-xl bg-cream px-5 py-3.5 text-center text-sm font-semibold text-espresso no-underline shadow-lg shadow-black/30 transition hover:bg-caramel">View My Orders</a>
+                        <a asp-action="Details" asp-route-id="@Model.Id"
+                           class="rounded-xl border border-caramel px-5 py-3 text-center text-sm font-semibold text-caramel no-underline transition hover:bg-caramel hover:text-espresso">Track Order</a>
+                        <a asp-controller="Menu" asp-action="Index"
+                           class="text-center text-sm text-neutral-400 no-underline hover:text-cream">Back to menu</a>
+                    </div>
+                </div>
+            </aside>
         </div>
     </div>
 </div>

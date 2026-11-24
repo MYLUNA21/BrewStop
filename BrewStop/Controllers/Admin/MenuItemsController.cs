@@ -1,20 +1,29 @@
 ﻿using BrewStop.Data;
 using BrewStop.Models;
+using BrewStop.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 
 namespace BrewStop.Controllers.Admin;
 
 [Authorize(Roles = AppRoles.Admin)]
 [Route("Admin/MenuItems")]
-public class MenuItemsController(ApplicationDbContext db, IWebHostEnvironment env) : Controller
+public class MenuItemsController(ApplicationDbContext db, IWebHostEnvironment env, IMemoryCache cache) : Controller
 {
     private const string FormView = "~/Views/Admin/MenuItems/Form.cshtml";
     private const string UploadUrl = "/uploads/menu/";
     private const long MaxBytes = 2 * 1024 * 1024;
     private static readonly string[] AllowedExt = [".jpg", ".jpeg", ".png", ".webp"];
+
+    private void InvalidateMenuCache()
+    {
+        cache.Remove(CacheKeys.MenuCatalog);
+        cache.Remove(CacheKeys.ItemSizes);
+        cache.Remove(CacheKeys.AddOns);
+    }
 
     private async Task LoadCategoriesAsync(int? selected = null) =>
         ViewBag.Categories = new SelectList(await db.Categories.AsNoTracking().OrderBy(c => c.Name).ToListAsync(), "Id", "Name", selected);
@@ -80,6 +89,7 @@ public class MenuItemsController(ApplicationDbContext db, IWebHostEnvironment en
         db.MenuItems.Add(m);
         db.InventoryItems.Add(new InventoryItem { MenuItem = m, Quantity = 0 });
         await db.SaveChangesAsync();
+        InvalidateMenuCache();
 
         TempData["Success"] = $"{m.Name} created.";
         return RedirectToAction(nameof(Index));
@@ -132,6 +142,7 @@ public class MenuItemsController(ApplicationDbContext db, IWebHostEnvironment en
         }
 
         await db.SaveChangesAsync();
+        InvalidateMenuCache();
 
         TempData["Success"] = $"{m.Name} updated.";
         return RedirectToAction(nameof(Index));
@@ -152,6 +163,7 @@ public class MenuItemsController(ApplicationDbContext db, IWebHostEnvironment en
         var imageUrl = m.ImageUrl;
         db.MenuItems.Remove(m);
         await db.SaveChangesAsync();
+        InvalidateMenuCache();
         DeleteImage(imageUrl);
 
         TempData["Success"] = $"{m.Name} deleted.";

@@ -2,6 +2,8 @@
 @{
     Layout = "_AdminLayout";
     ViewData["Title"] = "Payment Management";
+    var fpVal = Model.PaymentStatusFilter == "All" ? "" : Model.PaymentStatusFilter;
+    var fmVal = Model.MethodFilter == "All" ? "" : Model.MethodFilter;
 }
 
 <style>
@@ -613,9 +615,9 @@
                 }
                 @foreach (var o in Model.Orders)
                 {
-                    var fullName = o.User?.FullName ?? string.Empty;
+                    var fullName = o.CustomerName;
                     var initial = string.IsNullOrWhiteSpace(fullName) ? "?" : fullName.Trim()[0].ToString().ToUpperInvariant();
-                    var campusId = o.User?.CampusId ?? string.Empty;
+                    var campusId = o.CampusId;
                     var avIdx = Math.Abs((campusId + fullName).Aggregate(0, (h, c) => unchecked(h * 31 + c))) % 5;
                     var rowCls = o.PaymentStatus == PaymentStatus.Paid ? "row-paid"
                                : o.PaymentStatus == PaymentStatus.Refunded ? "row-refunded" : "row-unpaid";
@@ -630,8 +632,8 @@
                         <div role="cell" class="cust">
                             <span class="avatar av-@avIdx" aria-hidden="true">@initial</span>
                             <div class="min-w-0">
-                                <div class="cust-name">@o.User.FullName</div>
-                                <div class="cust-id">@o.User.CampusId</div>
+                                <div class="cust-name">@o.CustomerName</div>
+                                <div class="cust-id">@o.CampusId</div>
                             </div>
                         </div>
                         <div role="cell">
@@ -650,9 +652,10 @@
                                     @Html.AntiForgeryToken()
                                     <input type="hidden" name="id" value="@o.Id" />
                                     <input type="hidden" name="status" value="Paid" />
-                                    <input type="hidden" name="fp" value="@(Model.PaymentStatusFilter == "All" ? "" : Model.PaymentStatusFilter)" />
-                                    <input type="hidden" name="fm" value="@(Model.MethodFilter == "All" ? "" : Model.MethodFilter)" />
+                                    <input type="hidden" name="fp" value="@fpVal" />
+                                    <input type="hidden" name="fm" value="@fmVal" />
                                     <input type="hidden" name="fd" value="@Model.Date" />
+                                    <input type="hidden" name="page" value="@Model.Page" />
                                     <button type="submit" class="act act-pay">Mark Paid</button>
                                 </form>
                             }
@@ -663,9 +666,10 @@
                                     @Html.AntiForgeryToken()
                                     <input type="hidden" name="id" value="@o.Id" />
                                     <input type="hidden" name="status" value="Refunded" />
-                                    <input type="hidden" name="fp" value="@(Model.PaymentStatusFilter == "All" ? "" : Model.PaymentStatusFilter)" />
-                                    <input type="hidden" name="fm" value="@(Model.MethodFilter == "All" ? "" : Model.MethodFilter)" />
+                                    <input type="hidden" name="fp" value="@fpVal" />
+                                    <input type="hidden" name="fm" value="@fmVal" />
                                     <input type="hidden" name="fd" value="@Model.Date" />
+                                    <input type="hidden" name="page" value="@Model.Page" />
                                     <button type="submit" class="act act-refund">Refund</button>
                                 </form>
                             }
@@ -678,5 +682,26 @@
                 }
             </div>
         </div>
+
+        @if (Model.TotalPages > 1)
+        {
+            var fromRow = (Model.Page - 1) * Model.PageSize + 1;
+            var toRow = Math.Min(Model.TotalCount, Model.Page * Model.PageSize);
+            <nav class="mt-4 flex flex-wrap items-center justify-between gap-3 text-xs text-neutral-400" aria-label="Payments pages">
+                <span>Showing @fromRow-@toRow of @Model.TotalCount (Page @Model.Page of @Model.TotalPages)</span>
+                <div class="flex items-center gap-2">
+                    @if (Model.Page > 1)
+                    {
+                        <a href="@Url.Action("Payments", new { paymentStatus = fpVal, method = fmVal, date = Model.Date, page = Model.Page - 1 })"
+                           class="btn-reset" style="padding:.4rem .95rem;font-size:.78rem">&larr; Previous</a>
+                    }
+                    @if (Model.Page < Model.TotalPages)
+                    {
+                        <a href="@Url.Action("Payments", new { paymentStatus = fpVal, method = fmVal, date = Model.Date, page = Model.Page + 1 })"
+                           class="btn-reset" style="padding:.4rem .95rem;font-size:.78rem">Next &rarr;</a>
+                    }
+                </div>
+            </nav>
+        }
     </div>
 </div>

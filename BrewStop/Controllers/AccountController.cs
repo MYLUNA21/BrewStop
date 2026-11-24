@@ -759,28 +759,57 @@ public class AccountController(
     }
 
     // ---- Activity ----
-    private static readonly string[] CustomerVisibleActions =
+    private const int ActivityPageSize = 15;
+
+    private static readonly string[] OrderActions = ["OrderPlaced", "OrderCancelled"];
+    private static readonly string[] PromoActions = ["PromoApplied", "ReviewCreated"];
+    private static readonly string[] AccountActions =
     [
-        "OrderPlaced", "OrderCancelled", "PromoApplied", "ReviewCreated",
         "ProfileUpdated", "PasswordChanged", "PasswordSet", "SignedOutAllDevices",
         "NotificationsUpdated", "ExternalLogin", "ExternalLoginLinked",
         "UserRegistered", "GoogleOAuthRegistered", "AccountDeleted"
     ];
+    private static readonly string[] CustomerVisibleActions = [.. OrderActions, .. PromoActions, .. AccountActions];
 
     [HttpGet, Authorize]
-    public async Task<IActionResult> Activity()
+    public async Task<IActionResult> Activity(string? category, int page = 1)
     {
         var user = await CurrentUserAsync();
         if (user is null) return await ForceLogoutAsync();
 
-        var entries = await db.AuditLogs
-            .AsNoTracking()
-            .Where(a => a.UserId == user.Id && CustomerVisibleActions.Contains(a.Action))
+        var cat = category?.Trim().ToLowerInvariant() is "orders" or "promos" or "account"
+            ? category.Trim().ToLowerInvariant()
+            : "all";
+
+        var allowed = cat switch
+        {
+            "orders" => OrderActions,
+            "promos" => PromoActions,
+            "account" => AccountActions,
+            _ => CustomerVisibleActions
+        };
+
+        var q = db.AuditLogs.AsNoTracking()
+            .Where(a => a.UserId == user.Id && allowed.Contains(a.Action));
+
+        var total = await q.CountAsync();
+        var totalPages = Math.Max(1, (int)Math.Ceiling(total / (double)ActivityPageSize));
+        page = Math.Clamp(page, 1, totalPages);
+
+        var entries = await q
             .OrderByDescending(a => a.CreatedAtUtc)
-            .Take(50)
+            .Skip((page - 1) * ActivityPageSize)
+            .Take(ActivityPageSize)
             .ToListAsync();
 
-        return View(new ActivityViewModel { Entries = entries });
+        return View(new ActivityViewModel
+        {
+            Entries = entries,
+            Category = cat,
+            Page = page,
+            TotalPages = totalPages,
+            TotalCount = total
+        });
     }
 
     // ---- Delete Account (soft delete + PII anonymization) ----
@@ -868,4 +897,4 @@ public class AccountController(
         return View("Info", new InfoViewModel("Account deleted",
             "Your personal data has been erased. Past orders are kept in anonymized form for one academic year."));
     }
-}
+}   

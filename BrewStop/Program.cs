@@ -15,7 +15,8 @@ var builder = WebApplication.CreateBuilder(args);
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 if (string.IsNullOrWhiteSpace(connectionString))
 {
-    connectionString = "Server=localhost;Port=3306;Database=BrewStopDb;User=root;Password=;";
+    throw new InvalidOperationException(
+        "ConnectionStrings:DefaultConnection is not configured (use user-secrets / env var ConnectionStrings__DefaultConnection).");
 }
 
 builder.Services.AddDbContext<ApplicationDbContext>(options =>

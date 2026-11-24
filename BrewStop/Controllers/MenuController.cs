@@ -4,15 +4,30 @@ using BrewStop.Models;
 using BrewStop.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 
 namespace BrewStop.Controllers;
 
-public class MenuController(ApplicationDbContext db, IImageResolver images) : Controller
+public class MenuController(ApplicationDbContext db, IImageResolver images, IMemoryCache cache) : Controller
 {
     private static readonly string[] PriceProps =
         { "PriceModifier", "PriceDelta", "PriceAdjustment", "ExtraPrice", "AdditionalPrice", "ExtraCost", "Price" };
 
     private static readonly string[] SortKeys = { "popularity", "price_asc", "price_desc" };
+
+    private async Task<List<ItemSize>> GetSizesAsync() =>
+        (await cache.GetOrCreateAsync(CacheKeys.ItemSizes, e =>
+        {
+            e.SetOptions(CacheOptions.Catalog);
+            return db.ItemSizes.AsNoTracking().Where(s => s.IsActive).OrderBy(s => s.SortOrder).ToListAsync();
+        }))!;
+
+    private async Task<List<AddOn>> GetAddOnsAsync() =>
+        (await cache.GetOrCreateAsync(CacheKeys.AddOns, e =>
+        {
+            e.SetOptions(CacheOptions.Catalog);
+            return db.AddOns.AsNoTracking().Where(a => a.IsActive).OrderBy(a => a.Name).ToListAsync();
+        }))!;
 
     public async Task<IActionResult> Index(string? category, string? searchTerm, string? group, string? sort)
     {
@@ -24,11 +39,11 @@ public class MenuController(ApplicationDbContext db, IImageResolver images) : Co
 
         var sortKey = SortKeys.Contains(sort?.Trim().ToLowerInvariant()) ? sort!.Trim().ToLowerInvariant() : "popularity";
 
-        var categories = await db.Categories
-            .AsNoTracking()
-            .Include(c => c.MenuItems)
-            .OrderBy(c => c.Id)
-            .ToListAsync();
+        var categories = (await cache.GetOrCreateAsync(CacheKeys.MenuCatalog, e =>
+        {
+            e.SetOptions(CacheOptions.Catalog);
+            return db.Categories.AsNoTracking().Include(c => c.MenuItems).OrderBy(c => c.Id).ToListAsync();
+        }))!;
 
         var stock = await db.InventoryItems
             .AsNoTracking()
@@ -116,10 +131,8 @@ public class MenuController(ApplicationDbContext db, IImageResolver images) : Co
                             .FirstOrDefault()
                    ?? flat.FirstOrDefault(d => !string.IsNullOrWhiteSpace(d.ImageUrl));
 
-        var sizes = await db.ItemSizes.AsNoTracking()
-            .Where(s => s.IsActive).OrderBy(s => s.SortOrder).ToListAsync();
-        var addOns = await db.AddOns.AsNoTracking()
-            .Where(a => a.IsActive).OrderBy(a => a.Name).ToListAsync();
+        var sizes = await GetSizesAsync();
+        var addOns = await GetAddOnsAsync();
 
         await LoadStaffReferenceAsync();
 
@@ -221,10 +234,8 @@ public class MenuController(ApplicationDbContext db, IImageResolver images) : Co
     private async Task LoadStaffReferenceAsync()
     {
         if (!User.IsInRole(AppRoles.Barista)) return;
-        ViewBag.RefSizes = await db.ItemSizes.AsNoTracking()
-            .Where(s => s.IsActive).OrderBy(s => s.SortOrder).ToListAsync();
-        ViewBag.RefAddOns = await db.AddOns.AsNoTracking()
-            .Where(a => a.IsActive).OrderBy(a => a.Name).ToListAsync();
+        ViewBag.RefSizes = await GetSizesAsync();
+        ViewBag.RefAddOns = await GetAddOnsAsync();
     }
 
     private static bool IsDrink(string? group) =>

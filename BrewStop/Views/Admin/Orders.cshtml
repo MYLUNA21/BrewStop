@@ -8,8 +8,8 @@
     {
         id = o.Id,
         status = o.Status.ToString(),
-        name = o.User.FullName,
-        campus = o.User.CampusId,
+        name = o.CustomerName,
+        campus = o.CampusId,
         method = o.PaymentMethod.ToString(),
         pay = o.PaymentStatus.ToString(),
         reference = o.PaymentReference,
@@ -89,7 +89,7 @@
             var D = JSON.parse(document.getElementById('orders-data').textContent);
             var root = document.getElementById('orders-root');
             var $ = function(s) { return root.querySelector(s); };
-            var PAGE = 10, PESO = '\u20B1';
+            var PAGE = 10, LIMIT = @Model.HistoryLimit, PESO = '\u20B1';
             var TABS = [['All', 'All'], ['Placed', 'Placed'], ['Preparing', 'Preparing'], ['Ready', 'Ready'], ['Claimed', 'Completed'], ['Cancelled', 'Cancelled']];
             var TONE = {
                 Placed: { dot: 'bg-amber-400', chip: 'bg-amber-500/15 text-amber-300' },
@@ -200,8 +200,8 @@
                         + (open ? '<div class="border-t border-white/10 p-3"><div class="mb-3 flex gap-1.5">'
                             + [['Claimed', 'Completed'], ['Cancelled', 'Cancelled']].map(function(t) { return '<button type="button" data-closed="' + t[0] + '" class="' + PILL + (S.closed === t[0] ? PILL_ON : PILL_OFF) + '">' + t[1] + '</button>'; }).join('')
                             + '</div><div class="grid max-h-72 gap-2 overflow-y-auto sm:grid-cols-2 xl:grid-cols-3">'
-                            + (l.slice(0, 60).map(function(o) { return mini(o); }).join('') || '<p class="col-span-full py-6 text-center text-xs text-neutral-500">No orders</p>')
-                            + '</div>' + (l.length > 60 ? '<p class="mt-2 text-center text-[11px] text-neutral-500">Showing 60 of ' + l.length + ' - use Table view for the full list.</p>' : '') + '</div>' : '')
+                            + (l.map(function(o) { return mini(o); }).join('') || '<p class="col-span-full py-6 text-center text-xs text-neutral-500">No orders</p>')
+                            + '</div>' + (l.length >= LIMIT ? '<p class="mt-2 text-center text-[11px] text-neutral-500">Showing latest ' + LIMIT + ' - use Reports for older records.</p>' : '') + '</div>' : '')
                         + '</section>';
                 }
                 return html;
@@ -238,7 +238,7 @@
                         + '</div><span class="shrink-0 text-sm text-neutral-200">' + money(i.price * i.qty) + '</span></li>';
                 }).join('');
                 var field = function(k, v) { return '<div><p class="text-[11px] uppercase tracking-wider text-neutral-500">' + k + '</p><p class="mt-0.5 text-sm text-cream">' + v + '</p></div>'; };
-                var btns = o.next.map(function(s, i) {
+                var btns = o.next.map(function(s) {
                     var cancel = s === 'Cancelled';
                     return '<button type="button" data-adv="' + o.id + '" data-st="' + s + '" class="flex-1 rounded-xl px-4 py-2.5 text-sm font-semibold transition ' + (cancel ? 'border border-red-500/40 text-red-300 hover:bg-red-500/10' : 'bg-caramel text-espresso hover:bg-cream') + '">' + ACT[s] + '</button>';
                 }).join('');

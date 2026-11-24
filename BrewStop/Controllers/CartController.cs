@@ -4,6 +4,7 @@ using BrewStop.Models;
 using BrewStop.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 
 namespace BrewStop.Models
 {
@@ -42,7 +43,8 @@ namespace BrewStop.Controllers
         ICartService cart,
         IInventoryService inventory,
         IImageResolver images,
-        ApplicationDbContext db) : Controller
+        ApplicationDbContext db,
+        IMemoryCache cache) : Controller
     {
         private const string PromoKey = "brewstop.cart.promo";
 
@@ -217,7 +219,7 @@ namespace BrewStop.Controllers
             var normalized = code.Trim().ToUpperInvariant();
             var now = DateTime.UtcNow;
 
-            var promo = await db.Promotions.AsNoTracking().FirstOrDefaultAsync(p => p.Code == normalized);
+            var promo = await cache.FindActivePromoAsync(db, normalized);
             if (promo is null || !promo.IsActive) return Fail("Invalid promo code.");
             if (promo.ExpiryDate < now) return Fail("This promo code has expired.");
             if (promo.MaxUses is not null && promo.TimesUsed >= promo.MaxUses)

@@ -71,35 +71,34 @@
 
             <section class="rounded-3xl bg-white p-6 shadow-sm sm:p-10 lg:col-span-2">
                 <h2 class="font-serif text-2xl font-semibold text-[#1e3932]">Account Activity</h2>
-                <p class="mt-1 text-sm text-gray-500">Your most recent account activity (up to 50 events, UTC).</p>
+                <p class="mt-1 text-sm text-gray-500">Your recent account activity (UTC).</p>
+
+                <form method="get" asp-action="Activity" class="mt-5 flex flex-wrap items-center justify-between gap-3">
+                    <div class="flex items-center gap-2">
+                        <label for="activity-filter" class="text-xs font-semibold uppercase tracking-wider text-gray-500">Filter</label>
+                        <select id="activity-filter" name="category" onchange="this.form.submit()" aria-label="Filter activity by category"
+                                class="rounded-xl border border-solid border-gray-300 bg-white py-2 pl-3 pr-8 text-sm text-[#1e3932] shadow-sm focus:border-[#00754a] focus:outline-none focus:ring-2 focus:ring-[#00754a]/25">
+                            <option value="all" selected="@(Model.Category == "all")">All Activity</option>
+                            <option value="orders" selected="@(Model.Category == "orders")">Orders</option>
+                            <option value="promos" selected="@(Model.Category == "promos")">Promos &amp; Reviews</option>
+                            <option value="account" selected="@(Model.Category == "account")">Account &amp; Security</option>
+                        </select>
+                    </div>
+                    <p class="text-xs text-gray-400">@Model.TotalCount total event@(Model.TotalCount == 1 ? "" : "s")</p>
+                </form>
 
                 @if (Model.Entries.Count == 0)
                 {
-                    <p class="mt-6 rounded-xl bg-[#f9f9f9] px-4 py-6 text-center text-sm text-gray-500">No activity recorded yet.</p>
+                    <p class="mt-4 rounded-xl bg-[#f9f9f9] px-4 py-8 text-center text-sm text-gray-500">No activity recorded in this category.</p>
                 }
                 else
                 {
-                    <div class="mt-5 flex flex-wrap items-center justify-between gap-3">
-                        <div class="flex items-center gap-2">
-                            <label for="activity-filter" class="text-xs font-semibold uppercase tracking-wider text-gray-500">Filter</label>
-                            <select id="activity-filter" aria-label="Filter activity by category"
-                                    class="rounded-xl border border-solid border-gray-300 bg-white py-2 pl-3 pr-8 text-sm text-[#1e3932] shadow-sm focus:border-[#00754a] focus:outline-none focus:ring-2 focus:ring-[#00754a]/25">
-                                <option value="all">All Activity</option>
-                                <option value="orders">Orders</option>
-                                <option value="promos">Promos &amp; Reviews</option>
-                                <option value="account">Account &amp; Security</option>
-                            </select>
-                        </div>
-                        <p id="activity-count" class="text-xs text-gray-400" aria-live="polite"></p>
-                    </div>
-
-                    <div id="activity-feed" tabindex="0" role="region" aria-label="Account activity feed"
-                         class="activity-scroll mt-3 max-h-[420px] overflow-y-auto rounded-2xl border border-solid border-gray-200 bg-[#f9f9f9] [scrollbar-width:thin] [scrollbar-color:#b7d4c6_transparent]">
+                    <div class="mt-3 overflow-hidden rounded-2xl border border-solid border-gray-200 bg-[#f9f9f9]">
                         <ul>
                             @foreach (var a in Model.Entries)
                             {
                                 var (title, text, cat, icon, warn) = Describe(a);
-                                <li data-category="@cat" class="border-t border-solid border-gray-200 bg-white first:border-t-0">
+                                <li class="border-t border-solid border-gray-200 bg-white first:border-t-0">
                                     <div class="flex items-start gap-3 px-4 py-3.5">
                                         <span class="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full @(warn ? "bg-red-50 text-[#d62b1f]" : "bg-[#e8f3ee] text-[#00754a]")">
                                             <i class="@icon text-sm" aria-hidden="true"></i>
@@ -121,56 +120,32 @@
                                 </li>
                             }
                         </ul>
-                        <p id="activity-empty" class="hidden px-4 py-8 text-center text-sm text-gray-500">No activity in this category.</p>
                     </div>
+
+                    @if (Model.TotalPages > 1)
+                    {
+                        <nav class="mt-5 flex items-center justify-between gap-3 text-xs text-gray-500" aria-label="Activity pages">
+                            <span>Page @Model.Page of @Model.TotalPages</span>
+                            <div class="flex items-center gap-2">
+                                @if (Model.Page > 1)
+                                {
+                                    <a asp-action="Activity" asp-route-category="@Model.Category" asp-route-page="@(Model.Page - 1)"
+                                       class="rounded-full border border-solid border-gray-300 px-3.5 py-1.5 font-semibold text-[#1e3932] transition hover:border-[#00754a] hover:text-[#00754a]">
+                                        &larr; Previous
+                                    </a>
+                                }
+                                @if (Model.Page < Model.TotalPages)
+                                {
+                                    <a asp-action="Activity" asp-route-category="@Model.Category" asp-route-page="@(Model.Page + 1)"
+                                       class="rounded-full border border-solid border-gray-300 px-3.5 py-1.5 font-semibold text-[#1e3932] transition hover:border-[#00754a] hover:text-[#00754a]">
+                                        Next &rarr;
+                                    </a>
+                                }
+                            </div>
+                        </nav>
+                    }
                 }
             </section>
         </div>
     </div>
 </div>
-
-@section Scripts {
-    <style>
-        .activity-scroll::-webkit-scrollbar {
-            width: 8px;
-        }
-
-        .activity-scroll::-webkit-scrollbar-track {
-            background: transparent;
-        }
-
-        .activity-scroll::-webkit-scrollbar-thumb {
-            background: #b7d4c6;
-            border-radius: 9999px;
-        }
-
-            .activity-scroll::-webkit-scrollbar-thumb:hover {
-                background: #00754a;
-            }
-    </style>
-    <script>
-        (function() {
-            var sel = document.getElementById('activity-filter');
-            if (!sel) return;
-            var feed = document.getElementById('activity-feed');
-            var empty = document.getElementById('activity-empty');
-            var count = document.getElementById('activity-count');
-            var items = [].slice.call(feed.querySelectorAll('li[data-category]'));
-
-            function apply() {
-                var v = sel.value, n = 0;
-                items.forEach(function(li) {
-                    var show = v === 'all' || li.getAttribute('data-category') === v;
-                    li.classList.toggle('hidden', !show);
-                    if (show) n++;
-                });
-                empty.classList.toggle('hidden', n !== 0);
-                count.textContent = 'Showing ' + n + ' of ' + items.length;
-                feed.scrollTop = 0;
-            }
-
-            sel.addEventListener('change', apply);
-            apply();
-        })();
-    </script>
-}

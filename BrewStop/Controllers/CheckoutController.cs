@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 
 namespace BrewStop.Controllers;
 
@@ -30,6 +31,7 @@ public class CheckoutController(
     IPromotionService promotions,
     UserManager<ApplicationUser> users,
     ApplicationDbContext db,
+    IMemoryCache cache,
     ILogger<CheckoutController> log) : Controller
 {
     // Methods the checkout may offer. Card methods (Visa/Mastercard) are intentionally absent:
@@ -223,7 +225,7 @@ public class CheckoutController(
             return Json(new { ok = false, message = "Invalid promo code.", code = (string?)null, discount = 0m, total = subtotal });
 
         var now = DateTime.UtcNow;
-        var promo = await db.Promotions.AsNoTracking().FirstOrDefaultAsync(p => p.Code == normalized, ct);
+        var promo = await cache.FindActivePromoAsync(db, normalized, ct);
 
         string? error =
             promo is null || !promo.IsActive ? "Invalid promo code."

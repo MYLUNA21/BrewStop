@@ -5,8 +5,11 @@
     ViewData["Title"] = "My Orders";
     ViewData["LiveReload"] = false;
 
-    var active = Model.Where(o => o.Status is OrderStatus.Placed or OrderStatus.Preparing or OrderStatus.Ready).ToList();
-    var past = Model.Where(o => !active.Contains(o)).ToList();
+    var active = ViewBag.ActiveOrders as List<BrewStop.Models.Order> ?? new();
+    var past = Model;
+    int pastPage = ViewBag.PastPage ?? 1;
+    int pastTotalPages = ViewBag.PastTotalPages ?? 1;
+    int pastTotalCount = ViewBag.PastTotalCount ?? past.Count;
 
     const string whenFmt = "ddd, MMM d \u00B7 h:mm tt";
     const string payTone = "text-cream";
@@ -38,7 +41,7 @@
             <p class="mt-5 rounded-xl border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-200" role="alert">@err</p>
         }
 
-        @if (Model.Count == 0)
+        @if (active.Count == 0 && past.Count == 0)
         {
             <!-- Empty state -->
             <div class="mt-8 rounded-3xl border border-white/10 bg-card px-6 py-16 text-center">
@@ -159,7 +162,10 @@
             @if (past.Count > 0)
             {
                 <section class="mt-12" aria-labelledby="history-heading">
-                    <h2 id="history-heading" class="font-serif text-2xl font-semibold text-cream">Order History</h2>
+                    <div class="flex flex-wrap items-center justify-between gap-2">
+                        <h2 id="history-heading" class="font-serif text-2xl font-semibold text-cream">Order History</h2>
+                        <span class="text-xs text-neutral-400">@pastTotalCount total</span>
+                    </div>
 
                     <div class="mt-4 space-y-3">
                         @foreach (var o in past)
@@ -210,6 +216,29 @@
                             </article>
                         }
                     </div>
+
+                    @if (pastTotalPages > 1)
+                    {
+                        <nav class="mt-6 flex items-center justify-between gap-3 text-xs text-neutral-400" aria-label="Order history pages">
+                            <span>Page @pastPage of @pastTotalPages</span>
+                            <div class="flex items-center gap-2">
+                                @if (pastPage > 1)
+                                {
+                                    <a asp-action="Index" asp-route-page="@(pastPage - 1)"
+                                       class="rounded-full border border-white/15 px-4 py-1.5 font-semibold text-cream transition hover:border-caramel hover:text-caramel">
+                                        &larr; Previous
+                                    </a>
+                                }
+                                @if (pastPage < pastTotalPages)
+                                {
+                                    <a asp-action="Index" asp-route-page="@(pastPage + 1)"
+                                       class="rounded-full border border-white/15 px-4 py-1.5 font-semibold text-cream transition hover:border-caramel hover:text-caramel">
+                                        Next &rarr;
+                                    </a>
+                                }
+                            </div>
+                        </nav>
+                    }
                 </section>
             }
         }

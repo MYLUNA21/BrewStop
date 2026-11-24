@@ -121,6 +121,10 @@ public class NotificationsViewModel
 public class ActivityViewModel
 {
     public List<AuditLog> Entries { get; set; } = new();
+    public string Category { get; set; } = "all";
+    public int Page { get; set; } = 1;
+    public int TotalPages { get; set; } = 1;
+    public int TotalCount { get; set; }
 }
 
 public class DeleteAccountViewModel

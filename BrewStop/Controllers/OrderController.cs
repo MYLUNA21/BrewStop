@@ -11,20 +11,43 @@ namespace BrewStop.Controllers;
 [Authorize(Policy = "CustomerOnly")]
 public class OrderController(ApplicationDbContext db, IQrTokenService qr, IAuditService audit, ICartService cart) : Controller
 {
+    private const int PastPageSize = 10;
     private string? UserId => User.FindFirstValue(ClaimTypes.NameIdentifier);
 
     [HttpGet]
-    public async Task<IActionResult> Index()
+    public async Task<IActionResult> Index(int page = 1)
     {
-        var orders = await db.Orders.AsNoTracking()
-            .Where(o => o.UserId == UserId)
+        var active = await db.Orders.AsNoTracking()
+            .Where(o => o.UserId == UserId
+                && (o.Status == OrderStatus.Placed || o.Status == OrderStatus.Preparing || o.Status == OrderStatus.Ready))
             .Include(o => o.Items).ThenInclude(i => i.AddOns)
             .Include(o => o.Items).ThenInclude(i => i.MenuItem)
             .OrderByDescending(o => o.CreatedAtUtc)
-            .Take(50)
+            .AsSplitQuery()
             .ToListAsync();
 
-        return View(orders);
+        var pastBase = db.Orders.AsNoTracking()
+            .Where(o => o.UserId == UserId
+                && o.Status != OrderStatus.Placed && o.Status != OrderStatus.Preparing && o.Status != OrderStatus.Ready);
+
+        var pastTotal = await pastBase.CountAsync();
+        var totalPages = Math.Max(1, (int)Math.Ceiling(pastTotal / (double)PastPageSize));
+        page = Math.Clamp(page, 1, totalPages);
+
+        var past = await pastBase
+            .Include(o => o.Items).ThenInclude(i => i.AddOns)
+            .Include(o => o.Items).ThenInclude(i => i.MenuItem)
+            .OrderByDescending(o => o.CreatedAtUtc)
+            .Skip((page - 1) * PastPageSize)
+            .Take(PastPageSize)
+            .AsSplitQuery()
+            .ToListAsync();
+
+        ViewBag.ActiveOrders = active;
+        ViewBag.PastPage = page;
+        ViewBag.PastTotalPages = totalPages;
+        ViewBag.PastTotalCount = pastTotal;
+        return View(past);
     }
 
     [HttpGet]

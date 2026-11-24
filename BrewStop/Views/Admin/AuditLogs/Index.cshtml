@@ -1,0 +1,314 @@
+﻿@model BrewStop.Controllers.Admin.AuditLogsController.AuditLogsViewModel
+@{
+    Layout = "_AdminLayout";
+    ViewData["Title"] = "Audit Logs";
+    var s = Model.StartDate?.ToString("yyyy-MM-dd") ?? "";
+    var e = Model.EndDate?.ToString("yyyy-MM-dd") ?? "";
+}
+
+<style>
+    .al-root {
+        --al-card: #241411;
+        --al-card-hi: #2f1b16;
+        --al-caramel: #d4a373;
+        --al-amber: #f0a93b;
+        --al-cream: #fefae0;
+        --al-muted: #a8998f;
+        --al-line: rgba(255, 255, 255, .08);
+        --al-glow: 0 10px 26px -8px rgba(240, 169, 59, .55);
+    }
+
+    .al-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: .4rem;
+        border-radius: 10px;
+        padding: .55rem 1rem;
+        font-size: .875rem;
+        line-height: 1.25rem;
+        text-decoration: none;
+        cursor: pointer;
+        transition: transform .18s ease, box-shadow .18s ease, background-color .18s ease, border-color .18s ease, color .18s ease;
+    }
+
+        .al-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--al-glow);
+        }
+
+        .al-btn:active {
+            transform: translateY(0);
+            box-shadow: none;
+        }
+
+    .al-btn-primary {
+        background: linear-gradient(135deg, #e0b283, #d4a373 55%, #c68f5a);
+        color: #1a0f0d;
+        font-weight: 700;
+        border: 1px solid transparent;
+    }
+
+    .al-btn-ghost {
+        background: rgba(255, 255, 255, .02);
+        border: 1px solid rgba(255, 255, 255, .2);
+        color: var(--al-cream);
+    }
+
+        .al-btn-ghost:hover {
+            border-color: var(--al-caramel);
+            color: var(--al-caramel);
+            background: rgba(212, 163, 115, .08);
+        }
+
+        .al-btn-ghost[aria-disabled="true"] {
+            pointer-events: none;
+            opacity: .4;
+        }
+
+    .al-filter {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: flex-end;
+        gap: .85rem;
+        padding: .9rem 1rem;
+        border-radius: 14px;
+        background: linear-gradient(180deg, var(--al-card-hi), var(--al-card));
+        border: 1px solid var(--al-line);
+    }
+
+    .al-label {
+        display: block;
+        margin-bottom: .25rem;
+        font-size: .7rem;
+        letter-spacing: .08em;
+        text-transform: uppercase;
+        color: var(--al-muted);
+    }
+
+    .al-input, .al-select {
+        border-radius: 10px;
+        border: 1px solid rgba(255, 255, 255, .18);
+        background: rgba(0, 0, 0, .35);
+        padding: .5rem .75rem;
+        font-size: .875rem;
+        color: var(--al-cream);
+        color-scheme: dark;
+    }
+
+        .al-input:focus, .al-select:focus {
+            outline: none;
+            border-color: var(--al-amber);
+            box-shadow: 0 0 0 3px rgba(240, 169, 59, .22);
+        }
+
+    .al-scroll {
+        overflow-x: auto;
+        padding: 2px 6px 8px 2px;
+        margin: 0 -6px 0 -2px;
+    }
+
+    .al-table {
+        min-width: 860px;
+    }
+
+    .al-cols {
+        grid-template-columns: 76px 148px minmax(170px, 1.2fr) minmax(150px, 1fr) minmax(240px, 2.2fr);
+    }
+
+    .al-head, .al-row {
+        display: grid;
+        align-items: center;
+        column-gap: .75rem;
+        padding: 0 1rem;
+    }
+
+    .al-head {
+        padding-top: .35rem;
+        padding-bottom: .35rem;
+        font-size: .7rem;
+        font-weight: 600;
+        letter-spacing: .09em;
+        text-transform: uppercase;
+        color: var(--al-caramel);
+    }
+
+    .al-row {
+        margin-top: 8px;
+        padding-top: .7rem;
+        padding-bottom: .7rem;
+        border-radius: 10px;
+        border-left: 4px solid var(--al-caramel);
+        background: var(--al-card);
+        box-shadow: 0 2px 8px -2px rgba(0, 0, 0, .45);
+        font-size: .875rem;
+        color: var(--al-cream);
+        transition: transform .18s ease, background-color .18s ease;
+    }
+
+        .al-row:nth-child(even) {
+            border-left-color: var(--al-amber);
+        }
+
+        .al-row:hover {
+            transform: translateX(4px);
+            background: var(--al-card-hi);
+        }
+
+    .al-badge {
+        justify-self: start;
+        display: inline-block;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-size: .78rem;
+        padding: .2rem .55rem;
+        border-radius: 7px;
+        color: var(--al-caramel);
+        background: rgba(212, 163, 115, .12);
+        border: 1px solid rgba(212, 163, 115, .28);
+    }
+
+    .al-pill {
+        justify-self: start;
+        display: inline-block;
+        padding: .18rem .6rem;
+        border-radius: 999px;
+        font-size: .74rem;
+        font-weight: 600;
+        background: rgba(240, 169, 59, .14);
+        color: var(--al-amber);
+        border: 1px solid rgba(240, 169, 59, .3);
+    }
+
+        .al-pill.is-danger {
+            background: rgba(248, 113, 113, .12);
+            color: #fca5a5;
+            border-color: rgba(248, 113, 113, .3);
+        }
+
+        .al-pill.is-success {
+            background: rgba(74, 222, 128, .12);
+            color: #86efac;
+            border-color: rgba(74, 222, 128, .3);
+        }
+
+    .al-empty {
+        margin-top: 8px;
+        padding: 1.5rem 1rem;
+        text-align: center;
+        border-radius: 10px;
+        border: 1px dashed rgba(255, 255, 255, .15);
+        color: var(--al-muted);
+        font-size: .875rem;
+    }
+</style>
+
+<div class="tw">
+    <div class="al-root">
+        <div class="mb-5 flex flex-wrap items-center justify-between gap-3">
+            <div>
+                <h1 class="font-serif text-2xl font-bold">
+                    Audit <span class="text-caramel">Logs</span>
+                </h1>
+                <p class="mt-0.5 text-sm text-neutral-400">
+                    Showing @Model.Logs.Count of @Model.TotalCount recorded events (UTC)
+                </p>
+            </div>
+        </div>
+
+        <form method="get" action="/Admin/AuditLogs" class="al-filter mb-6">
+            <div class="min-w-[200px] flex-1">
+                <label class="al-label">Search</label>
+                <input type="text" name="search" value="@Model.Search" placeholder="User, action, or details..." class="al-input w-full" />
+            </div>
+            <div>
+                <label class="al-label">Action</label>
+                <select name="actionFilter" class="al-select">
+                    <option value="">All Actions</option>
+                    @foreach (var act in Model.DistinctActions)
+                    {
+                        <option value="@act" selected="@(Model.ActionFilter == act)">@act</option>
+                    }
+                </select>
+            </div>
+            <div>
+                <label class="al-label">Start Date</label>
+                <input type="date" name="startDate" value="@s" class="al-input" />
+            </div>
+            <div>
+                <label class="al-label">End Date</label>
+                <input type="date" name="endDate" value="@e" class="al-input" />
+            </div>
+            <button type="submit" class="al-btn al-btn-primary">
+                <i class="fa-solid fa-filter"></i> Filter
+            </button>
+            <a href="/Admin/AuditLogs" class="al-btn al-btn-ghost">Reset</a>
+        </form>
+
+        <div class="al-scroll">
+            <div class="al-table" role="table" aria-label="Audit Logs">
+                <div class="al-head al-cols" role="row">
+                    <div role="columnheader">ID</div>
+                    <div role="columnheader">Timestamp (UTC)</div>
+                    <div role="columnheader">Actor</div>
+                    <div role="columnheader">Action</div>
+                    <div role="columnheader">Details</div>
+                </div>
+
+                @foreach (var log in Model.Logs)
+                {
+                    var isDanger = log.Action.Contains("Delete", StringComparison.OrdinalIgnoreCase)
+                                || log.Action.Contains("Cancel", StringComparison.OrdinalIgnoreCase)
+                                || log.Action.Contains("Fail", StringComparison.OrdinalIgnoreCase);
+                    var isSuccess = log.Action.Contains("Create", StringComparison.OrdinalIgnoreCase)
+                                 || log.Action.Contains("Claim", StringComparison.OrdinalIgnoreCase)
+                                 || log.Action.Contains("Paid", StringComparison.OrdinalIgnoreCase);
+                    var pillClass = isDanger ? "is-danger" : (isSuccess ? "is-success" : "");
+
+                    <div class="al-row al-cols" role="row">
+                        <div role="cell"><span class="al-badge">#@log.Id</span></div>
+                        <div role="cell" class="text-xs text-neutral-300" style="font-family:ui-monospace,Menlo,Consolas,monospace;font-variant-numeric:tabular-nums">
+                            @log.CreatedAtUtc.ToString("yyyy-MM-dd HH:mm:ss")
+                        </div>
+                        <div role="cell" class="min-w-0 break-words text-sm">
+                            @if (log.ActorDisplay == "System")
+                            {
+                                <span class="italic text-neutral-400"><i class="fa-solid fa-gear mr-1 text-xs"></i>System</span>
+                            }
+                            else
+                            {
+                                <span>@log.ActorDisplay</span>
+                            }
+                        </div>
+                        <div role="cell"><span class="al-pill @pillClass">@log.Action</span></div>
+                        <div role="cell" class="min-w-0 break-words text-xs text-neutral-300">
+                            @(string.IsNullOrWhiteSpace(log.Details) ? "—" : log.Details)
+                        </div>
+                    </div>
+                }
+
+                @if (Model.Logs.Count == 0)
+                {
+                    <div class="al-empty">No audit logs match the selected filters.</div>
+                }
+            </div>
+        </div>
+
+        @if (Model.TotalPages > 1)
+        {
+            <div class="mt-5 flex items-center justify-between">
+                <span class="text-xs text-neutral-400">Page @Model.Page of @Model.TotalPages</span>
+                <div class="flex gap-2">
+                    <a class="al-btn al-btn-ghost"
+                       aria-disabled="@(Model.Page <= 1 ? "true" : "false")"
+                       href="/Admin/AuditLogs?search=@Uri.EscapeDataString(Model.Search ?? "")&actionFilter=@Uri.EscapeDataString(Model.ActionFilter ?? "")&startDate=@s&endDate=@e&page=@(Model.Page - 1)">
+                        <i class="fa-solid fa-chevron-left"></i> Prev
+                    </a>
+                    <a class="al-btn al-btn-ghost"
+                       aria-disabled="@(Model.Page >= Model.TotalPages ? "true" : "false")"
+                       href="/Admin/AuditLogs?search=@Uri.EscapeDataString(Model.Search ?? "")&actionFilter=@Uri.EscapeDataString(Model.ActionFilter ?? "")&startDate=@s&endDate=@e&page=@(Model.Page + 1)">
+                        Next <i class="fa-solid fa-chevron-right"></i>
+                    </a>
+                </div>
+            </div>
+        }
+    </div>
+</div>

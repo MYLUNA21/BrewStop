@@ -232,23 +232,69 @@ public class AdminController(
     [HttpGet("Orders")]
     public async Task<IActionResult> Orders(string? status, CancellationToken ct)
     {
+        const int historyLimit = 60;
         var filter = Enum.TryParse<OrderStatus>(status, true, out var s) && Enum.IsDefined(s) ? s.ToString() : "All";
         var since = DateTime.UtcNow.AddDays(-14);
 
-        var orders = await db.Orders.AsNoTracking()
-            .Include(o => o.User)
-            .Include(o => o.Items).ThenInclude(i => i.AddOns)
-            .Where(o => o.CreatedAtUtc >= since
-                     || o.Status == OrderStatus.Placed || o.Status == OrderStatus.Preparing || o.Status == OrderStatus.Ready)
-            .OrderByDescending(o => o.CreatedAtUtc)
+        static IQueryable<AdminOrderBoardRow> Project(IQueryable<Order> q) => q.Select(o => new AdminOrderBoardRow
+        {
+            Id = o.Id,
+            Status = o.Status,
+            CustomerName = o.User.FullName,
+            CampusId = o.User.CampusId,
+            PaymentMethod = o.PaymentMethod,
+            PaymentStatus = o.PaymentStatus,
+            PaymentReference = o.PaymentReference,
+            Note = o.Note,
+            PromoCode = o.PromoCode,
+            DiscountAmount = o.DiscountAmount,
+            Total = o.Total,
+            CreatedAtUtc = o.CreatedAtUtc,
+            PickupAtUtc = o.PickupAtUtc,
+            Items = o.Items.Select(i => new AdminOrderBoardItem
+            {
+                ItemName = i.ItemName,
+                SizeName = i.SizeName,
+                UnitPrice = i.UnitPrice,
+                Quantity = i.Quantity,
+                AddOns = i.AddOns.Select(a => new AdminOrderBoardAddOn
+                {
+                    Name = a.Name,
+                    Price = a.Price
+                }).ToList()
+            }).ToList()
+        });
+
+        var active = await Project(db.Orders.AsNoTracking()
+                .Where(o => o.Status == OrderStatus.Placed || o.Status == OrderStatus.Preparing || o.Status == OrderStatus.Ready)
+                .OrderByDescending(o => o.CreatedAtUtc))
             .AsSplitQuery()
             .ToListAsync(ct);
+
+        var claimed = await Project(db.Orders.AsNoTracking()
+                .Where(o => o.Status == OrderStatus.Claimed && o.CreatedAtUtc >= since)
+                .OrderByDescending(o => o.CreatedAtUtc)
+                .Take(historyLimit))
+            .AsSplitQuery()
+            .ToListAsync(ct);
+
+        var cancelled = await Project(db.Orders.AsNoTracking()
+                .Where(o => o.Status == OrderStatus.Cancelled && o.CreatedAtUtc >= since)
+                .OrderByDescending(o => o.CreatedAtUtc)
+                .Take(historyLimit))
+            .AsSplitQuery()
+            .ToListAsync(ct);
+
+        var orders = active.Concat(claimed).Concat(cancelled)
+            .OrderByDescending(o => o.CreatedAtUtc)
+            .ToList();
 
         return View(new AdminOrdersViewModel
         {
             Filter = filter,
             Orders = orders,
-            PendingCount = orders.Count(o => o.Status is OrderStatus.Placed or OrderStatus.Preparing)
+            PendingCount = active.Count(o => o.Status is OrderStatus.Placed or OrderStatus.Preparing),
+            HistoryLimit = historyLimit
         });
     }
 
@@ -520,16 +566,15 @@ public class AdminController(
     // ---------------- Payment Management ----------------
 
     [HttpGet("Payments")]
-    public async Task<IActionResult> Payments(string? paymentStatus, string? method, string? date, CancellationToken ct)
+    public async Task<IActionResult> Payments(
+        string? paymentStatus, string? method, string? date, int page = 1, CancellationToken ct = default)
     {
+        const int pageSize = 15;
         var today = DateTime.UtcNow.Date;
         var all = db.Orders.AsNoTracking();
 
-        async Task<decimal> Sum(IQueryable<Order> src) =>
-            await src.SumAsync(o => (decimal?)o.Total, ct) ?? 0;
-
-        var q = all.Include(o => o.User).AsQueryable();
-        var vm = new AdminPaymentsViewModel();
+        var q = all;
+        var vm = new AdminPaymentsViewModel { PageSize = pageSize };
 
         if (Enum.TryParse<PaymentStatus>(paymentStatus, true, out var ps) && Enum.IsDefined(ps))
         {
@@ -541,31 +586,60 @@ public class AdminController(
             q = q.Where(o => o.PaymentMethod == pm);
             vm.MethodFilter = pm.ToString();
         }
+
+        IQueryable<Order> kpiBase = all;
         if (DateTime.TryParseExact(date, "yyyy-MM-dd", CultureInfo.InvariantCulture,
                 DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal, out var d))
         {
             var from = d.Date;
             var to = from.AddDays(1);
             q = q.Where(o => o.CreatedAtUtc >= from && o.CreatedAtUtc < to);
+            kpiBase = kpiBase.Where(o => o.CreatedAtUtc >= from && o.CreatedAtUtc < to);
             vm.Date = from.ToString("yyyy-MM-dd");
         }
+        else
+        {
+            kpiBase = kpiBase.Where(o => o.CreatedAtUtc >= today.AddDays(-90));
+        }
 
-        vm.Orders = await q.OrderByDescending(o => o.CreatedAtUtc).ToListAsync(ct);
-        vm.TodayCollected = await Sum(all.Where(o => o.PaymentStatus == PaymentStatus.Paid && o.PaidAtUtc >= today));
-        vm.UnpaidPending = await Sum(all.Where(o => o.PaymentStatus == PaymentStatus.Unpaid
-            && (o.Status == OrderStatus.Placed || o.Status == OrderStatus.Preparing || o.Status == OrderStatus.Ready)));
-        vm.CashTotal = await Sum(all.Where(o => o.PaymentStatus == PaymentStatus.Paid && o.PaymentMethod == PaymentMethod.Cash));
-        vm.GCashTotal = await Sum(all.Where(o => o.PaymentStatus == PaymentStatus.Paid && o.PaymentMethod == PaymentMethod.GCash));
-        vm.RefundedTotal = await Sum(all.Where(o => o.PaymentStatus == PaymentStatus.Refunded));
+        vm.TotalCount = await q.CountAsync(ct);
+        vm.Page = Math.Clamp(page, 1, vm.TotalPages);
+
+        vm.Orders = await q
+            .OrderByDescending(o => o.CreatedAtUtc)
+            .Skip((vm.Page - 1) * pageSize)
+            .Take(pageSize)
+            .Select(o => new AdminPaymentRow(
+                o.Id,
+                o.User.FullName,
+                o.User.CampusId,
+                o.CreatedAtUtc,
+                o.Status,
+                o.PaymentMethod,
+                o.Total,
+                o.PaymentStatus))
+            .ToListAsync(ct);
+
+        var kpiRows = await kpiBase
+            .Select(o => new { o.PaymentStatus, o.PaymentMethod, o.Status, o.PaidAtUtc, o.Total })
+            .ToListAsync(ct);
+
+        vm.TodayCollected = kpiRows.Where(o => o.PaymentStatus == PaymentStatus.Paid && o.PaidAtUtc >= today).Sum(o => o.Total);
+        vm.UnpaidPending = kpiRows.Where(o => o.PaymentStatus == PaymentStatus.Unpaid
+            && (o.Status == OrderStatus.Placed || o.Status == OrderStatus.Preparing || o.Status == OrderStatus.Ready)).Sum(o => o.Total);
+        vm.CashTotal = kpiRows.Where(o => o.PaymentStatus == PaymentStatus.Paid && o.PaymentMethod == PaymentMethod.Cash).Sum(o => o.Total);
+        vm.GCashTotal = kpiRows.Where(o => o.PaymentStatus == PaymentStatus.Paid && o.PaymentMethod == PaymentMethod.GCash).Sum(o => o.Total);
+        vm.RefundedTotal = kpiRows.Where(o => o.PaymentStatus == PaymentStatus.Refunded).Sum(o => o.Total);
 
         return View(vm);
     }
 
     [HttpPost("UpdatePaymentStatus"), ValidateAntiForgeryToken]
     public async Task<IActionResult> UpdatePaymentStatus(
-        int id, PaymentStatus status, string? fp, string? fm, string? fd, CancellationToken ct)
+        int id, PaymentStatus status, string? fp, string? fm, string? fd, int page = 1, CancellationToken ct = default)
     {
-        IActionResult Back() => RedirectToAction(nameof(Payments), new { paymentStatus = fp, method = fm, date = fd });
+        IActionResult Back() => RedirectToAction(nameof(Payments),
+            new { paymentStatus = fp, method = fm, date = fd, page });
 
         var order = await db.Orders.AsNoTracking().FirstOrDefaultAsync(o => o.Id == id, ct);
         if (order is null) return NotFound();

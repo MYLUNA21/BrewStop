@@ -1,0 +1,389 @@
+﻿@using BrewStop.Models
+@model BrewStop.Controllers.Barista.BaristaController.BaristaQueueViewModel
+@{
+    Layout = "_Layout";
+    ViewData["Title"] = "Barista Queue";
+}
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+<script src="https://cdn.tailwindcss.com/3.4.17"></script>
+<script>
+    tailwind.config = {
+        important: '.tw',
+        corePlugins: { preflight: false },
+        theme: {
+            extend: {
+                colors: {
+                    espresso: '#1a0f0d',
+                    card: '#241411',
+                    cardhi: '#2f1b16',
+                    caramel: '#d4a373',
+                    amberbrew: '#f0a93b',
+                    cream: '#fefae0'
+                }
+            }
+        }
+    };
+</script>
+
+<style>
+    body {
+        background: #1a0f0d !important;
+        color: #fefae0;
+    }
+
+    .bq-card {
+        background: linear-gradient(180deg, #2b1814, #241411);
+        border: 1px solid rgba(255, 255, 255, .09);
+        border-left: 4px solid #d4a373;
+        border-radius: 14px;
+        box-shadow: 0 8px 22px -8px rgba(0, 0, 0, .65);
+        transition: transform .18s ease, border-color .18s ease;
+    }
+
+        .bq-card:hover {
+            transform: translateY(-2px);
+            border-color: rgba(240, 169, 59, .38);
+        }
+
+        .bq-card.is-preparing {
+            border-left-color: #f0a93b;
+        }
+
+        .bq-card.is-ready {
+            border-left-color: #4ade80;
+        }
+
+    .bq-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: .4rem;
+        border-radius: 10px;
+        padding: .5rem .85rem;
+        font-size: .82rem;
+        font-weight: 700;
+        cursor: pointer;
+        border: 1px solid transparent;
+        transition: transform .15s ease, opacity .15s ease;
+    }
+
+        .bq-btn:hover {
+            transform: translateY(-1px);
+        }
+
+        .bq-btn:active {
+            transform: translateY(0);
+        }
+
+        .bq-btn:disabled {
+            opacity: .45;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+    .bq-btn-caramel {
+        background: linear-gradient(135deg, #e0b283, #d4a373 55%, #c68f5a);
+        color: #1a0f0d;
+    }
+
+    .bq-btn-amber {
+        background: linear-gradient(135deg, #f6be5c, #f0a93b);
+        color: #1a0f0d;
+    }
+
+    .bq-btn-green {
+        background: rgba(74, 222, 128, .18);
+        border-color: rgba(74, 222, 128, .4);
+        color: #86efac;
+    }
+
+    .bq-btn-ghost {
+        background: rgba(255, 255, 255, .04);
+        border-color: rgba(255, 255, 255, .18);
+        color: #fefae0;
+    }
+</style>
+
+<div class="tw min-h-screen bg-espresso px-4 py-6 text-cream md:px-8">
+    <div class="mx-auto max-w-7xl">
+        <!-- Header -->
+        <div class="mb-6 flex flex-wrap items-center justify-between gap-4 border-b border-white/10 pb-4">
+            <div>
+                <div class="flex items-center gap-3">
+                    <h1 class="font-serif text-2xl font-bold tracking-wide">
+                        <i class="fa-solid fa-mug-hot mr-2 text-caramel"></i>Barista <span class="text-caramel">Order Queue</span>
+                    </h1>
+                    <span id="hub-status" class="inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-card px-2.5 py-0.5 text-xs text-neutral-400">
+                        <span id="hub-dot" class="h-2 w-2 rounded-full bg-amber-400"></span>
+                        <span id="hub-text">Connecting...</span>
+                    </span>
+                </div>
+                <p class="mt-0.5 text-xs text-neutral-400">
+                    Active Orders: @(Model.PlacedOrders.Count + Model.PreparingOrders.Count + Model.ReadyOrders.Count)
+                </p>
+            </div>
+            <div class="flex items-center gap-2">
+                <a href="/Barista" class="bq-btn bq-btn-ghost no-underline">
+                    <i class="fa-solid fa-rotate"></i> Refresh Now
+                </a>
+                @if (User.IsInRole("Admin"))
+                {
+                    <a href="/Admin/Dashboard" class="bq-btn bq-btn-ghost no-underline">
+                        <i class="fa-solid fa-gauge"></i> Admin Panel
+                    </a>
+                }
+            </div>
+        </div>
+
+        @if (TempData["Success"] is string ok)
+        {
+            <div class="mb-4 rounded-xl border border-emerald-400/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200">
+                <i class="fa-solid fa-circle-check mr-1.5"></i>@ok
+            </div>
+        }
+        @if (TempData["Error"] is string err)
+        {
+            <div class="mb-4 rounded-xl border border-red-400/30 bg-red-500/10 px-4 py-3 text-sm text-red-200">
+                <i class="fa-solid fa-triangle-exclamation mr-1.5"></i>@err
+            </div>
+        }
+
+        @{
+            async Task RenderOrderCard(Order o, string laneClass, OrderStatus? nextStatus, string? actionLabel, string actionBtnClass, string actionIcon)
+            {
+                <div class="bq-card @laneClass p-4">
+                    <div class="flex items-start justify-between gap-2">
+                        <div>
+                            <span class="inline-block rounded-md border border-caramel/30 bg-caramel/15 px-2 py-0.5 font-mono text-xs font-bold text-caramel">
+                                #@o.Id
+                            </span>
+                            <span class="ml-1.5 text-sm font-semibold text-cream">@(o.User?.FullName ?? "Customer")</span>
+                        </div>
+                        <span class="font-mono text-xs text-neutral-400" title="Pickup Time (UTC)">
+                            <i class="fa-regular fa-clock mr-1"></i>@o.PickupAtUtc.ToString("HH:mm") UTC
+                        </span>
+                    </div>
+
+                    <!-- Payment Badge -->
+                    <div class="mt-2 flex flex-wrap items-center gap-1.5 text-xs">
+                        <span class="rounded-full border border-white/15 bg-black/30 px-2.5 py-0.5 text-neutral-300">
+                            @o.PaymentMethod &bull; ₱@o.Total.ToString("N2")
+                        </span>
+                        @if (o.PaymentStatus == PaymentStatus.Paid)
+                        {
+                            <span class="rounded-full border border-emerald-400/30 bg-emerald-400/15 px-2.5 py-0.5 font-semibold text-emerald-300">
+                                <i class="fa-solid fa-check mr-1"></i>Paid
+                            </span>
+                        }
+                        else
+                        {
+                            <span class="rounded-full border border-amber-400/35 bg-amber-400/15 px-2.5 py-0.5 font-semibold text-amber-300">
+                                <i class="fa-solid fa-hourglass-half mr-1"></i>@o.PaymentStatus
+                            </span>
+                        }
+                    </div>
+
+                    <!-- Items -->
+                    <ul class="my-3 space-y-1.5 border-y border-white/10 py-2.5 pl-0 text-sm">
+                        @foreach (var item in o.Items)
+                        {
+                            <li class="list-none">
+                                <div class="flex justify-between">
+                                    <span class="font-medium text-cream">
+                                        <span class="font-bold text-caramel">@item.Quantity×</span> @item.ItemName
+                                        @if (!string.IsNullOrWhiteSpace(item.SizeName))
+                                        {
+                                            <span class="text-xs text-neutral-400">(@item.SizeName)</span>
+                                        }
+                                    </span>
+                                </div>
+                                @if (item.AddOns.Count > 0)
+                                {
+                                    <div class="pl-5 text-xs text-amber-200/80">
+                                        + @string.Join(", ", item.AddOns.Select(a => a.Name))
+                                    </div>
+                                }
+                            </li>
+                        }
+                    </ul>
+
+                    @if (!string.IsNullOrWhiteSpace(o.Note))
+                    {
+                        <div class="mb-3 rounded-lg border border-amber-400/25 bg-amber-500/10 px-3 py-1.5 text-xs text-amber-200">
+                            <i class="fa-regular fa-note-sticky mr-1"></i><strong>Note:</strong> @o.Note
+                        </div>
+                    }
+
+                    <!-- Actions -->
+                    <div class="flex flex-wrap items-center gap-2">
+                        @if (o.PaymentStatus != PaymentStatus.Paid)
+                        {
+                            <form method="post" action="/Barista/MarkPaid" class="flex-1">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="orderId" value="@o.Id" />
+                                <button type="submit" class="bq-btn bq-btn-ghost w-full">
+                                    <i class="fa-solid fa-peso-sign"></i> Confirm Paid
+                                </button>
+                            </form>
+                        }
+
+                        @if (nextStatus.HasValue && actionLabel is not null)
+                        {
+                            <form method="post" action="/Barista/AdvanceStatus" class="flex-1">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="orderId" value="@o.Id" />
+                                <input type="hidden" name="nextStatus" value="@nextStatus.Value" />
+                                <button type="submit"
+                                        class="bq-btn @actionBtnClass w-full"
+                                        disabled="@(nextStatus == OrderStatus.Claimed && o.PaymentStatus != PaymentStatus.Paid)">
+                                    <i class="fa-solid @actionIcon"></i> @actionLabel
+                                </button>
+                            </form>
+                        }
+                    </div>
+                </div>
+            }
+        }
+
+        <!-- 3-Column Queue Board -->
+        <div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
+            <!-- Column 1: Placed -->
+            <section>
+                <div class="mb-3 flex items-center justify-between">
+                    <h2 class="font-serif text-lg font-bold text-caramel">
+                        <i class="fa-solid fa-bell-concierge mr-1.5"></i>Placed
+                    </h2>
+                    <span class="rounded-full bg-caramel/20 px-2.5 py-0.5 text-xs font-bold text-caramel">
+                        @Model.PlacedOrders.Count
+                    </span>
+                </div>
+                <div class="space-y-3">
+                    @foreach (var o in Model.PlacedOrders)
+                    {
+                        await RenderOrderCard(o, "", OrderStatus.Preparing, "Start Preparing", "bq-btn-caramel", "fa-fire-burner");
+                    }
+                    @if (Model.PlacedOrders.Count == 0)
+                    {
+                        <div class="rounded-xl border border-dashed border-white/15 p-6 text-center text-xs text-neutral-400">
+                            No incoming orders.
+                        </div>
+                    }
+                </div>
+            </section>
+
+            <!-- Column 2: Preparing -->
+            <section>
+                <div class="mb-3 flex items-center justify-between">
+                    <h2 class="font-serif text-lg font-bold text-amberbrew">
+                        <i class="fa-solid fa-blender mr-1.5"></i>Preparing
+                    </h2>
+                    <span class="rounded-full bg-amber-400/20 px-2.5 py-0.5 text-xs font-bold text-amber-300">
+                        @Model.PreparingOrders.Count
+                    </span>
+                </div>
+                <div class="space-y-3">
+                    @foreach (var o in Model.PreparingOrders)
+                    {
+                        await RenderOrderCard(o, "is-preparing", OrderStatus.Ready, "Mark Ready", "bq-btn-amber", "fa-mug-saucer");
+                    }
+                    @if (Model.PreparingOrders.Count == 0)
+                    {
+                        <div class="rounded-xl border border-dashed border-white/15 p-6 text-center text-xs text-neutral-400">
+                            No drinks currently being prepared.
+                        </div>
+                    }
+                </div>
+            </section>
+
+            <!-- Column 3: Ready -->
+            <section>
+                <div class="mb-3 flex items-center justify-between">
+                    <h2 class="font-serif text-lg font-bold text-emerald-300">
+                        <i class="fa-solid fa-bag-shopping mr-1.5"></i>Ready for Pickup
+                    </h2>
+                    <span class="rounded-full bg-emerald-400/20 px-2.5 py-0.5 text-xs font-bold text-emerald-300">
+                        @Model.ReadyOrders.Count
+                    </span>
+                </div>
+                <div class="space-y-3">
+                    @foreach (var o in Model.ReadyOrders)
+                    {
+                        await RenderOrderCard(o, "is-ready", OrderStatus.Claimed, "Complete Pickup", "bq-btn-green", "fa-check-double");
+                    }
+                    @if (Model.ReadyOrders.Count == 0)
+                    {
+                        <div class="rounded-xl border border-dashed border-white/15 p-6 text-center text-xs text-neutral-400">
+                            No orders waiting at the counter.
+                        </div>
+                    }
+                </div>
+            </section>
+        </div>
+
+        <!-- Recent Completed Today -->
+        @if (Model.RecentCompleted.Count > 0)
+        {
+            <div class="mt-10 border-t border-white/10 pt-6">
+                <h3 class="mb-3 font-serif text-base font-bold text-neutral-300">Recent Completed / Cancelled (Today UTC)</h3>
+                <div class="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-5">
+                    @foreach (var c in Model.RecentCompleted)
+                    {
+                        <div class="rounded-lg border border-white/10 bg-card px-3 py-2 text-xs">
+                            <div class="flex items-center justify-between">
+                                <span class="font-mono font-bold text-caramel">#@c.Id</span>
+                                <span class="@(c.Status == OrderStatus.Claimed ? "text-emerald-300" : "text-red-300")">@c.Status</span>
+                            </div>
+                            <div class="mt-1 truncate text-neutral-300">@(c.User?.FullName ?? "Customer")</div>
+                            <div class="text-neutral-500">₱@c.Total.ToString("N2") &bull; @c.Items.Sum(i => i.Quantity) item(s)</div>
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.7/signalr.min.js"></script>
+<script>
+    (function() {
+        const dot = document.getElementById('hub-dot');
+        const text = document.getElementById('hub-text');
+
+        function setLive(isLive, label) {
+            if (!dot || !text) return;
+            dot.className = 'h-2 w-2 rounded-full ' + (isLive ? 'bg-emerald-400' : 'bg-amber-400');
+            text.textContent = label;
+        }
+
+        if (typeof signalR === 'undefined') {
+            setLive(false, 'Polling (20s)');
+            setInterval(() => { if (!document.hidden) window.location.reload(); }, 20000);
+            return;
+        }
+
+        // Adjust hub URL if Program.cs maps OrderHub to a different path (e.g., "/hubs/order")
+        const connection = new signalR.HubConnectionBuilder()
+            .withUrl('/orderHub')
+            .withAutomaticReconnect()
+            .build();
+
+        const refreshBoard = () => window.location.reload();
+
+        connection.on('OrderPlaced', refreshBoard);
+        connection.on('OrderUpdated', refreshBoard);
+        connection.on('OrderStatusChanged', refreshBoard);
+        connection.on('NewOrder', refreshBoard);
+
+        connection.onreconnecting(() => setLive(false, 'Reconnecting...'));
+        connection.onreconnected(() => { setLive(true, 'Live'); refreshBoard(); });
+        connection.onclose(() => setLive(false, 'Disconnected'));
+
+        connection.start()
+            .then(() => setLive(true, 'Live'))
+            .catch(() => {
+                setLive(false, 'Polling (20s)');
+                setInterval(() => { if (!document.hidden) window.location.reload(); }, 20000);
+            });
+    })();
+</script>
